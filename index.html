@@ -708,6 +708,8 @@
     font-family: var(--mono);
     font-size: 12px;
     line-height: 1.8;
+    grid-column: 1 / -1;
+    width: 100%;
   }
   .empty-state .big { font-size: 40px; margin-bottom: 12px; }
 
@@ -1529,19 +1531,39 @@ async function resolveChannelId(channelInput, apiKey) {
   throw new Error('Channel not found — check the channel handle');
 }
 
-// Smart fetch — tries direct first, falls back to CORS proxy if network-blocked
-let _useProxy = false;
+// Smart fetch — tries direct first, then multiple CORS proxies
+const PROXIES = [
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://cors-anywhere.herokuapp.com/${u}`,
+];
+let _proxyIdx = -1; // -1 = try direct first
 async function apiFetch(url) {
-  const PROXY = 'https://corsproxy.io/?';
-  if (_useProxy) return fetch(PROXY + encodeURIComponent(url));
+  if (_proxyIdx >= 0) {
+    // Already using a proxy
+    return fetch(PROXIES[_proxyIdx](url));
+  }
   try {
     const r = await fetch(url);
-    return r;
+    // Some proxies return 200 even for errors — check it's real
+    if (r.ok || r.status === 403 || r.status === 400) return r;
+    throw new Error(`HTTP ${r.status}`);
   } catch(e) {
-    // "Failed to fetch" = network/CORS block — retry via proxy
-    console.warn('Direct fetch blocked, switching to CORS proxy:', e.message);
-    _useProxy = true;
-    return fetch(PROXY + encodeURIComponent(url));
+    console.warn('Direct fetch failed:', e.message, '— trying proxies...');
+    // Try each proxy in order
+    for (let i = 0; i < PROXIES.length; i++) {
+      try {
+        const pr = await fetch(PROXIES[i](url));
+        if (pr.ok) {
+          console.log('Proxy', i, 'worked');
+          _proxyIdx = i;
+          return pr;
+        }
+      } catch(pe) {
+        console.warn('Proxy', i, 'failed:', pe.message);
+      }
+    }
+    throw new Error('All fetch attempts failed — check browser console for details');
   }
 }
 
@@ -2226,7 +2248,7 @@ async function renderChat(stream) {
       console.log('Rustlog status:', r.status, 'for', url);
       if (!r.ok) return [];
       const text = await r.text();
-      console.log('Rustlog raw (first 200):', text.slice(0, 200));
+      console.log(`Rustlog raw [${url}] (first 400):`, text.slice(0, 400));
       if (!text || !text.trim()) return [];
       try {
         const data = JSON.parse(text);
@@ -2259,8 +2281,18 @@ async function renderChat(stream) {
     console.log('Total raw messages:', rawMsgs.length);
 
     if (!rawMsgs.length) {
-      const debugDate = new Date(vodStart).toISOString().slice(0,10);
-      box.innerHTML = `<div class="chat-placeholder"><div class="chat-placeholder-icon" style="font-size:20px;opacity:0.3">💬</div><div style="font-size:10px;line-height:1.6">No chat found<br><span style="opacity:0.5">Channel: ${channel}<br>${debugDate}</span></div></div>`;
+      const d0 = new Date(vodStart);
+      const y0 = d0.getUTCFullYear(), mo0 = String(d0.getUTCMonth()+1).padStart(2,'0'), dd0 = String(d0.getUTCDate()).padStart(2,'0');
+      const testUrl = `https://logs.ivr.fi/channel/${channel}/${y0}/${mo0}/${dd0}?json=true`;
+      box.innerHTML = `<div class="chat-placeholder" style="padding:12px;align-items:flex-start;text-align:left">
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">💬 No chat found</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.8;word-break:break-all">
+          Channel: <b style="color:#bbb">${channel}</b><br>
+          Date tried: <b style="color:#bbb">${y0}-${mo0}-${dd0}</b><br>
+          <a href="${testUrl}" target="_blank" style="color:var(--accent);font-size:9px">▶ Test this URL in new tab</a><br>
+          <span style="opacity:0.6;font-size:9px">(should return JSON with messages array)</span>
+        </div>
+      </div>`;
       if (note) { note.textContent = 'no logs'; note.style.color = 'var(--muted)'; }
       return;
     }
@@ -2578,10 +2610,10 @@ async function checkLiveStatus() {
   try {
     const token = await fetchTwitchToken();
     const [userResp, streamResp] = await Promise.all([
-      fetch('https://api.twitch.tv/helix/users?login=badge_insider', {
+      fetch('https://api.twitch.tv/helix/users?login=shlbez', {
         headers: { 'Client-ID': config.twitchClientId, 'Authorization': 'Bearer ' + token }
       }),
-      fetch('https://api.twitch.tv/helix/streams?user_login=badge_insider', {
+      fetch('https://api.twitch.tv/helix/streams?user_login=shlbez', {
         headers: { 'Client-ID': config.twitchClientId, 'Authorization': 'Bearer ' + token }
       })
     ]);
@@ -2618,7 +2650,7 @@ async function checkLiveStatus() {
         if (bannerGame) bannerGame.textContent = stream.game_name || '';
         if (bannerEmbed) {
           const parent = location.hostname || 'localhost';
-          bannerEmbed.innerHTML = `<iframe src="https://player.twitch.tv/?channel=badge_insider&parent=${parent}&autoplay=false" allowfullscreen></iframe>`;
+          bannerEmbed.innerHTML = `<iframe src="https://player.twitch.tv/?channel=shlbez&parent=${parent}&autoplay=false" allowfullscreen></iframe>`;
         }
       }
     } else {
@@ -2654,7 +2686,7 @@ async function demoLiveAsBadgeInsider() {
 
   try {
     const token = await fetchTwitchToken();
-    const r = await fetch('https://api.twitch.tv/helix/streams?user_login=badge_insider', {
+    const r = await fetch('https://api.twitch.tv/helix/streams?user_login=shlbez', {
       headers: { 'Client-ID': config.twitchClientId, 'Authorization': 'Bearer ' + token }
     });
     const d = await r.json();
@@ -2682,7 +2714,7 @@ async function demoLiveAsBadgeInsider() {
         if (bannerEmbed && !bannerEmbed.querySelector('iframe')) {
           const parent = location.hostname || 'localhost';
           bannerEmbed.innerHTML =
-            `<iframe src="https://player.twitch.tv/?channel=badge_insider&parent=${parent}&autoplay=false"` +
+            `<iframe src="https://player.twitch.tv/?channel=shlbez&parent=${parent}&autoplay=false"` +
             ` frameborder="0" allowfullscreen></iframe>`;
         }
       }
