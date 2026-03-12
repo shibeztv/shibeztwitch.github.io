@@ -2269,39 +2269,38 @@ async function renderChat(stream) {
   const channel = config.twitch || 'shlbez';
   const BOT_NAME = 'shibez_bot';
 
-  // Try to find stream start from bot's first message on the stream day
-  // Bot sends the same message at the very start of every stream
+  // Try to find stream start from bot's live message ("hasanefe123123")
+  // Bot message = 0:00, everything before it is hidden
+  let botMsgTs = null; // unix ms of bot's live message — used as hard filter
   if (!vodStart) {
     try {
-      const day = stream.day; // YYYY-MM-DD
+      const day = stream.day;
       const y = day.slice(0,4), mo = day.slice(5,7), d = day.slice(8,10);
-      // Fetch prev day too in case stream started just before midnight UTC
       const botUrls = [
         `https://logs.ivr.fi/channel/${channel}/${y}/${mo}/${d}?json=true&username=${BOT_NAME}`,
         `https://logs.ivr.fi/channel/${channel}/${y}/${mo}/${String(parseInt(d)-1).padStart(2,'0')}?json=true&username=${BOT_NAME}`,
       ];
-      let botStart = null;
       for (const burl of botUrls) {
         const br = await fetch(burl);
         if (!br.ok) continue;
         const bdata = await br.json();
         const bmsgs = Array.isArray(bdata) ? bdata : (bdata.messages || []);
-        // Only match the specific "gone live" message the bot sends at stream start
         const LIVE_MSG = 'hasanefe123123';
         const liveMsg = bmsgs.find(m => (m.text || m.message || '').toLowerCase().includes(LIVE_MSG));
         if (liveMsg) {
-          const firstBotTs = liveMsg.timestamp || liveMsg.ts || '';
-          if (firstBotTs) {
-            let tsNorm = firstBotTs.trim().replace(' UTC','').replace(' +0000','').replace(' ','T');
+          const rawTs = liveMsg.timestamp || liveMsg.ts || '';
+          if (rawTs) {
+            let tsNorm = rawTs.trim().replace(' UTC','').replace(' +0000','').replace(' ','T');
             if (!/[Z+\-]\d*$/.test(tsNorm)) tsNorm += 'Z';
             const t = new Date(tsNorm).getTime();
-            if (!isNaN(t)) { botStart = t; break; }
+            if (!isNaN(t)) {
+              botMsgTs = t;
+              vodStart = t; // bot message IS 0:00
+              console.log('vodStart = bot live message:', new Date(vodStart).toISOString());
+              break;
+            }
           }
         }
-      }
-      if (botStart) {
-        vodStart = botStart - 15000; // stream started ~15s before bot fires
-        console.log('vodStart from bot first message (shifted -15s):', new Date(vodStart).toISOString());
       }
     } catch(e) {
       console.warn('Bot start fetch failed:', e.message);
@@ -2410,7 +2409,7 @@ async function renderChat(stream) {
       }
 
       return { offset, user: username, text, color };
-    }).filter(m => m !== null && !isNaN(m.offset) && m.offset > -86400 && m.offset < 86400 * 3).sort((a,b) => a.offset - b.offset);
+    }).filter(m => m !== null && !isNaN(m.offset) && m.offset >= 0 && m.offset < 86400 * 3).sort((a,b) => a.offset - b.offset);
 
     console.log(`Parsed ${msgs.length} messages, offset range: ${msgs[0]?.offset?.toFixed(0)}s to ${msgs[msgs.length-1]?.offset?.toFixed(0)}s`);
 
