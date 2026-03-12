@@ -1287,7 +1287,17 @@
           <div class="no-video"><div class="icon">📺</div><div>Loading…</div></div>
         </div>
 
-        <div id="theaterBarWrap" style="display:none;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end">
+        <div id="theaterBarWrap" style="display:none;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--muted)">
+            <span style="white-space:nowrap;letter-spacing:0.3px">CHAT DELAY</span>
+            <input type="range" id="chatDelaySlider" min="-60" max="120" step="1" value="15"
+              style="width:120px;accent-color:var(--accent);cursor:pointer"
+              oninput="chatDelay=parseInt(this.value);document.getElementById('chatDelayInput').value=this.value;resetChatSync()">
+            <input type="number" id="chatDelayInput" value="15" min="-60" max="120"
+              style="width:46px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;text-align:center"
+              oninput="chatDelay=parseInt(this.value)||0;document.getElementById('chatDelaySlider').value=chatDelay;resetChatSync()">
+            <span id="chatDelayLabel" style="color:#aaa;min-width:14px">s</span>
+          </div>
           <button id="theaterToggleBtn" class="theater-btn" onclick="toggleTheater()" title="Theater mode">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 19v2M16 19v2"/></svg>
             THEATER MODE
@@ -2121,7 +2131,18 @@ let chatMessages = [];       // all messages for current stream sorted by offset
 let chatPointer = 0;         // index of next message to show
 let chatSyncInterval = null;
 let vodStartTime = null;     // unix ms when VOD started
+let chatDelay = 15;          // seconds to add to chat offset (bot msg ~15s after stream start)
 let autoScroll = true;
+
+function resetChatSync() {
+  // Re-seek chat to current video position with new delay
+  if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+  const pos = ytPlayer.getCurrentTime() - chatDelay;
+  chatPointer = chatMessages.findIndex(m => m.offset >= pos);
+  if (chatPointer < 0) chatPointer = chatMessages.length;
+  const box = document.getElementById('chatMessages');
+  if (box) box.innerHTML = '';
+}
 
 function stopChatSync() {
   if (chatSyncInterval) { clearInterval(chatSyncInterval); chatSyncInterval = null; }
@@ -2137,7 +2158,7 @@ function startChatSync() {
   if (el) el.textContent = '▶ replaying';
   chatSyncInterval = setInterval(() => {
     if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
-    const pos = ytPlayer.getCurrentTime();
+    const pos = ytPlayer.getCurrentTime() - chatDelay;
 
     // Detect seek backwards — reset pointer and clear chat
     if (pos < lastSyncPos - 2) {
