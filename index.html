@@ -1290,10 +1290,10 @@
         <div id="theaterBarWrap" style="display:none;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--muted)">
             <span style="white-space:nowrap;letter-spacing:0.3px">CHAT DELAY</span>
-            <input type="range" id="chatDelaySlider" min="-60" max="120" step="1" value="15"
+            <input type="range" id="chatDelaySlider" min="-60" max="120" step="1" value="0"
               style="width:120px;accent-color:var(--accent);cursor:pointer"
               oninput="chatDelay=parseInt(this.value);document.getElementById('chatDelayInput').value=this.value;resetChatSync()">
-            <input type="number" id="chatDelayInput" value="15" min="-60" max="120"
+            <input type="number" id="chatDelayInput" value="0" min="-60" max="120"
               style="width:46px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;text-align:center"
               oninput="chatDelay=parseInt(this.value)||0;document.getElementById('chatDelaySlider').value=chatDelay;resetChatSync()">
             <span id="chatDelayLabel" style="color:#aaa;min-width:14px">s</span>
@@ -2131,7 +2131,7 @@ let chatMessages = [];       // all messages for current stream sorted by offset
 let chatPointer = 0;         // index of next message to show
 let chatSyncInterval = null;
 let vodStartTime = null;     // unix ms when VOD started
-let chatDelay = 15;          // seconds to add to chat offset (bot msg ~15s after stream start)
+let chatDelay = 0;           // seconds to subtract from video position when syncing chat
 let autoScroll = true;
 
 function resetChatSync() {
@@ -2184,6 +2184,16 @@ function startChatSync() {
 }
 
 function appendChatMsg(msg) {
+  if (msg.isSystem) {
+    const box = document.getElementById('chatMessages');
+    if (!box) return;
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:6px 10px;margin:4px 0;background:rgba(255,68,68,0.12);border-left:2px solid #ff4444;font-family:var(--mono);font-size:10px;color:#ff8888;letter-spacing:0.3px';
+    div.textContent = '📡 ' + msg.text;
+    box.appendChild(div);
+    if (autoScroll) scrollChatToBottom();
+    return;
+  }
   const box = document.getElementById('chatMessages');
   if (!box) return;
   // Remove placeholder if present
@@ -2404,7 +2414,9 @@ async function renderChat(stream) {
 
     console.log(`Parsed ${msgs.length} messages, offset range: ${msgs[0]?.offset?.toFixed(0)}s to ${msgs[msgs.length-1]?.offset?.toFixed(0)}s`);
 
-    chatMessages = msgs;
+    // Inject a synthetic stream-start marker at offset 0
+    const liveMarker = { offset: -15, user: '📡', text: 'Shibez went live!', color: '#ff4444', isSystem: true };
+    chatMessages = [liveMarker, ...msgs];
     box.innerHTML = '';
 
     if (!msgs.length) {
