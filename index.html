@@ -804,7 +804,8 @@
   body.theater .parts-section { display: none !important; }
   body.theater .status-bar { display: none !important; }
   body.theater .chat-panel { display: flex !important; width: 320px; flex-shrink: 0; }
-  body.theater .resize-handle { display: block; }
+  body.theater .resize-handle,
+  .player-view.active .resize-handle { display: block; }
 
   /* ── GRID HOME ─────────────────────────────────────────────────── */
   .grid-view {
@@ -1184,9 +1185,10 @@
     z-index: 10;
     display: none;
   }
-  body.theater .resize-handle { display: block; }
+  body.theater .resize-handle,
+  .player-view.active .resize-handle { display: block; }
   .resize-handle:hover,
-  .resize-handle.dragging { background: var(--accent); width: 4px; }
+  .resize-handle.dragging { background: var(--accent); width: 6px; }
   .resize-handle::after {
     content: '';
     position: absolute;
@@ -1280,15 +1282,21 @@
     <div class="grid-header">
       <span class="grid-header-title">ALL STREAMS <span class="grid-header-count" id="gridCount"></span></span>
       <div id="dateFilterWrap" style="display:flex;align-items:center;gap:6px;margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted)">
-        <input type="date" id="dateFrom" lang="en" title="From date"
-          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:3px;cursor:pointer;color-scheme:dark"
-          oninput="applyDateFilter()">
-        <span style="color:#555">→</span>
-        <input type="date" id="dateTo" lang="en" title="To date"
-          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:3px;cursor:pointer;color-scheme:dark"
-          oninput="applyDateFilter()">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:9px;color:#777;letter-spacing:0.5px">FROM</span>
+          <input type="date" id="dateFrom" lang="en" title="From date"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:3px;cursor:pointer;color-scheme:dark"
+            oninput="applyDateFilter()">
+        </div>
+        <span style="font-size:16px;color:#555;align-self:flex-end;padding-bottom:3px">→</span>
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:9px;color:#777;letter-spacing:0.5px">TO</span>
+          <input type="date" id="dateTo" lang="en" title="To date"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:3px;cursor:pointer;color-scheme:dark"
+            oninput="applyDateFilter()">
+        </div>
         <button onclick="clearDateFilter()" title="Clear filter"
-          style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px;cursor:pointer;display:none" id="dateFilterClear">✕</button>
+          style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px;cursor:pointer;display:none;align-self:flex-end;margin-bottom:1px" id="dateFilterClear">✕</button>
       </div>
     </div>
     <div class="stream-grid" id="streamGrid">
@@ -1316,9 +1324,7 @@
     <div id="theaterBtnWrap" style="display:none"></div>
     <div class="player-topbar">
       <button class="back-btn" onclick="goBack()">← All Streams</button>
-      <span class="player-topbar-title" id="playerTopTitle"></span>
-      <span class="player-topbar-date" id="playerTopDate"></span>
-
+      <span class="player-topbar-date" id="playerTopDate" style="margin-left:auto"></span>
     </div>
     <div style="display:flex;flex:1;overflow:hidden;position:relative;">
       <button id="showChatBtn" onclick="toggleChat()" title="Show chat"
@@ -1383,11 +1389,15 @@
         </div>
         <!-- Chat settings panel -->
         <div id="chatSettingsPanel" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span>CHAT DELAY (s)</span>
-            <input type="number" id="chatDelayInputSettings" value="0"
-              style="width:52px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;text-align:center"
-              oninput="chatDelay=parseInt(this.value)||0;const di=document.getElementById('chatDelayInput');if(di)di.value=this.value;resetChatSync()">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+            <span style="flex:1">CHAT DELAY (s)</span>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input type="number" id="chatDelayInputSettings" value="0"
+                style="width:48px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 4px;border-radius:3px;text-align:center"
+                oninput="chatDelay=parseInt(this.value)||0;const di=document.getElementById('chatDelayInput');if(di)di.value=this.value;resetChatSync()">
+              <button onclick="chatDelay=0;document.getElementById('chatDelayInputSettings').value=0;const di=document.getElementById('chatDelayInput');if(di)di.value=0;resetChatSync()"
+                style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer">DEFAULT</button>
+            </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
             <span style="flex:1">CHAT WIDTH (px)</span>
@@ -2271,6 +2281,40 @@ let chatSyncInterval = null;
 let vodStartTime = null;     // unix ms when VOD started
 let chatDelay = 0;           // seconds to subtract from video position when syncing chat
 let showTimestamps = true;   // toggle chat timestamps
+
+// Resolve a badge key (e.g. "subtember-2025", "moderator", "sub-gifter/1") to [url, label]
+function resolveBadgeUrl(raw) {
+  const key = (raw || '').split('/')[0].toLowerCase();
+  // Exact matches
+  const EXACT = {
+    'broadcaster': '5527c58c-fb7d-422d-b71b-f309dcb85cc1',
+    'moderator':   '3267646d-33f0-4b17-b3df-f923a41db1d0',
+    'vip':         'b817aba4-fad8-49e2-b88a-7cc744dfa6ec',
+    'subscriber':  '5d9f2208-5dd8-11e7-8513-2ff4adfae661',
+    'partner':     'd12a2e27-16f6-41d0-ab77-b780518f00a3',
+    'turbo':       'bd444ec6-8f34-4bf9-91f4-af1e3428d80f',
+    'premium':     'a1dd5073-19c3-4911-8cb4-c464a7bc1510',
+    'sub-gifter':  'f1d8a571-5f3f-4a33-918c-d43a4d6f3e1a',
+    'founder':     '511b78a9-ab37-472f-9569-457753bbe7d3',
+    'staff':       'd97c37be-a963-4035-b3fb-b1fd76129dd5',
+    'hype-train':  '912b0ba0-b5b0-11e8-88c4-47c6c7b49ad7',
+    'bits':        '73b5c3fb-24f9-4a82-a852-23f186c1da46',
+    'glhf-pledge': '3158e758-3cb4-43c5-94b3-7639810e3201',
+  };
+  if (EXACT[key]) return [`https://static-cdn.jtvnw.net/badges/v1/${EXACT[key]}/1`, key];
+  // Fuzzy: any sub variant (subtember-2025, subscriber, sub-gifter, etc.)
+  if (key.startsWith('sub') || key.includes('subscri'))
+    return [`https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1`, 'subscriber'];
+  if (key.includes('mod'))
+    return [`https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/1`, 'moderator'];
+  if (key.includes('vip'))
+    return [`https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/1`, 'vip'];
+  if (key.includes('bit'))
+    return [`https://static-cdn.jtvnw.net/badges/v1/73b5c3fb-24f9-4a82-a852-23f186c1da46/1`, 'bits'];
+  if (key.includes('hype'))
+    return [`https://static-cdn.jtvnw.net/badges/v1/912b0ba0-b5b0-11e8-88c4-47c6c7b49ad7/1`, 'hype-train'];
+  return null; // unknown badge — skip
+}
 let autoScroll = true;
 
 function resetChatSync() {
@@ -2342,13 +2386,8 @@ function rerenderVisibleChat() {
     const msg = chatMessages[idx];
     if (!msg || msg.isSystem) return;
     const timeStr = formatChatTime(msg.offset);
-    const BADGE_URLS = {
-      broadcaster:'https://static-cdn.jtvnw.net/badges/v1/5527c58c-fb7d-422d-b71b-f309dcb85cc1/1',
-      moderator:'https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/1',
-      vip:'https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/1',
-      subscriber:'https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1',
-    };
-    const badgeHtml = (msg.badges||[]).slice(0,2).map(b=>BADGE_URLS[b]?`<img src="${BADGE_URLS[b]}" class="chat-badge" alt="${b}">`:''). join('');
+    const badgeHtml = (msg.badges||[]).slice(0,2).map(b => resolveBadgeUrl(b)).filter(Boolean)
+      .map(url_b => `<img src="${url_b[0]}" class="chat-badge" alt="${url_b[1]}" title="${url_b[1]}">`).join('');
     const timeHtml = showTimestamps ? `<span class="chat-msg-time" title="Jump to ${timeStr}">${timeStr}</span>` : '';
     div.innerHTML = `${timeHtml}${badgeHtml}<span class="chat-msg-user" style="color:${msg.color||'#9146ff'}">${escHtml(msg.user)}</span><span class="chat-msg-text">: ${parseMessageText(msg.text)}</span>`;
   });
@@ -2376,22 +2415,8 @@ function appendChatMsg(msg) {
   div.dataset.idx = chatMessages.indexOf(msg);
   const displayOffset = Math.max(0, msg.offset);
   const timeStr = formatChatTime(msg.offset);
-  const BADGE_URLS = {
-    broadcaster: 'https://static-cdn.jtvnw.net/badges/v1/5527c58c-fb7d-422d-b71b-f309dcb85cc1/1',
-    moderator:   'https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/1',
-    vip:         'https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/1',
-    subscriber:  'https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1',
-    partner:     'https://static-cdn.jtvnw.net/badges/v1/d12a2e27-16f6-41d0-ab77-b780518f00a3/1',
-    turbo:       'https://static-cdn.jtvnw.net/badges/v1/bd444ec6-8f34-4bf9-91f4-af1e3428d80f/1',
-    premium:     'https://static-cdn.jtvnw.net/badges/v1/a1dd5073-19c3-4911-8cb4-c464a7bc1510/1',
-    'sub-gifter':'https://static-cdn.jtvnw.net/badges/v1/f1d8a571-5f3f-4a33-918c-d43a4d6f3e1a/1',
-    founder:     'https://static-cdn.jtvnw.net/badges/v1/511b78a9-ab37-472f-9569-457753bbe7d3/1',
-    staff:       'https://static-cdn.jtvnw.net/badges/v1/d97c37be-a963-4035-b3fb-b1fd76129dd5/1',
-  };
-  const badgeHtml = (msg.badges||[]).slice(0,2).map(b => {
-    const url = BADGE_URLS[b];
-    return url ? `<img src="${url}" class="chat-badge" alt="${b}" title="${b}">` : '';
-  }).join('');
+  const badgeHtml = (msg.badges||[]).slice(0,2).map(b => resolveBadgeUrl(b)).filter(Boolean)
+    .map(url_b => `<img src="${url_b[0]}" class="chat-badge" alt="${url_b[1]}" title="${url_b[1]}">`).join('');
   const timeHtml = showTimestamps ? `<span class="chat-msg-time" title="Jump to ${timeStr}">${timeStr}</span>` : '';
   div.innerHTML = `${timeHtml}${badgeHtml}<span class="chat-msg-user" style="color:${msg.color||'#9146ff'}">${escHtml(msg.user)}</span><span class="chat-msg-text">: ${parseMessageText(msg.text)}</span>`;
   // Click TIMESTAMP to seek
