@@ -1080,6 +1080,7 @@
     body.theater .main { flex: none; height: 50vh; }
     body.theater .video-section { height: 100%; }
     body.theater .chat-panel { flex: 1; width: 100%; height: auto; border-top: 1px solid var(--border); }
+    body.theater .chat-panel.chat-hidden { display: none !important; }
   }
 
   /* Theater mode — desktop: video left, chat right */
@@ -1311,15 +1312,11 @@
       <div class="live-banner-embed" id="liveBannerEmbed"></div>
     </div>
     <!-- RANDOM CLIP BUTTON -->
-    <div style="display:flex;justify-content:center;padding:10px 0 4px">
+    <div style="display:flex;justify-content:flex-start;padding:10px 0 4px">
       <button onclick="openRandomClip()" id="randomClipBtn"
-        style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
+        style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
         onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
-        </svg>
         🎲 RANDOM CLIP
       </button>
     </div>
@@ -3075,12 +3072,12 @@ function toggleChat() {
   const toggleBtn = document.getElementById('chatToggleBtn');
   const showChatBtn = document.getElementById('showChatBtn');
   if (chatVisible) {
-    if (panel) panel.style.display = 'flex';
+    if (panel) { panel.style.display = 'flex'; panel.classList.remove('chat-hidden'); }
     if (showChatBtn) showChatBtn.style.display = 'none';
     if (openBtn) openBtn.style.display = 'none';
     if (toggleBtn) { toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>'; toggleBtn.title = 'Hide chat'; }
   } else {
-    if (panel) panel.style.display = 'none';
+    if (panel) { panel.style.display = 'none'; panel.classList.add('chat-hidden'); }
     if (openBtn) openBtn.style.display = 'flex';
     if (showChatBtn) showChatBtn.style.display = 'flex';
     if (toggleBtn) { toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>'; toggleBtn.title = 'Show chat'; }
