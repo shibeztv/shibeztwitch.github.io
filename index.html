@@ -1346,7 +1346,7 @@
             <button onclick="closeFlappy()" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
           </div>
         </div>
-        <canvas id="flappyCanvas" width="480" height="620" style="display:block;cursor:pointer"></canvas>
+        <canvas id="flappyCanvas" width="540" height="700" style="display:block;cursor:pointer"></canvas>
       </div>
     </div>
 
@@ -1381,8 +1381,8 @@
         </div>
 
         <!-- Zoom overlay (fullscreen) -->
-        <div id="shibleZoomOverlay" onclick="shibleZoomToggle()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);cursor:zoom-out;align-items:center;justify-content:center">
-          <img id="shibleZoomImg" src="" style="max-width:95vw;max-height:92vh;object-fit:contain;border-radius:4px">
+        <div id="shibleZoomOverlay" onclick="if(event.target===this)shibleZoomToggle()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);cursor:zoom-out;align-items:center;justify-content:center">
+          <img id="shibleZoomImg" src="" onclick="event.stopPropagation()" style="max-width:95vw;max-height:92vh;object-fit:contain;border-radius:4px;cursor:default">
           <div style="position:absolute;bottom:0;right:0;width:9%;height:6%;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(0,0,0,0.3);pointer-events:none" id="shibleZoomBlur"></div>
         </div>
 
@@ -1397,7 +1397,7 @@
               <span style="font-family:var(--mono);font-size:9px;color:#bbb;letter-spacing:1px">DAY</span>
               <div style="display:flex;align-items:center;gap:4px">
                 <button onclick="shibleAdjust('d',-1)" style="background:none;border:1px solid var(--border);color:#bbb;width:22px;height:28px;border-radius:3px;cursor:pointer;font-size:14px">‹</button>
-                <div id="shibleDayDisp" style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--text);min-width:36px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 0">01</div>
+                <input id="shibleDayDisp" type="number" min="1" max="31" value="1" oninput="shibleSetD(this.value)" style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--text);width:46px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 0;outline:none;-moz-appearance:textfield;appearance:textfield">
                 <button onclick="shibleAdjust('d',1)" style="background:none;border:1px solid var(--border);color:#bbb;width:22px;height:28px;border-radius:3px;cursor:pointer;font-size:14px">›</button>
               </div>
               <div id="shibleDayColor" style="width:36px;height:8px;border-radius:2px;background:var(--surface2)"></div>
@@ -1417,7 +1417,7 @@
               <span style="font-family:var(--mono);font-size:9px;color:#bbb;letter-spacing:1px">YEAR</span>
               <div style="display:flex;align-items:center;gap:4px">
                 <button onclick="shibleAdjust('y',-1)" style="background:none;border:1px solid var(--border);color:#bbb;width:22px;height:28px;border-radius:3px;cursor:pointer;font-size:14px">‹</button>
-                <div id="shibleYearDisp" style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--text);min-width:60px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 0">2025</div>
+                <input id="shibleYearDisp" type="number" min="2020" max="2030" value="2025" oninput="shibleSetY(this.value)" style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--text);width:72px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 0;outline:none;-moz-appearance:textfield;appearance:textfield">
                 <button onclick="shibleAdjust('y',1)" style="background:none;border:1px solid var(--border);color:#bbb;width:22px;height:28px;border-radius:3px;cursor:pointer;font-size:14px">›</button>
               </div>
               <div id="shibleYearColor" style="width:60px;height:8px;border-radius:2px;background:var(--surface2)"></div>
@@ -3467,16 +3467,21 @@ const SHIBLE_MAX_GUESSES = 5;
 let _shibleD = 1, _shibleM = 1, _shibleY = 2025;
 const SHIBLE_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
+function shibleSetD(v) { const n = parseInt(v); if (n >= 1 && n <= 31) _shibleD = n; }
+function shibleSetY(v) { const n = parseInt(v); if (n >= 2020 && n <= 2030) _shibleY = n; }
 function shibleAdjust(part, delta) {
   if (part === 'd') {
     _shibleD = ((_shibleD - 1 + delta + 31) % 31) + 1;
-    document.getElementById('shibleDayDisp').textContent = String(_shibleD).padStart(2,'0');
+    const el = document.getElementById('shibleDayDisp');
+    if (el) el.value = _shibleD;
   } else if (part === 'm') {
     _shibleM = ((_shibleM - 1 + delta + 12) % 12) + 1;
-    document.getElementById('shibleMonthDisp').textContent = SHIBLE_MONTHS[_shibleM - 1];
+    const el = document.getElementById('shibleMonthDisp');
+    if (el) el.textContent = SHIBLE_MONTHS[_shibleM - 1];
   } else if (part === 'y') {
     _shibleY = Math.max(2020, Math.min(2030, _shibleY + delta));
-    document.getElementById('shibleYearDisp').textContent = _shibleY;
+    const el = document.getElementById('shibleYearDisp');
+    if (el) el.value = _shibleY;
   }
 }
 
@@ -3507,12 +3512,15 @@ function openShible(randomMode) {
   _shibleStream = stream;
   _shibleGuesses = 0;
 
-  // Init drum to middle of streams date range
+  // Init drum to today's date
   const now = new Date();
   _shibleD = now.getDate(); _shibleM = now.getMonth() + 1; _shibleY = now.getFullYear();
-  document.getElementById('shibleDayDisp').textContent = String(_shibleD).padStart(2,'0');
-  document.getElementById('shibleMonthDisp').textContent = SHIBLE_MONTHS[_shibleM - 1];
-  document.getElementById('shibleYearDisp').textContent = _shibleY;
+  const dd = document.getElementById('shibleDayDisp');
+  const dm = document.getElementById('shibleMonthDisp');
+  const dy = document.getElementById('shibleYearDisp');
+  if (dd) dd.value = _shibleD;
+  if (dm) dm.textContent = SHIBLE_MONTHS[_shibleM - 1];
+  if (dy) dy.value = _shibleY;
   ['Day','Month','Year'].forEach(x => { document.getElementById('shible'+x+'Color').style.background = 'var(--surface2)'; });
 
   // Reset UI
@@ -3528,9 +3536,12 @@ function openShible(randomMode) {
   const guessBtn = document.getElementById('shibleGuessBtn');
   if (guessBtn) { guessBtn.disabled = false; guessBtn.style.opacity = '1'; }
 
-  const vid = stream.vids[0];
-  const thumb = `https://i.ytimg.com/vi/${vid.id}/maxresdefault.jpg`;
+  // Pick a random vid from the stream, then a random frame slot (1/2/3 are actual video frames)
+  const vid = stream.vids[Math.floor(Math.random() * stream.vids.length)];
+  const frameSlot = ['1','2','3'][Math.floor(Math.random() * 3)];
+  const thumb = `https://i.ytimg.com/vi/${vid.id}/${frameSlot}.jpg`;
   document.getElementById('shibleThumb').src = thumb;
+  document.getElementById('shibleZoomImg').src = ''; // reset zoom
   document.getElementById('shibleThumbWrap').style.cursor = 'zoom-in';
 }
 
@@ -3541,6 +3552,11 @@ function closeShible() {
 
 function submitShibleGuess() {
   if (!_shibleStream) return;
+  // Sync typed values from inputs
+  const dEl = document.getElementById('shibleDayDisp');
+  const yEl = document.getElementById('shibleYearDisp');
+  if (dEl) { const v = parseInt(dEl.value); if (v >= 1 && v <= 31) _shibleD = v; }
+  if (yEl) { const v = parseInt(yEl.value); if (v >= 2020 && v <= 2030) _shibleY = v; }
   _shibleGuesses++;
   const guessLeft = SHIBLE_MAX_GUESSES - _shibleGuesses;
   const target = _shibleStream.day; // YYYY-MM-DD
@@ -3672,11 +3688,11 @@ function startFlappy() {
   });
 
   // Game state
-  const GRAVITY = 0.28;
-  const FLAP = -6.8;
+  const GRAVITY = 0.20;
+  const FLAP = -5.8;
   const PIPE_W = 52;
-  const PIPE_GAP = 210;
-  const PIPE_SPEED = 1.9;
+  const PIPE_GAP = 300;
+  const PIPE_SPEED = 1.6;
   const EMOTE_SIZE = 52;
   const BIRD_SIZE = 48;
 
@@ -3704,7 +3720,7 @@ function startFlappy() {
   }
 
   function spawnPipe() {
-    const gapY = 120 + Math.random() * (H - 300 - 60);
+    const gapY = 100 + Math.random() * (H - 260 - 60);
     const eImg = emoteImgs[pipeEmoteIdx % emoteImgs.length];
     pipeEmoteIdx++;
     pipes.push({ x: W + 10, gapY, eImg, scored: false });
@@ -3722,13 +3738,20 @@ function startFlappy() {
       for (let col = 0; col < cols; col++) {
         const ey = row * EMOTE_SIZE;
         if (ey + EMOTE_SIZE < 0) continue;
-        try { ctx.drawImage(p.eImg, p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE); } catch(e){}
+        if (p.eImg && p.eImg.complete && p.eImg.naturalWidth > 0) {
+          try { ctx.drawImage(p.eImg, p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE); } catch(ee){}
+        } else {
+          ctx.fillStyle = '#2a2a3a'; ctx.fillRect(p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE);
+        }
       }
     }
 
-    // Dark tint over top pipe
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    // Dark tint + border over top pipe
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(p.x, 0, PIPE_W, topH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x + 1, 0, PIPE_W - 2, topH);
 
     // Draw bottom pipe emotes (stacked upward from floor)
     const botRows = Math.ceil(botH / EMOTE_SIZE);
@@ -3736,12 +3759,19 @@ function startFlappy() {
       for (let col = 0; col < cols; col++) {
         const ey = botY + row * EMOTE_SIZE;
         if (ey > H - 60) break;
-        try { ctx.drawImage(p.eImg, p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE); } catch(e){}
+        if (p.eImg && p.eImg.complete && p.eImg.naturalWidth > 0) {
+          try { ctx.drawImage(p.eImg, p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE); } catch(ee){}
+        } else {
+          ctx.fillStyle = '#2a2a3a'; ctx.fillRect(p.x + col * EMOTE_SIZE, ey, EMOTE_SIZE, EMOTE_SIZE);
+        }
       }
     }
 
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(p.x, botY, PIPE_W, botH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x + 1, botY, PIPE_W - 2, botH);
   }
 
   function drawBird() {
@@ -3844,7 +3874,7 @@ function startFlappy() {
       groundX = (groundX + PIPE_SPEED) % W;
 
       // Spawn pipes
-      if (frameCount % 130 === 0 || (frameCount === 1)) spawnPipe();
+      if (frameCount % 175 === 0 || (frameCount === 1)) spawnPipe();
 
       // Update bird
       bird.vy += GRAVITY;
