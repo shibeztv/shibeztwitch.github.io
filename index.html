@@ -1414,33 +1414,33 @@
           </button>
         </div>
         <!-- Chat settings panel -->
-        <div id="chatSettingsPanel" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);flex-direction:column;gap:8px">
+        <div id="chatSettingsPanel" style="display:none;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:#bbb;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
             <span style="flex:1">CHAT DELAY (s)</span>
             <div style="display:flex;align-items:center;gap:3px">
-              <button id="delayDecBtn" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&lt;</button>
+              <button id="delayDecBtn" style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&lt;</button>
               <input type="number" id="chatDelayInputSettings" value="0"
                 style="width:48px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 4px;border-radius:3px;text-align:center"
                 oninput="chatDelay=parseInt(this.value)||0;const di=document.getElementById('chatDelayInput');if(di)di.value=this.value;resetChatSync()">
-              <button id="delayIncBtn" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&gt;</button>
+              <button id="delayIncBtn" style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&gt;</button>
               <button onclick="chatDelay=0;document.getElementById('chatDelayInputSettings').value=0;const di=document.getElementById('chatDelayInput');if(di)di.value=0;resetChatSync()"
-                style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer">DEFAULT</button>
+                style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer">DEFAULT</button>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
             <span style="flex:1">CHAT WIDTH (px)</span>
             <div style="display:flex;align-items:center;gap:3px">
-              <button id="widthDecBtn" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&lt;</button>
+              <button id="widthDecBtn" style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&lt;</button>
               <input type="number" id="chatWidthInput" value="340" min="150" max="600"
                 style="width:48px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 4px;border-radius:3px;text-align:center"
                 oninput="const p=document.getElementById('chatPanel');if(p){p.style.width=this.value+'px';p.style.flexShrink='0'}">
-              <button id="widthIncBtn" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&gt;</button>
-              <button onclick="resetChatWidth()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer">DEFAULT</button>
+              <button id="widthIncBtn" style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer;user-select:none">&gt;</button>
+              <button onclick="resetChatWidth()" style="background:none;border:1px solid var(--border);color:#bbb;font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;cursor:pointer">DEFAULT</button>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span>TIMESTAMPS</span>
-            <button id="tsToggleBtn" onclick="showTimestamps=!showTimestamps;this.textContent=showTimestamps?'ON':'OFF';this.style.color=showTimestamps?'var(--accent)':'var(--muted)';rerenderVisibleChat()"
+            <button id="tsToggleBtn" onclick="showTimestamps=!showTimestamps;this.textContent=showTimestamps?'ON':'OFF';this.style.color=showTimestamps?'var(--accent)':'#bbb';rerenderVisibleChat()"
               style="background:none;border:1px solid var(--border);color:var(--accent);font-family:var(--mono);font-size:10px;padding:2px 10px;border-radius:3px;cursor:pointer">ON</button>
           </div>
         </div>
