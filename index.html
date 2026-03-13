@@ -264,8 +264,8 @@
 
   .video-date-badge {
     font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
+    font-size: 12px;
+    color: #bbb;
     white-space: nowrap;
     padding-top: 3px;
   }
@@ -478,7 +478,6 @@
   .chat-msg-user {
     font-weight: 700;
     margin-right: 4px;
-    cursor: pointer;
   }
   .chat-msg-text { color: var(--text); }
 
@@ -1345,7 +1344,7 @@
 
         <div id="theaterBarWrap" style="display:none;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--muted)">
-            <span style="white-space:nowrap;letter-spacing:0.3px">CHAT DELAY</span>
+            <span style="white-space:nowrap;letter-spacing:0.3px;color:var(--text)">CHAT DELAY</span>
             <input type="number" id="chatDelayInput" value="0"
               style="width:52px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;text-align:center"
               oninput="chatDelay=parseInt(this.value)||0;resetChatSync()">
@@ -1441,7 +1440,7 @@ const DEFAULTS = {
   twitch: 'shlbez',
   siteName: 'Shibez VOD Archive',
   twitchClientId: '61x4q55vai9w0lwsc1enqw9vktqzee',
-  twitchClientSecret: 'ihetv1d2e2uknniplqol4wct42jxta',
+  twitchClientSecret: '4okb43u66gkj27to2vxqw6wewb4ohd',
 };
 
 // ── Twitch VOD matching ────────────────────────────────────────────────────
@@ -1761,7 +1760,14 @@ function groupIntoStreams(videos) {
   videos.forEach(v => {
     // Try to extract date from title first (more accurate than upload date)
     const titleDay = extractDateFromTitle(v.title);
-    const day = titleDay || v.publishedAt.slice(0,10);
+    // Fallback: upload date minus 1 day (streams are often uploaded the next day)
+    let fallbackDay = v.publishedAt.slice(0,10);
+    if (!titleDay) {
+      const d = new Date(v.publishedAt);
+      d.setUTCDate(d.getUTCDate() - 1);
+      fallbackDay = d.toISOString().slice(0,10);
+    }
+    const day = titleDay || fallbackDay;
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(v);
   });
@@ -2430,14 +2436,7 @@ function appendChatMsg(msg) {
       ytPlayer.playVideo();
     }
   });
-  // Click username to seek
-  div.querySelector('.chat-msg-user').addEventListener('click', () => {
-    if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
-      ytPlayer.seekTo(msg.offset, true);
-      chatPointer = chatMessages.findIndex(m => m.offset >= msg.offset);
-      if (chatPointer < 0) chatPointer = 0;
-    }
-  });
+  // Username: hover highlight only, no click action
   box.appendChild(div);
   // Keep max 300 messages in DOM
   while (box.children.length > 300) box.removeChild(box.firstChild);
