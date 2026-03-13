@@ -646,7 +646,7 @@
     align-items: center;
     font-family: var(--mono);
     font-size: 11px;
-    color: var(--muted);
+    color: #bbb;
   }
   .live-status { color: #ff6060 !important; }
   .live-dot {
@@ -1405,8 +1405,8 @@
         <div class="chat-header">
           <span class="chat-header-icon">💬</span>
           <span class="chat-header-title">CHAT REPLAY</span>
-          <span id="chatHeaderNote" style="font-family:var(--mono);font-size:9px;color:var(--muted)">—</span>
-          <button onclick="toggleChatSettings()" title="Chat settings" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:3px;display:flex;align-items:center" id="chatSettingsBtn">
+          <span id="chatHeaderNote" style="font-family:var(--mono);font-size:9px;color:#bbb">—</span>
+          <button onclick="toggleChatSettings()" title="Chat settings" style="background:none;border:none;color:#bbb;cursor:pointer;padding:2px 4px;border-radius:3px;display:flex;align-items:center" id="chatSettingsBtn">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           <button class="chat-toggle-btn" onclick="toggleChat()" title="Hide chat" id="chatToggleBtn">
@@ -1451,16 +1451,15 @@
           </div>
         </div>
         <div class="chat-footer" id="chatFooter" style="display:none">
-          <span id="chatSyncStatus">⏸ paused</span>
-          <span style="margin-left:auto;opacity:0.6" id="statusText"></span>
+          <span id="chatSyncStatus" style="color:#bbb">⏸ paused</span>
+          <span style="margin-left:auto;color:#bbb;font-family:var(--mono);font-size:9px" id="statusText"></span>
+        </div>
+        <div class="site-footer player-footer" style="border-top:1px solid var(--border);margin:0;padding:10px 0;flex-shrink:0">
+          <span>Made by Shibez</span>
+          <img class="footer-emote" src="https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.webp" alt="" onclick="secretLiveToggle()" style="cursor:pointer" title="">
         </div>
       </aside>
     </div>
-  </div>
-  <!-- Player page footer — hidden in theater mode -->
-  <div class="site-footer player-footer" id="playerFooter" style="display:none">
-    <span>Made by Shibez</span>
-    <img class="footer-emote" src="https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.webp" alt="" onclick="secretLiveToggle()" style="cursor:pointer" title="">
   </div>
 
 </div>
@@ -1988,7 +1987,6 @@ function goBack(pushHistory=true) {
   if (typeof theaterMode !== 'undefined' && theaterMode && typeof toggleTheater === 'function') toggleTheater();
   document.getElementById('gridView').style.display = '';
   document.getElementById('playerView').classList.remove('active');
-  const pfb = document.getElementById('playerFooter'); if (pfb) pfb.style.display = 'none';
   const tbw = document.getElementById('theaterBtnWrap'); if (tbw) tbw.style.display = 'none';
   currentStream = null;
   if (pushHistory) try { history.pushState({}, '', location.pathname); } catch(e) {}
@@ -2014,7 +2012,6 @@ function selectStream(idx, pushHistory=true) {
   const ptt = document.getElementById('playerTopTitle'); if (ptt) ptt.textContent = s.title;
   document.getElementById('playerTopDate').textContent = '';
   document.getElementById('theaterBtnWrap').style.display = 'flex';
-  const pf = document.getElementById('playerFooter'); if (pf) pf.style.display = 'flex';
   const tbw2 = document.getElementById('theaterBarWrap'); if (tbw2) tbw2.style.display = 'flex';
   renderVideoPlayer(currentStream, 0);
   renderVideoMeta(currentStream);
