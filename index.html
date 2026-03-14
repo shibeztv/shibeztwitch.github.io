@@ -2020,35 +2020,35 @@ function extractDateFromTitle(title) {
 function groupIntoStreams(videos) {
   // Filter out videos under 10 minutes
   videos = videos.filter(v => v.duration >= 600);
+
   const byDay = {};
+  let noDateIdx = 0;
   videos.forEach(v => {
-    // Try to extract date from title first (more accurate than upload date)
+    // Primary key: date extracted from title (e.g. "JUNE 09 2022" at end of title)
     const titleDay = extractDateFromTitle(v.title);
-    // Fallback: upload date minus 1 day (streams are often uploaded the next day)
-    let fallbackDay = v.publishedAt.slice(0,10);
-    if (!titleDay) {
-      const d = new Date(v.publishedAt);
-      d.setUTCDate(d.getUTCDate() - 1);
-      fallbackDay = d.toISOString().slice(0,10);
+    if (titleDay) {
+      if (!byDay[titleDay]) byDay[titleDay] = [];
+      byDay[titleDay].push(v);
+    } else {
+      // No date in title — treat as standalone entry keyed by upload timestamp
+      const key = `_nodate_${v.publishedAt}_${noDateIdx++}`;
+      byDay[key] = [v];
     }
-    const day = titleDay || fallbackDay;
-    if (!byDay[day]) byDay[day] = [];
-    byDay[day].push(v);
   });
+
   return Object.entries(byDay)
-    .sort((a,b) => b[0].localeCompare(a[0]))
-    .map(([day, vids]) => {
+    .sort((a, b) => {
+      // Sort by the date portion — nodate entries use publishedAt for ordering
+      const da = a[0].startsWith('_nodate_') ? a[1][0].publishedAt.slice(0,10) : a[0];
+      const db = b[0].startsWith('_nodate_') ? b[1][0].publishedAt.slice(0,10) : b[0];
+      return db.localeCompare(da); // newest first
+    })
+    .map(([key, vids]) => {
       vids.sort((a,b) => a.publishedAt.localeCompare(b.publishedAt));
+      const day = key.startsWith('_nodate_') ? vids[0].publishedAt.slice(0,10) : key;
       const totalDuration = vids.reduce((s,v) => s + v.duration, 0);
       const games = parseGamesFromDescriptions(vids);
-      return {
-        day,
-        vids,
-        totalDuration,
-        games,
-        thumb: vids[0].thumb,
-        title: buildStreamTitle(vids, day),
-      };
+      return { day, vids, totalDuration, games, thumb: vids[0].thumb, title: buildStreamTitle(vids, day) };
     });
 }
 
