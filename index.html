@@ -1378,7 +1378,7 @@
           <!-- SHOP OVERLAY — only over canvas, topbar stays visible -->
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px">🛒 UPGRADE SHOP</div>
-          <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 Coins: <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> &nbsp;·&nbsp; Press E / Tab to close</div>
+          <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px;display:flex;gap:16px;align-items:center">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span>&nbsp;coins &nbsp;·&nbsp; ⭐ <span id="shopUpgradePoints" style="color:#a3e635;font-weight:900">0</span>&nbsp;upgrade pts &nbsp;·&nbsp; E/Tab to close</div>
           <div id="shopGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;max-width:700px;overflow-y:auto;max-height:60vh"></div>
           </div>
         </div>
@@ -4341,8 +4341,17 @@ function startSpace() {
   }));
 
   // ── Upgrades
-  const upgrades = window._spaceUpgrades||(window._spaceUpgrades={speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,friends:0});
-  let activeWeapon = window._spaceWeapon||'default'; // persists across runs
+  // Upgrades reset each run — only coins + upgrade points persist
+  const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,friends:0});
+  const upgrades = _freshUpgrades();
+  window._spaceUpgrades = upgrades; // expose for current run only
+  // Upgrade points: earned 1 per 50 score, persist across runs
+  if (!window._spaceUpgradePoints) window._spaceUpgradePoints = 0;
+  let upgradePoints = window._spaceUpgradePoints;
+  function saveUpgradePoints(n){ upgradePoints=n; window._spaceUpgradePoints=n; const el=document.getElementById('shopUpgradePoints'); if(el) el.textContent=upgradePoints; }
+  let activeWeapon = 'default'; // resets each run (weapons re-unlocked via points)
+  // Track which weapons are unlocked this run
+  const unlockedWeapons = new Set(['default']);
   const UPGRADE_DEFS = [
     {key:'speed',      label:'🚀 Move Speed',    desc:'+8% speed per lvl',      maxLvl:20, cost:l=>Math.floor(1+l*1.4)},
     {key:'atkSpeed',   label:'⚡ Attack Speed',   desc:'-6% shoot cooldown',     maxLvl:20, cost:l=>Math.floor(1+l*1.4)},
@@ -4365,32 +4374,39 @@ function startSpace() {
     {key:'towerGun',    label:'🗼 Tower Gun',     desc:'8-shot radial burst in all directions',         color:'#a855f7', cost:35},
     {key:'flamethrower',label:'🔥 Flamethrower',  desc:'Short range cone, deals burn over time',        color:'#ff4400', cost:40},
     {key:'multiGun',    label:'💥 Multi-Gun',     desc:'6-way spread, medium dmg',                      color:'#4ade80', cost:50},
-    {key:'friends',     label:'👾 Friends',       desc:'4 orbital followers that auto-shoot enemies',   color:'#f0abfc', cost:60},
+    {key:'friends',     label:'👾 Friends',       desc:'Orbital followers (1 per lvl, max 8). Each auto-aims and shoots!', color:'#f0abfc', cost:25, maxLvl:8, costPerLvl:l=>Math.floor(25+l*18)},
   ];
 
   window.renderShopGrid = function renderShopGrid() {
     const grid=document.getElementById('shopGrid'); if(!grid) return;
     document.getElementById('shopCoinsDisp').textContent=coins;
+    const _upEl=document.getElementById('shopUpgradePoints');if(_upEl)_upEl.textContent=upgradePoints;
 
-    // ── Stat upgrades
+    // ── Stat upgrades (cost upgrade points ⭐, not coins)
     const statHtml = UPGRADE_DEFS.map(def=>{
-      const lvl=upgrades[def.key],maxed=lvl>=def.maxLvl,cost=def.cost(lvl),canAfford=coins>=cost&&!maxed;
-      return `<div style="background:rgba(255,255,255,0.05);border:1px solid ${canAfford?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.1)'};border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+      const lvl=upgrades[def.key],maxed=lvl>=def.maxLvl,cost=def.cost(lvl),canAfford=upgradePoints>=cost&&!maxed;
+      return `<div style="background:rgba(255,255,255,0.05);border:1px solid ${canAfford?'rgba(163,230,53,0.4)':'rgba(255,255,255,0.1)'};border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
         <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#fff">${def.label}</div>
         <div style="font-family:var(--mono);font-size:9px;color:#aaa">${def.desc}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
           <div style="font-family:var(--mono);font-size:9px;color:#bbb">Lv ${lvl}/${def.maxLvl}</div>
           ${maxed?'<span style="font-family:var(--mono);font-size:10px;color:#4ade80;font-weight:700">MAX</span>'
-          :`<button onclick="spaceBuyUpgrade('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">🪙 ${cost}</button>`}
+          :`<button onclick="spaceBuyUpgrade('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(163,230,53,0.15)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(163,230,53,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#a3e635':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">⭐ ${cost}</button>`}
         </div>
       </div>`;
     }).join('');
 
     // ── Weapon selector
     const weaponHtml = WEAPON_DEFS.map(def=>{
-      const owned = def.cost===0 || upgrades[def.key]>0;
+      const isFriendsKey = def.key==='friends';
+      const owned = def.cost===0 || unlockedWeapons.has(def.key);
       const active = activeWeapon===def.key;
-      const canAfford = coins>=def.cost && !owned;
+      const friendsLvl = upgrades.friends||0;
+      const friendsMax = def.maxLvl||8;
+      const friendsCost = def.costPerLvl ? def.costPerLvl(friendsLvl) : def.cost;
+      const canAfford = isFriendsKey
+        ? (coins>=friendsCost && friendsLvl<friendsMax)
+        : (coins>=def.cost && !owned);
       const isFriends = def.key==='friends';
       const colSpan = isFriends ? 'grid-column:1/-1;' : '';
       return `<div style="${colSpan}background:${active?'rgba(100,200,255,0.12)':'rgba(255,255,255,0.04)'};border:2px solid ${active?def.color:'rgba(255,255,255,0.1)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:${isFriends?'row':'column'};align-items:${isFriends?'center':'flex-start'};gap:${isFriends?'16px':'5px'};position:relative">
@@ -4400,7 +4416,11 @@ function startSpace() {
         <div style="margin-top:${isFriends?'0':'4px'};flex-shrink:0">
           ${active
             ? `<span style="font-family:var(--mono);font-size:10px;color:${def.color};font-weight:700">✓ Equipped</span>`
-            : owned
+            : (isFriendsKey && owned)
+              ? (friendsLvl>=friendsMax
+                ? `<span style="font-family:var(--mono);font-size:10px;color:#4ade80;font-weight:700">MAX (${friendsLvl}/${friendsMax})</span>`
+                : `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:pointer">+1 follower (${friendsLvl}/${friendsMax}) 🪙 ${friendsCost}</button>`)
+              : owned
               ? `<button onclick="spaceEquipWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:3px 10px;border-radius:3px;cursor:pointer">EQUIP</button>`
               : `<button onclick="spaceBuyWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">🪙 ${def.cost}</button>`
           }
@@ -4418,6 +4438,17 @@ function startSpace() {
 
   window.spaceBuyWeapon = function(key) {
     const def = WEAPON_DEFS.find(d=>d.key===key); if(!def) return;
+    if(key==='friends'){
+      const curLvl = upgrades.friends||0;
+      const maxL = def.maxLvl||8;
+      if(curLvl>=maxL) return;
+      const cost = def.costPerLvl ? def.costPerLvl(curLvl) : def.cost;
+      if(coins<cost) return;
+      saveCoins(coins-cost);
+      upgrades.friends = curLvl+1;
+      activeWeapon='friends'; window._spaceWeapon='friends';
+      sfxPowerup(); renderShopGrid(); return;
+    }
     if(coins<def.cost) return;
     saveCoins(coins-def.cost);
     upgrades[key]=1;
@@ -4433,8 +4464,8 @@ function startSpace() {
   window.spaceBuyUpgrade = function(key) {
     const def=UPGRADE_DEFS.find(d=>d.key===key); if(!def) return;
     const lvl=upgrades[key]; if(lvl>=def.maxLvl) return;
-    const cost=def.cost(lvl); if(coins<cost) return;
-    saveCoins(coins-cost); upgrades[key]++; renderShopGrid();
+    const cost=def.cost(lvl); if(upgradePoints<cost) return;
+    saveUpgradePoints(upgradePoints-cost); upgrades[key]++; renderShopGrid();
     if(key==='maxHp'){lives=Math.min(3+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
   };
 
@@ -4443,7 +4474,7 @@ function startSpace() {
   function getBulletCount() { return 1+upgrades.multishot+(activePowerup==='triple'?2:activePowerup==='double'?1:0); }
   function getBulletDmg()   { return 1+upgrades.damage; }
   function getBulletSize()   { return 1+upgrades.bulletSize*0.2; }
-  function getCoinRange()    { return 20*(1+upgrades.coinMagnet*0.15); }
+  function getCoinRange()    { return 38*(1+upgrades.coinMagnet*0.15); }
   function getMaxHp()       { return 3+upgrades.maxHp; }
 
   // Ship can move anywhere on screen
@@ -4586,7 +4617,7 @@ function startSpace() {
   let _followers=[]; // orbital friend ships
   let _followerShootTimers=[];
   const FOLLOWER_ORBIT_R=75;
-  const NUM_FOLLOWERS=4;
+  // NUM_FOLLOWERS is now dynamic: upgrades.friends (1-8)
 
   function fireBulletDir() {
     if(shootCooldown>0) return;
@@ -4699,8 +4730,17 @@ function startSpace() {
   }
 
   function resetSpace(){
+    // Award upgrade points for last run (1 per 50 score)
+    if(score>0){
+      const earned=Math.floor(score/50);
+      if(earned>0) saveUpgradePoints(upgradePoints+earned);
+    }
+    // Wipe all upgrades for new run
+    Object.keys(upgrades).forEach(k=>{ upgrades[k]=0; });
+    activeWeapon='default';
+    unlockedWeapons.clear(); unlockedWeapons.add('default');
     ship={x:W/2,y:H/2,vx:0,vy:0,angle:0};
-    // new random pilot
+    // New random pilot
     if(_spaceEmotes.length>1){let n;do{n=Math.floor(Math.random()*_spaceEmotes.length);}while(n===_pilotIdx);_pilotIdx=n;}
     const ne=_spaceEmotes[_pilotIdx];shipImg.src=ne.url;shipImg.crossOrigin='anonymous';
     bullets=[];enemies=[];particles=[];drops=[];powerupDrops=[];
@@ -4853,6 +4893,8 @@ function startSpace() {
       // ── Followers (Friends weapon)
       if(activeWeapon==='friends'){
         // Ensure followers exist
+        const NUM_FOLLOWERS=Math.max(1,upgrades.friends||1);
+        while(_followers.length>NUM_FOLLOWERS)_followers.pop();
         while(_followers.length<NUM_FOLLOWERS){
           const idx=_followers.length;
           _followers.push({angle:(idx/NUM_FOLLOWERS)*Math.PI*2, shootTimer:Math.floor(Math.random()*30)});
@@ -4862,7 +4904,7 @@ function startSpace() {
         _followers=[];
       }
       _followers.forEach((f,fi)=>{
-        f.angle+=0.035; // orbit speed
+        f.angle+=0.010; // slower orbit so emotes are visible
         f.x=ship.x+Math.cos(f.angle)*FOLLOWER_ORBIT_R;
         f.y=ship.y+Math.sin(f.angle)*FOLLOWER_ORBIT_R;
         // Auto-aim at nearest enemy
@@ -4913,7 +4955,7 @@ function startSpace() {
         // Occasionally double-spawn at high scores
         if(score>15&&Math.random()<0.3+score*0.005) spawnEnemy();
         if(score>40&&Math.random()<0.2) spawnEnemy();
-        enemyTimer=Math.max(18,80-score*0.45);
+        enemyTimer=Math.max(50,140-score*0.5);
       }
       difficulty=1+score*0.010;
 
@@ -5062,7 +5104,7 @@ function startSpace() {
 
     // Stars
     stars.forEach(s=>{
-      ctx.globalAlpha=s.a*(0.7+0.3*Math.sin(frame*0.02+s.x));
+      ctx.globalAlpha=s.a*(0.75+0.25*Math.sin(frame*0.004+s.x*0.01));
       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
     });
     ctx.globalAlpha=1;
@@ -5110,22 +5152,28 @@ function startSpace() {
         ctx.globalAlpha=t*0.6;
         ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*2,0,Math.PI*2);ctx.fill();
 
-      } else if(wt==='sniper'||b.sniper){
-        // Laser Gun — pulsing red/orange beam with glow
-        const angle=Math.atan2(b.vy,b.vx);
+      } else if(wt==='sniper'||b.laser){
+        // Laser Gun — full beam from origin across screen
+        const angle = b.angle !== undefined ? b.angle : Math.atan2(b.vy||0,b.vx||1);
         const sz=b.size||1;
+        const t=b.life!==undefined?(b.life/b.maxLife):1;
+        const beamLen=Math.sqrt(W*W+H*H)*1.1;
+        const bw=(b.width||6)*t;
         ctx.translate(b.x,b.y);ctx.rotate(angle);
-        // Glow
-        const gl=ctx.createRadialGradient(0,0,0,0,0,8*sz);
-        gl.addColorStop(0,'rgba(255,120,60,0.5)');gl.addColorStop(1,'rgba(255,80,0,0)');
-        ctx.fillStyle=gl;ctx.beginPath();ctx.arc(0,0,8*sz,0,Math.PI*2);ctx.fill();
-        // Tracer
-        const tg=ctx.createLinearGradient(-52*sz,0,0,0);
-        tg.addColorStop(0,'rgba(255,80,0,0)');tg.addColorStop(0.6,'rgba(255,140,60,0.7)');tg.addColorStop(1,'#ff6622');
-        ctx.strokeStyle=tg;ctx.lineWidth=4*sz;ctx.lineCap='round';
-        ctx.beginPath();ctx.moveTo(-52*sz,0);ctx.lineTo(0,0);ctx.stroke();
-        // Bright tip
-        ctx.fillStyle='#ffe0c0';ctx.beginPath();ctx.arc(0,0,3.5*sz,0,Math.PI*2);ctx.fill();
+        // Outer glow
+        const og=ctx.createLinearGradient(0,0,beamLen,0);
+        og.addColorStop(0,`rgba(255,100,50,${0.25*t})`);og.addColorStop(0.6,`rgba(255,60,20,${0.1*t})`);og.addColorStop(1,'rgba(255,40,0,0)');
+        ctx.strokeStyle=og;ctx.lineWidth=bw*3.5;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(beamLen,0);ctx.stroke();
+        // Core beam
+        const cg=ctx.createLinearGradient(0,0,beamLen,0);
+        cg.addColorStop(0,`rgba(255,220,180,${t})`);cg.addColorStop(0.3,`rgba(255,80,20,${0.9*t})`);cg.addColorStop(1,'rgba(255,40,0,0)');
+        ctx.strokeStyle=cg;ctx.lineWidth=bw;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(beamLen,0);ctx.stroke();
+        // Bright origin flash
+        const og2=ctx.createRadialGradient(0,0,0,0,0,bw*3);
+        og2.addColorStop(0,`rgba(255,255,200,${t})`);og2.addColorStop(1,'rgba(255,80,0,0)');
+        ctx.fillStyle=og2;ctx.beginPath();ctx.arc(0,0,bw*3,0,Math.PI*2);ctx.fill();
 
       } else if(wt==='minigun'){
         // Minigun — tiny fast yellow/white round
@@ -5285,7 +5333,7 @@ function startSpace() {
           ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillStyle='#ccc';
           ctx.fillText('Score: '+score+'  ·  Best: '+Math.max(score,parseInt(localStorage.getItem('spaceBest')||0)),W/2,H/2+W*0.06);
           ctx.font=`${Math.floor(W*0.018)}px monospace`;ctx.fillStyle='#ffd700';
-          ctx.fillText('🪙 '+coins+' coins  ·  upgrades saved',W/2,H/2+W*0.09);
+          const earnedPts=Math.floor(score/50);ctx.fillText('🪙 '+coins+' coins kept  ·  ⭐ '+(upgradePoints+(earnedPts||0))+' upgrade pts total',W/2,H/2+W*0.09);
           const best2=parseInt(localStorage.getItem('spaceBest')||'0');
           if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
         }
@@ -5294,48 +5342,37 @@ function startSpace() {
     }
 
 
-    // ── Bottom-right HP bar — compact, always visible except waiting screen
+    // ── Bottom-LEFT HP hearts — emoji, large, always visible except waiting
     if(state!=='waiting'){
       ctx.save();
       const maxHp=getMaxHp();
       const totalH=maxHp+silverLives;
-      const hpBarW=Math.min(160, totalH*18+16);
-      const hpBarH=28;
-      const hpX=W-hpBarW-10;
-      const hpY=H-hpBarH-8;
+      const hSize=30; // large emoji hearts
+      const hGap=3;
+      const hPad=10;
+      const rowW=(hSize+hGap)*totalH-hGap+hPad*2;
+      const rowH=hSize+hPad*2;
+      const hpX=10, hpY=H-rowH-8;
       // Background pill
-      ctx.globalAlpha=0.72;
-      ctx.fillStyle='rgba(10,10,25,0.85)';
-      ctx.beginPath();ctx.roundRect(hpX,hpY,hpBarW,hpBarH,8);ctx.fill();
-      ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.stroke();
+      ctx.globalAlpha=0.65;
+      ctx.fillStyle='rgba(8,8,20,0.8)';
+      ctx.beginPath();ctx.roundRect(hpX,hpY,rowW,rowH,10);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;ctx.stroke();
       ctx.globalAlpha=1;
-      // HP label
-      ctx.font='bold 9px monospace';ctx.fillStyle='rgba(255,255,255,0.35)';
-      ctx.fillText('HP',hpX+7,hpY+hpBarH*0.65);
-      // Draw heart segments
-      const segW=Math.min(14, (hpBarW-28)/Math.max(totalH,1));
-      const segH=10; const segY=hpY+(hpBarH-segH)/2;
+      // Hearts
+      ctx.font=`${hSize}px serif`;
       for(let i=0;i<totalH;i++){
-        const sx=hpX+22+i*(segW+2);
-        const isBonus=i<silverLives;
-        const hi=i-silverLives;
-        const filled=isBonus||(hi<lives);
-        ctx.beginPath();ctx.roundRect(sx,segY,segW,segH,3);
-        if(filled){
-          ctx.fillStyle=isBonus?'#ffe066':'#ff4466';
-          ctx.globalAlpha=isBonus?0.95:1;
+        const hx=hpX+hPad+i*(hSize+hGap);
+        const hy=hpY+hPad+hSize*0.85;
+        if(i<silverLives){
+          ctx.globalAlpha=0.95;ctx.fillText('💛',hx,hy);
         } else {
-          ctx.fillStyle='rgba(255,255,255,0.1)';
-          ctx.globalAlpha=1;
+          const hi=i-silverLives;
+          ctx.globalAlpha=hi<lives?1:0.15;
+          ctx.fillText('❤️',hx,hy);
         }
-        ctx.fill();
-        if(filled){
-          // inner shine
-          ctx.fillStyle='rgba(255,255,255,0.25)';
-          ctx.beginPath();ctx.roundRect(sx+1,segY+1,segW-2,4,2);ctx.fill();
-        }
-        ctx.globalAlpha=1;
       }
+      ctx.globalAlpha=1;
       ctx.restore();
     }
     _spaceRAF=requestAnimationFrame(loop);
