@@ -4394,7 +4394,7 @@ function startSpace() {
 
   // ── Preload emotes (pilot emotes for UFO + enemies)
   const shipEmote = _spaceEmotes[Math.floor(Math.random() * _spaceEmotes.length)];
-  const _shipUrl = shipEmote.animated ? `https://cdn.7tv.app/emote/${shipEmote.id}/2x.gif` : shipEmote.url;
+  const _shipUrl = shipEmote.id ? `https://cdn.7tv.app/emote/${shipEmote.id}/2x.webp` : shipEmote.url;
   const shipImg = new Image(); shipImg.crossOrigin='anonymous'; shipImg.src = _shipUrl;
 
   const enemyPool = _spaceEmotes.filter(e=>e.url!==shipEmote.url).sort(()=>Math.random()-0.5).slice(0,24);
@@ -4403,17 +4403,17 @@ function startSpace() {
   if(!_imgPool){
     _imgPool = document.createElement('div');
     _imgPool.id='spaceImgPool';
-    _imgPool.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:-1;';
+    _imgPool.style.cssText='position:fixed;left:-9999px;top:0;width:100px;height:600px;overflow:visible;pointer-events:none;z-index:-1;opacity:0.01;';
     document.body.appendChild(_imgPool);
   } else {
     _imgPool.innerHTML='';
   }
   const enemyImgs = enemyPool.map(e=>{
-    const animated = e.animated || false;
-    const url = animated ? `https://cdn.7tv.app/emote/${e.id}/2x.gif` : e.url;
+    // Use /2x.webp for all — animated WebP plays in DOM just like GIF, canvas drawImage grabs current frame
+    const url = e.id ? `https://cdn.7tv.app/emote/${e.id}/2x.webp` : e.url;
     const i=new Image(); i.crossOrigin='anonymous'; i.src=url;
-    i.style.cssText='position:absolute;width:32px;height:32px;image-rendering:auto;';
-    if(_imgPool) _imgPool.appendChild(i); // in DOM = GIF animates live
+    i.style.cssText='position:absolute;width:52px;height:52px;image-rendering:auto;';
+    if(_imgPool) _imgPool.appendChild(i); // MUST stay in DOM for animated WebP to play
     return i;
   });
   // Also add ship img to pool
@@ -4435,7 +4435,7 @@ function startSpace() {
   if(_imgPool){ _planetEmoteImg.style.cssText='position:absolute;width:1px;height:1px;'; _imgPool.appendChild(_planetEmoteImg); }
 
   const planets = Array.from({length:5}, (_,pi)=>({
-    x: W+400+pi*700+Math.random()*300, y:80+Math.random()*(H-160),
+    x: pi<3 ? Math.random()*W : W+200+pi*600+Math.random()*300, y:80+Math.random()*(H-160),
     r:10+Math.random()*14, speed:0.07+Math.random()*0.08,
     hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
     rings:Math.random()>0.5, ringTilt:0.22+Math.random()*0.18,
