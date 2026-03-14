@@ -1358,7 +1358,7 @@
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <button id="spacePauseBtn" onclick="toggleSpacePause()" title="Pause [P]" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:4px 9px;border-radius:4px;font-family:var(--mono)">⏸</button>
             <div style="display:flex;flex-direction:column;gap:1px">
-              <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">SPACEBEZ <span style="font-weight:400;color:#555;font-size:10px">1.5</span></span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">SPACEBEZ <span style="font-weight:400;color:#555;font-size:10px">1.5.2</span></span>
               <span style="font-family:var(--mono);font-size:9px;color:#444">WASD · Space/Click · E shop · P pause</span>
             </div>
           </div>
@@ -1387,10 +1387,10 @@
 
           <!-- SHOP OVERLAY — only over canvas, topbar stays visible -->
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
-          <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px">🛒 UPGRADE SHOP</div>
+          <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><img src="https://cdn.7tv.app/emote/01FC5B2AH00005D6HG0ANTP0H3/2x.webp" style="width:28px;height:28px;object-fit:contain;image-rendering:auto"> UPGRADE SHOP</div>
           <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; After Death = You keep half of current coins 🪙 + 1🪙 / every 10 score</div>
           <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:100%;max-width:900px;overflow-y:auto;max-height:68vh"></div>
-          <div class="shopMusicLabel" style="margin-top:8px;font-family:var(--mono);font-size:9px;color:#4a3a6a;letter-spacing:0.5px">♪ Shop music: Motoi Sakuraba — Majula</div>
+          <div class="shopMusicLabel" style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#6a5a9a;letter-spacing:0.5px">♪ Shop music: Motoi Sakuraba — Majula</div>
           </div>
         </div>
       </div>
@@ -4403,7 +4403,7 @@ function startSpace() {
   if(!_imgPool){
     _imgPool = document.createElement('div');
     _imgPool.id='spaceImgPool';
-    _imgPool.style.cssText='position:fixed;left:-9999px;top:0;width:100px;height:600px;overflow:visible;pointer-events:none;z-index:-1;opacity:0.01;';
+    _imgPool.style.cssText='position:fixed;left:0;top:-9999px;width:auto;height:auto;pointer-events:none;z-index:-9999;visibility:hidden;';
     document.body.appendChild(_imgPool);
   } else {
     _imgPool.innerHTML='';
@@ -4412,13 +4412,23 @@ function startSpace() {
     // Use /2x.webp for all — animated WebP plays in DOM just like GIF, canvas drawImage grabs current frame
     const url = e.id ? `https://cdn.7tv.app/emote/${e.id}/2x.webp` : e.url;
     const i=new Image(); i.crossOrigin='anonymous'; i.src=url;
-    i.style.cssText='position:absolute;width:52px;height:52px;image-rendering:auto;';
+    i.style.cssText='display:inline-block;width:52px;height:52px;image-rendering:auto;';
     if(_imgPool) _imgPool.appendChild(i); // MUST stay in DOM for animated WebP to play
     return i;
   });
   // Also add ship img to pool
-  shipImg.style.cssText='position:absolute;width:32px;height:32px;image-rendering:auto;';
+  shipImg.style.cssText='display:inline-block;width:52px;height:52px;image-rendering:auto;';
   if(_imgPool) _imgPool.appendChild(shipImg);
+
+  // Coin emote images
+  const _coinImg = new Image(); _coinImg.crossOrigin='anonymous';
+  _coinImg.src='https://cdn.7tv.app/emote/01HK8SDB6G000870SVK5KGZYWD/2x.webp';
+  _coinImg.style.cssText='display:inline-block;width:32px;height:32px;';
+  if(_imgPool) _imgPool.appendChild(_coinImg);
+  const _silverCoinImg = new Image(); _silverCoinImg.crossOrigin='anonymous';
+  _silverCoinImg.src='https://cdn.7tv.app/emote/01HK8SDB6G000870SVK5KGZYWD/2x.webp';
+  _silverCoinImg.style.cssText='display:inline-block;width:32px;height:32px;';
+  if(_imgPool) _imgPool.appendChild(_silverCoinImg);
 
   // ── Stars
   const stars = Array.from({length:200}, ()=>({
@@ -4434,14 +4444,21 @@ function startSpace() {
   _planetEmoteImg.src='https://cdn.7tv.app/emote/01F00Z3A9G0007E4VV006YKSK9/2x.webp';
   if(_imgPool){ _planetEmoteImg.style.cssText='position:absolute;width:1px;height:1px;'; _imgPool.appendChild(_planetEmoteImg); }
 
-  const planets = Array.from({length:5}, (_,pi)=>({
-    x: pi<3 ? Math.random()*W : W+200+pi*600+Math.random()*300, y:80+Math.random()*(H-160),
-    r:10+Math.random()*14, speed:0.07+Math.random()*0.08,
-    hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
-    rings:Math.random()>0.5, ringTilt:0.22+Math.random()*0.18,
-    atmOpacity:0.25+Math.random()*0.4,
-    seed:Math.random()*1000,
-  }));
+  const _pAngles=[0,Math.PI*0.5,Math.PI,Math.PI*1.5,Math.PI*0.25];
+  const planets = Array.from({length:5}, (_,pi)=>{
+    const spd=0.07+Math.random()*0.08;
+    const ang=_pAngles[pi]+(Math.random()-0.5)*0.4;
+    return {
+      x: pi<3 ? Math.random()*W : W+200+pi*400+Math.random()*200,
+      y: pi<3 ? 80+Math.random()*(H-160) : 80+Math.random()*(H-160),
+      r:10+Math.random()*14, speed:spd,
+      vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+      hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
+      rings:Math.random()>0.5, ringTilt:0.22+Math.random()*0.18,
+      atmOpacity:0.25+Math.random()*0.4,
+      seed:Math.random()*1000,
+    };
+  });
 
   // ── Upgrades
   // Upgrades reset each run — only coins + upgrade points persist
@@ -4951,7 +4968,7 @@ function startSpace() {
     const speed=0.3+Math.random()*0.2; // very slow
     const timeMins=survivalFrames/3600;
     const dmgScale=Math.max(1,getBulletDmg()*0.7);
-    const titanHp=Math.ceil((30+timeMins*8)*dmgScale); // very tanky
+    const titanHp=Math.ceil((180+timeMins*48)*dmgScale); // 1.5.2: 6x tankier
     spawnParticles(W/2,H/2,'#ff6600',20);
     enemies.push({
       x,y,img,size,sizeScale:4,isBoss:false,isBig:false,isTitan:true,
@@ -4965,7 +4982,7 @@ function startSpace() {
 
   function spawnDrop(x,y,type){
     if(type==='coin')drops.push({x,y,vx:0,vy:0,life:99999,collected:false,settled:true});
-    else powerupDrops.push({x,y,vx:(Math.random()-0.5)*1.0,vy:-1.2,type,life:600,collected:false});
+    else powerupDrops.push({x,y,vx:0,vy:0,type,life:600,collected:false,freezeFrames:180});
   }
 
   function spawnParticles(x,y,color,n=10){
@@ -5236,8 +5253,8 @@ function startSpace() {
       const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
       // Ease-in: very slow for first minute, gradually faster
       const secIn=survivalFrames/60;
-      const easeBase= secIn<30 ? 380 : secIn<60 ? 310 : secIn<120 ? 240 : secIn<240 ? 175 : 130; // 1.4: slower ramp
-      const scoreRamp=Math.max(0.6,1-score*0.004); // 1.4: slower score ramp
+      const easeBase= secIn<30 ? 450 : secIn<60 ? 370 : secIn<120 ? 290 : secIn<240 ? 210 : 160; // 1.5.2: even slower ramp
+      const scoreRamp=Math.max(0.65,1-score*0.003); // 1.5.2: slower score ramp
       const baseSpawn=Math.floor(easeBase*scoreRamp);
       enemyTimer=Math.max(12,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
@@ -5412,7 +5429,7 @@ function startSpace() {
       }
 
             powerupDrops=powerupDrops.filter(d=>{
-        // No gravity — stay exactly where dropped
+        if(d.freezeFrames>0){d.freezeFrames--;} else if(d.vx||d.vy){d.x+=d.vx;d.y+=d.vy;}
         d.life--;if(d.life<=0)return false;
         if(Math.sqrt((d.x-ship.x)**2+(d.y-ship.y)**2)<38&&!d.collected){
           d.collected=true;const pt=POWERUP_TYPES.find(p=>p.type===d.type);
@@ -5483,7 +5500,13 @@ function startSpace() {
       particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=0.93;p.vy*=0.93;p.life--;});
       particles=particles.filter(p=>p.life>0);
       // stars: no movement, fade only
-      planets.forEach(p=>{p.x-=p.speed;if(p.x<-p.r*3){p.x=W+p.r*2+Math.random()*500;p.y=80+Math.random()*(H-160);}});
+      planets.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<-p.r*3){p.x=W+p.r*2;p.y=80+Math.random()*(H-160);}
+        if(p.x>W+p.r*3){p.x=-p.r*2;p.y=80+Math.random()*(H-160);}
+        if(p.y<-p.r*3){p.y=H+p.r*2;p.x=Math.random()*W;}
+        if(p.y>H+p.r*3){p.y=-p.r*2;p.x=Math.random()*W;}
+      });
     }
 
     // ── DRAW ──
@@ -5506,23 +5529,28 @@ function startSpace() {
     // Coins drawn first (powerups draw on top)
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      const cr=d.green?11:d.silver?9:7;
-      const cfill=d.green?'#22c55e':d.silver?'#d1d5db':'#ffd700';
-      const cstroke=d.green?'#16a34a':d.silver?'#9ca3af':'#b8860b';
-      const clabel=d.green?'★':d.silver?'✦':'$';
+      const cr=d.green?10.7:d.silver?8.7:6.8; // 3% smaller (1.5.2)
       ctx.globalAlpha=1;
       // Glow for special coins
       if(d.silver||d.green){
+        const cfill=d.green?'#22c55e':'#d1d5db';
         const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2);
         cg.addColorStop(0,cfill+'55');cg.addColorStop(1,cfill+'00');
         ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2,0,Math.PI*2);ctx.fill();
       }
-      ctx.fillStyle=cfill;ctx.strokeStyle=cstroke;ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(d.x,d.y,cr,0,Math.PI*2);ctx.fill();ctx.stroke();
-      // 1.4: plain circle, no label text on normal coins
-      if(d.green||d.silver){
-        ctx.fillStyle='#fff';ctx.font=`bold ${d.green?9:7}px monospace`;ctx.textAlign='center';
-        ctx.fillText(clabel,d.x,d.y+(d.green?3.5:2.5));ctx.textAlign='left';
+      // Draw emote coin image
+      const _cImg = _coinImg;
+      if(_cImg&&_cImg.complete&&_cImg.naturalWidth>0){
+        const csize=cr*2;
+        if(d.silver){ctx.save();ctx.filter='grayscale(1) brightness(1.5)';ctx.globalAlpha=0.9;}
+        else if(d.green){ctx.save();ctx.filter='hue-rotate(120deg) saturate(1.5)';}
+        else ctx.save();
+        ctx.drawImage(_cImg,d.x-csize/2,d.y-csize/2,csize,csize);
+        ctx.restore();
+      } else {
+        // Fallback circle
+        ctx.fillStyle=d.green?'#22c55e':d.silver?'#d1d5db':'#ffd700';
+        ctx.beginPath();ctx.arc(d.x,d.y,cr,0,Math.PI*2);ctx.fill();
       }
       ctx.globalAlpha=1;
     });
