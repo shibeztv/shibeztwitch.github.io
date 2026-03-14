@@ -6065,6 +6065,11 @@ function startSpace() {
       }
     }
     positionEmoteOverlays();
+    // Dim emote overlay when game is not actively playing
+    if(_emoteLayer){
+      const _shopOpen = document.getElementById('spaceShop').style.display==='flex';
+      _emoteLayer.style.opacity = (state==='playing' && !_shopOpen) ? '1' : '0.15';
+    }
     _spaceRAF=requestAnimationFrame(loop);
   }
 
