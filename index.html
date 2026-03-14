@@ -4536,7 +4536,7 @@ function startSpace() {
     {key:'default',      label:'🔫 Default',       desc:'Auto-aims at nearest enemy to cursor. Scales with upgrades.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Rapid Double',      desc:'+22% attack speed & double shot',       cost:22}},
     {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, insane dmg, slow cooldown',                                    color:'#ff6644', cost:30,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces once off world edges',      cost:28}},
     {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each. Slows you 10% while firing.',            color:'#fbbf24', cost:38,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, wider spread, faster',        cost:28}},
-    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst in all directions',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Rotating Ring',     desc:'Shots orbit & rotate on spawn',          cost:32}},
+    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst in all directions',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots (2×) in a rotating circle',  cost:32}},
     {key:'flamethrower', label:'🔥 Flamethrower',   desc:'Short range cone, deals burn over time',                                            color:'#ff4400', cost:52,  tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',           desc:'Longer range + burn dmg 1/3s',           cost:35}},
     {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:65,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way, much wider spread + longer range',cost:42}},
     {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Ice cone that slows hit enemies for 1.5s. Chill aura lingers after you stop.',     color:'#88ddff', cost:48,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3-4s of continuous hits, fully freezes the enemy for 1.5-2s',cost:36}},
@@ -4716,6 +4716,7 @@ function startSpace() {
   let _titanWarning=0;
   let _nukeFlash=0, _freezeFlash=0;
   let _minigunShooting=false; // track if minigun fired this frame
+  let _towerGunBurstCount=0;  // counts bursts for tier2 double-shot every 4th
   let state='waiting', enemyTimer=90, difficulty=1, invincible=0, shootCooldown=0;
   // Multi-weapon slots: active weapons array (slot 0 = primary)
   let activeWeapon = 'default';
@@ -4806,6 +4807,7 @@ function startSpace() {
     if(nav.includes(e.key))e.preventDefault();
     if(e.type==='keydown'){
       if(e.key==='p'||e.key==='P'){toggleSpacePause();return;}
+      if((e.key==='c'||e.key==='C')&&state==='playing'){_autoShoot=!_autoShoot;sfxPowerup();return;}
       keys[e.key]=true;
       if((e.key==='e'||e.key==='E'||e.key==='Tab')&&(state==='playing'||state==='paused')){spaceShopToggle();return;}
       if((e.key===' '||e.key==='Space')&&state==='waiting'){state='playing';return;}
@@ -4820,6 +4822,7 @@ function startSpace() {
   let mouseX=W/2, mouseY=H/2;
   const onMouseMove=e=>{const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(W/r.width);mouseY=(e.clientY-r.top)*(H/r.height);};
   let mouseHeld=false;
+  let _autoShoot=false; // C key toggle — auto-fires without holding
   const onMouseDown=e=>{
     if(e.button!==0) return;
     const r=canvas.getBoundingClientRect();
@@ -4962,11 +4965,21 @@ function startSpace() {
       shootCooldown=Math.floor((upgrades.tier2_minigun?2:3)*rapidMod);
 
     } else if(wKey==='towerGun'){
-      const _rotOff=upgrades.tier2_towerGun?(frame*0.05):0;
-      for(let i=0;i<8;i++){
-        const a=(i/8)*Math.PI*2+_rotOff;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*13*rm,vy:Math.sin(a)*13*rm,dmg:dmg,size:sz*1.1,color:'#c084fc',weaponType:'dual'});
+      // Tier2: every 4th burst fires double (16 shots) in a rotating ring
+      const hasTier2=!!upgrades.tier2_towerGun;
+      if(hasTier2) _towerGunBurstCount++;
+      const isDoubleBurst=hasTier2&&(_towerGunBurstCount%4===0);
+      const shotCount=isDoubleBurst?16:8;
+      // Rotation offset — always rotates with tier2, static without
+      const _rotOff=hasTier2?(frame*0.05):0;
+      for(let i=0;i<shotCount;i++){
+        const a=(i/shotCount)*Math.PI*2+_rotOff;
+        const spd=isDoubleBurst?15*rm:13*rm; // slightly faster on double burst
+        const bulletSz=isDoubleBurst?sz*1.35:sz*1.1;
+        const col=isDoubleBurst?'#e879f9':'#c084fc'; // brighter purple on double burst
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:dmg,size:bulletSz,color:col,weaponType:'dual'});
       }
+      if(isDoubleBurst) spawnParticles(ship.x,ship.y,'#e879f9',10); // visual feedback
       shootCooldown=Math.floor(44*rapidMod);
 
     } else if(wKey==='flamethrower'){
@@ -5072,13 +5085,17 @@ function startSpace() {
   }
 
   function spawnTitan() {
-    const img=enemyImgs[Math.floor(Math.random()*enemyImgs.length)];
-    // Always spawn from right edge, center-ish
+    const titanEmoteIdx=Math.floor(Math.random()*enemyPool.length);
+    const img=enemyImgs[titanEmoteIdx];
+    const titanEmoteName=(enemyPool[titanEmoteIdx]?.name)||'Unknown';
+    const _titanSubtitles=['The Doubtful','The Questioner','Bringer of Doubt','The Skeptic','Lord of Disbelief','The Uncertain','Shadow of Doubt','Eternal Doubter','The Unconvinced','Harbinger of Sus'];
+    const titanSubtitle=_titanSubtitles[Math.floor(Math.random()*_titanSubtitles.length)];
+    const titanName=`${titanEmoteName}\n${titanSubtitle}`;
     const size=90+Math.random()*40;
     const x=cam.x+W+size, y=cam.y+H*0.3+Math.random()*H*0.4;
     const tx=ship.x, ty=ship.y;
     const dx=tx-x, dy=ty-y, len=Math.sqrt(dx*dx+dy*dy)||1;
-    const speed=(0.3+Math.random()*0.2)*0.90; // very slow, 10% slower
+    const speed=(0.3+Math.random()*0.2)*0.90;
     const timeMins=survivalFrames/3600;
     const dmgScale=Math.max(1,getBulletDmg()*0.7);
     const titanHp=Math.ceil((180+timeMins*48)*dmgScale);
@@ -5087,10 +5104,10 @@ function startSpace() {
       x,y,img,size,sizeScale:4,isBoss:false,isBig:false,isTitan:true,
       vx:(dx/len)*speed,vy:(dy/len)*speed,
       hp:titanHp,maxHp:titanHp,
-      age:0,wobble:false,wobbleAmp:0,wobbleFreq:0
+      age:0,wobble:false,wobbleAmp:0,wobbleFreq:0,
+      titanName, // emote name + subtitle
     });
-    // Flash warning on canvas
-    _titanWarning=90; // frames to show warning
+    _titanWarning=90;
   }
 
   function spawnDrop(x,y,type){
@@ -5121,7 +5138,7 @@ function startSpace() {
     score=0;lives=getMaxHp();frame=0;survivalFrames=0;
     try{_spaceDeathSfxPlayer?.pauseVideo();_spaceDeathSfxPlayer?.seekTo(0,true);}catch(e){}
     state='playing';enemyTimer=90;difficulty=1;invincible=0;shootCooldown=0;_deathFrame=0;silverLives=0;
-    _nukeFlash=0;_freezeFlash=0;_minigunShooting=false;
+    _nukeFlash=0;_freezeFlash=0;_minigunShooting=false;_towerGunBurstCount=0;_autoShoot=false;
     activeWeapon='default';activeWeapons=['default'];
     window._spaceWeapon='default';
     // Pick a new random track on retry
@@ -5361,7 +5378,7 @@ function startSpace() {
       // Camera follows ship, clamped to world
       cam.x=Math.max(0,Math.min(WW-W, ship.x-W/2));
       cam.y=Math.max(0,Math.min(WH-H, ship.y-H/2));
-      if(keys[' ']||keys['Space']||mouseHeld){
+      if(keys[' ']||keys['Space']||mouseHeld||_autoShoot){
         fireBulletDir(); // primary slot (activeWeapon)
         const maxSlots=getMaxWeaponSlots();
         for(let si=1;si<maxSlots&&si<activeWeapons.length;si++){
@@ -5439,6 +5456,9 @@ function startSpace() {
             const slotLabel=maxSlots>1?`<span style="color:#666;font-size:9px;margin-right:2px">S${si+1}:</span>`:'';
             hudParts.push(`<span style="display:inline-flex;align-items:center;color:${_wdef.color};font-weight:700;font-size:13px;border-right:1px solid rgba(255,255,255,0.12);padding-right:8px;margin-right:2px">${slotLabel}${_dispName}</span>`);
           }
+        }
+        if(_autoShoot){
+          hudParts.push(`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(96,221,255,0.12);border:1px solid rgba(96,221,255,0.45);border-radius:3px;padding:1px 6px"><span style="color:#60ddff;font-weight:900;font-size:9px">🔒 AUTO-FIRE</span><span style="color:#aaa;font-size:8px">C to toggle</span></span>`);
         }
         activePowerups.forEach((t,key)=>{
           const pd=POWERUP_TYPES.find(p=>p.type===key);
@@ -5858,9 +5878,22 @@ function startSpace() {
     });
     ctx.globalAlpha=1;
 
-    // World-edge glow when near boundary
-    {const ex=Math.min(cam.x,cam.y,WW-W-cam.x,WH-H-cam.y);
-    if(ex<150){ctx.save();ctx.globalAlpha=(1-ex/150)*0.35;ctx.fillStyle='#2244aa';ctx.fillRect(0,0,W,H);ctx.restore();}}
+    // ── Permanent world-edge borders (always visible when at edge of map)
+    // Show a solid colored stripe on each side where the world boundary is
+    ctx.save();
+    const edgeBorderW=8; // border thickness in px
+    ctx.fillStyle='rgba(60,100,220,0.55)';
+    if(cam.x<=0)         ctx.fillRect(0,0,edgeBorderW,H);           // left edge
+    if(cam.x>=WW-W)      ctx.fillRect(W-edgeBorderW,0,edgeBorderW,H); // right edge
+    if(cam.y<=0)         ctx.fillRect(0,0,W,edgeBorderW);            // top edge
+    if(cam.y>=WH-H)      ctx.fillRect(0,H-edgeBorderW,W,edgeBorderW); // bottom edge
+    // Inner glow line on each active edge
+    ctx.fillStyle='rgba(100,160,255,0.25)';
+    if(cam.x<=0)         ctx.fillRect(edgeBorderW,0,6,H);
+    if(cam.x>=WW-W)      ctx.fillRect(W-edgeBorderW-6,0,6,H);
+    if(cam.y<=0)         ctx.fillRect(0,edgeBorderW,W,6);
+    if(cam.y>=WH-H)      ctx.fillRect(0,H-edgeBorderW-6,W,6);
+    ctx.restore();
 
     // ── World-space rendering (camera translate)
     ctx.save();
@@ -6165,13 +6198,6 @@ function startSpace() {
         ctx.strokeStyle='#ff6600';ctx.lineWidth=4;
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();
         ctx.globalAlpha=1;
-        // Exclamation mark above boss
-        const exSize=Math.floor(e.size*0.18+16);
-        ctx.font=`bold ${exSize}px monospace`;ctx.textAlign='center';
-        ctx.shadowColor='#ff4400';ctx.shadowBlur=8;
-        ctx.fillStyle='#ffdd00';
-        ctx.fillText('❗',e.x,e.y-e.size*0.58);
-        ctx.shadowBlur=0;ctx.textAlign='left';
         ctx.restore();
       } else if(e.isBig){
         ctx.save();ctx.globalAlpha=0.22+0.1*Math.sin(frame*0.06);
@@ -6202,17 +6228,41 @@ function startSpace() {
       ctx.fillStyle='#111';ctx.fillRect(e.x-e.size/2,bary,e.size,barh);
       ctx.fillStyle=e.isTitan?'#ff8800':e.isBoss?'#ff6600':e.isBig?'#ff2244':'#fc5c7d';
       ctx.fillRect(e.x-e.size/2,bary,e.size*(e.hp/e.maxHp),barh);
-      if(e.isTitan){
-        ctx.font='bold 9px monospace';ctx.fillStyle='#ffcc66';ctx.textAlign='center';
-        ctx.fillText(e.hp+'/'+e.maxHp,e.x,bary+barh+9);ctx.textAlign='left';
+
+      if(e.isTitan&&e.titanName){
+        ctx.save();ctx.textAlign='center';
+        // HP numbers — big enough to read
+        const thpPx=Math.floor(e.size*0.095+10);
+        ctx.font=`bold ${thpPx}px monospace`;
+        ctx.shadowColor='#000';ctx.shadowBlur=5;
+        ctx.fillStyle='#ffcc66';ctx.globalAlpha=1;
+        ctx.fillText(`${e.hp} / ${e.maxHp}`,e.x,bary+barh+thpPx+2);
+        // Emote name line
+        const parts=e.titanName.split('\n');
+        const tnamePx=Math.floor(e.size*0.11+12);
+        ctx.font=`900 ${tnamePx}px monospace`;
+        ctx.shadowColor='#cc4400';ctx.shadowBlur=14;
+        ctx.fillStyle='#ff9944';ctx.globalAlpha=1;
+        ctx.fillText(parts[0]||'',e.x,bary+barh+thpPx+tnamePx+6);
+        // Subtitle line
+        if(parts[1]){
+          const tsubPx=Math.floor(tnamePx*0.75);
+          ctx.font=`bold ${tsubPx}px monospace`;
+          ctx.shadowColor='#880000';ctx.shadowBlur=8;
+          ctx.fillStyle='#dd7733';ctx.globalAlpha=0.9;
+          ctx.fillText(parts[1],e.x,bary+barh+thpPx+tnamePx+tsubPx+10);
+        }
+        ctx.shadowBlur=0;ctx.textAlign='left';ctx.restore();
       }
+
       if(e.isBoss&&e.bossName){
         ctx.save();ctx.textAlign='center';
         // HP numbers
         const hpFontPx=Math.floor(e.size*0.055+9);
         ctx.font=`bold ${hpFontPx}px monospace`;ctx.fillStyle='#fff';ctx.globalAlpha=0.9;
+        ctx.shadowColor='#000';ctx.shadowBlur=4;
         ctx.fillText(`${e.hp} / ${e.maxHp}`,e.x,bary+barh+hpFontPx+1);
-        // Boss name — two lines: emote name (bright orange) + subtitle (muted)
+        // Boss name — two lines
         const nameParts=e.bossName.split(' — ');
         const nameFontPx=Math.floor(e.size*0.065+10);
         const subFontPx=Math.floor(nameFontPx*0.78);
@@ -6224,9 +6274,10 @@ function startSpace() {
         ctx.shadowBlur=0;
         if(nameParts[1]){
           ctx.font=`bold ${subFontPx}px monospace`;ctx.fillStyle='#cc8844';ctx.globalAlpha=0.85;
+          ctx.shadowColor='#000';ctx.shadowBlur=3;
           ctx.fillText(nameParts[1],e.x,bary+barh+hpFontPx+nameFontPx+subFontPx+8);
         }
-        ctx.textAlign='left';ctx.restore();
+        ctx.shadowBlur=0;ctx.textAlign='left';ctx.restore();
       }
     });
 
@@ -6366,7 +6417,7 @@ function startSpace() {
       ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
       ctx.textAlign='center';
       ctx.font='bold 26px monospace';ctx.fillStyle='#fff';ctx.fillText('SPACEBEZ',W/2,H/2-36);
-      ctx.font='13px monospace';ctx.fillStyle='#aaa';ctx.fillText('WASD / Arrows to move · Space or click to shoot',W/2,H/2-4);
+      ctx.font='13px monospace';ctx.fillStyle='#aaa';ctx.fillText('WASD / Arrows to move · Space or click to shoot · C = auto-fire',W/2,H/2-4);
       ctx.fillStyle='#ffd700';ctx.fillText('Press E or Tab to open SHOP 🛒',W/2,H/2+20);
       ctx.fillStyle='#60ddff';ctx.fillText('Enemies come from all directions!',W/2,H/2+42);
       ctx.fillStyle='#aaa';ctx.fillText('Press Space or tap to start',W/2,H/2+66);
