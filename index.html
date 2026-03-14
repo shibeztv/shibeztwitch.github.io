@@ -2031,31 +2031,27 @@ function groupIntoStreams(videos) {
   });
 
   const byDay = {};
-  let noDateIdx = 0;
   videos.forEach(v => {
     const titleDay = extractDateFromTitle(v.title);
     // Debug: log first 5 to console
-    if (noDateIdx < 5) console.log('[grouping] title:', JSON.stringify(v.title), '→ day:', titleDay, '| publishedAt:', v.publishedAt);
+    if (Object.keys(byDay).length < 5) console.log('[grouping] title:', JSON.stringify(v.title), '→ day:', titleDay, '| publishedAt:', v.publishedAt);
     if (titleDay) {
       if (!byDay[titleDay]) byDay[titleDay] = [];
       byDay[titleDay].push(v);
     } else {
-      // No date in title — treat as standalone entry keyed by upload timestamp
-      const key = `_nodate_${v.publishedAt}_${noDateIdx++}`;
-      byDay[key] = [v];
+      // No date in title — use upload date minus 1 day (streams uploaded next day)
+      const d = new Date(v.publishedAt);
+      d.setUTCDate(d.getUTCDate() - 1);
+      const fallbackDay = d.toISOString().slice(0, 10);
+      if (!byDay[fallbackDay]) byDay[fallbackDay] = [];
+      byDay[fallbackDay].push(v);
     }
   });
 
   return Object.entries(byDay)
-    .sort((a, b) => {
-      // Sort by the date portion — nodate entries use publishedAt for ordering
-      const da = a[0].startsWith('_nodate_') ? a[1][0].publishedAt.slice(0,10) : a[0];
-      const db = b[0].startsWith('_nodate_') ? b[1][0].publishedAt.slice(0,10) : b[0];
-      return db.localeCompare(da); // newest first
-    })
-    .map(([key, vids]) => {
+    .sort((a, b) => b[0].localeCompare(a[0])) // newest first
+    .map(([day, vids]) => {
       vids.sort((a,b) => a.publishedAt.localeCompare(b.publishedAt));
-      const day = key.startsWith('_nodate_') ? vids[0].publishedAt.slice(0,10) : key;
       const totalDuration = vids.reduce((s,v) => s + v.duration, 0);
       const games = parseGamesFromDescriptions(vids);
       return { day, vids, totalDuration, games, thumb: vids[0].thumb, title: buildStreamTitle(vids, day) };
@@ -2137,7 +2133,10 @@ function renderPage() {
 
   grid.innerHTML = pageStreams.map((s, i) => {
     const idx = start + i;
-    const date = new Date(s.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    // Always try to get date from video title first — most reliable for bulk-uploaded channels
+    const titleDay = extractDateFromTitle(s.vids[0].title);
+    const displayDay = titleDay || s.day;
+    const date = new Date(displayDay+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const games = [...new Set(s.games.map(g=>g.label))].slice(0,3).map(g=>`<span class="grid-game-tag">${escHtml(g)}</span>`).join('');
     const parts = s.vids.length > 1 ? `<span class="grid-card-parts">${s.vids.length} PARTS</span>` : '';
     const globalIdx = allStreams.indexOf(displayedStreams[start + i]);
@@ -2401,7 +2400,8 @@ function renderVideoMeta(stream) {
   const meta = document.getElementById('videoMeta');
   meta.style.display = 'block';
   document.getElementById('videoTitle').textContent = stream.title;
-  document.getElementById('videoDateBadge').textContent = formatDay(stream.day);
+  const _streamTitleDay = extractDateFromTitle(stream.vids[0].title);
+  document.getElementById('videoDateBadge').textContent = formatDay(_streamTitleDay || stream.day);
 
   // Stats
   const totalViews = stream.vids.reduce((s,v)=>s+v.views,0);
