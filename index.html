@@ -3989,69 +3989,6 @@ function startFlappy() {
     ctx.textAlign = 'left';
   }
 
-  // Get canvas bounding rect for coordinate mapping
-  let _canvasRect = null;
-  function getCanvasRect(){ if(!_canvasRect || frame%60===0) _canvasRect=canvas.getBoundingClientRect(); return _canvasRect; }
-
-  // Track which imgs are in use this frame
-  const _activeOverlayImgs = new Set();
-
-  function positionEmoteOverlays(){
-    if(!_emoteLayer) return;
-    const rect = getCanvasRect();
-    const scaleX = rect.width / canvas.width;
-    const scaleY = rect.height / canvas.height;
-    const OFF = '-9999px'; // off-screen position for unused imgs
-
-    _activeOverlayImgs.clear();
-
-    // Position enemies — NEVER set display:none (kills animation), move off-screen instead
-    const isFrozen = _hasPowerup('freeze');
-    enemies.forEach(e=>{
-      if(!e.img) return;
-      _activeOverlayImgs.add(e.img);
-      const sz = e.size;
-      const sw = sz * scaleX;
-      const sh = sz * scaleY;
-      const sx = (e.x - sz/2) * scaleX;
-      const sy = (e.y - sz/2) * scaleY;
-      e.img.style.width  = sw + 'px';
-      e.img.style.height = sh + 'px';
-      e.img.style.left   = sx + 'px';
-      e.img.style.top    = sy + 'px';
-      e.img.style.display = 'block';
-      e.img.style.opacity = '1';
-      e.img.style.borderRadius = '50%';
-      e.img.style.filter = isFrozen ? 'hue-rotate(195deg) saturate(1.5) brightness(0.85)' : '';
-    });
-
-    // Move unused enemy imgs off-screen (not display:none — that resets animation!)
-    Array.from(_emoteLayer.querySelectorAll('.space-emote-overlay')).forEach(el=>{
-      if(el === shipImg) return; // handle ship separately
-      if(!_activeOverlayImgs.has(el)){
-        el.style.left = OFF;
-        el.style.top  = OFF;
-      }
-    });
-
-    // Ship: move off-screen when invisible instead of display:none
-    const DOME_R = 18;
-    const domeSize = DOME_R * 1.55 * scaleX;
-    const shipHide = state==='dead' || (invincible>0 && Math.floor(frame/5)%2===1);
-    if(shipHide){
-      shipImg.style.left = OFF;
-      shipImg.style.top  = OFF;
-    } else {
-      shipImg.style.width  = domeSize + 'px';
-      shipImg.style.height = domeSize + 'px';
-      shipImg.style.left   = ((ship.x - domeSize/2) * scaleX) + 'px';
-      shipImg.style.top    = ((ship.y - 2 - DOME_R - domeSize*0.05) * scaleY) + 'px';
-      shipImg.style.display = 'block';
-      shipImg.style.borderRadius = '50%';
-      shipImg.style.filter = '';
-    }
-  }
-
   function loop() {
     if (!_flappyRunning) return;
 
@@ -5230,6 +5167,60 @@ function startSpace() {
     });
 
     ctx.restore();
+  }
+
+  // Get canvas bounding rect for coordinate mapping
+  let _canvasRect = null;
+  function getCanvasRect(){ if(!_canvasRect || frame%60===0) _canvasRect=canvas.getBoundingClientRect(); return _canvasRect; }
+
+  // Track which imgs are in use this frame
+  const _activeOverlayImgs = new Set();
+
+  function positionEmoteOverlays(){
+    if(!_emoteLayer) return;
+    const rect = getCanvasRect();
+    const scaleX = rect.width / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    const OFF = '-9999px';
+
+    _activeOverlayImgs.clear();
+
+    const isFrozen = _hasPowerup('freeze');
+    enemies.forEach(e=>{
+      if(!e.img) return;
+      _activeOverlayImgs.add(e.img);
+      const sz = e.size;
+      const sw = sz * scaleX, sh = sz * scaleY;
+      const sx = (e.x - sz/2) * scaleX, sy = (e.y - sz/2) * scaleY;
+      e.img.style.width  = sw + 'px';
+      e.img.style.height = sh + 'px';
+      e.img.style.left   = sx + 'px';
+      e.img.style.top    = sy + 'px';
+      e.img.style.display = 'block';
+      e.img.style.opacity = '1';
+      e.img.style.borderRadius = '50%';
+      e.img.style.filter = isFrozen ? 'hue-rotate(195deg) saturate(1.5) brightness(0.85)' : '';
+    });
+
+    Array.from(_emoteLayer.querySelectorAll('.space-emote-overlay')).forEach(el=>{
+      if(el === shipImg) return;
+      if(!_activeOverlayImgs.has(el)){ el.style.left = OFF; el.style.top = OFF; }
+    });
+
+    const DOME_R = 18;
+    const domeSize = DOME_R * 1.55 * scaleX;
+    const shipHide = state==='dead' || (invincible>0 && Math.floor(frame/5)%2===1);
+    if(shipHide){
+      shipImg.style.left = OFF; shipImg.style.top = OFF;
+    } else {
+      shipImg.style.width  = domeSize + 'px';
+      shipImg.style.height = domeSize + 'px';
+      shipImg.style.left   = ((ship.x - domeSize/2) * scaleX) + 'px';
+      shipImg.style.top    = ((ship.y - 2 - DOME_R - domeSize*0.05) * scaleY) + 'px';
+      shipImg.style.display = 'block';
+      shipImg.style.borderRadius = '50%';
+      shipImg.style.filter = '';
+    }
   }
 
   function loop() {
