@@ -3489,7 +3489,7 @@ let _shibleZoomed = false;
 function shibleZoomOpen() {
   const overlay = document.getElementById('shibleZoomOverlay');
   const img = document.getElementById('shibleThumb');
-  document.getElementById('shibleZoomImg').src = img.src;
+  const vidId = img.dataset.vidId; document.getElementById('shibleZoomImg').src = vidId ? `https://i.ytimg.com/vi/${vidId}/maxresdefault.jpg` : img.src;
   overlay.style.display = 'flex';
   _shibleZoomed = true;
   document.getElementById('shibleThumbWrap').style.cursor = 'zoom-out';
@@ -3543,9 +3543,14 @@ function openShible(randomMode) {
   const guessBtn = document.getElementById('shibleGuessBtn');
   if (guessBtn) { guessBtn.disabled = false; guessBtn.style.opacity = '1'; }
 
-  // Pick a random vid from the stream, use maxresdefault for full quality
+  // Pick a random vid from the stream
+  // maxresdefault is always sharp; numbered thumbs (1/2/3) are actual random frames but lower res
+  // We try to load a random numbered one and fall back to maxresdefault if it fails
   const vid = stream.vids[Math.floor(Math.random() * stream.vids.length)];
-  const thumb = `https://i.ytimg.com/vi/${vid.id}/maxresdefault.jpg`;
+  const frameNum = Math.floor(Math.random() * 3) + 1;
+  const thumb = `https://i.ytimg.com/vi/${vid.id}/hqdefault.jpg`;
+  // Store vid id for zoom
+  document.getElementById('shibleThumb').dataset.vidId = vid.id;
   document.getElementById('shibleThumb').src = thumb;
   document.getElementById('shibleZoomImg').src = ''; shibleZoomClose();
   document.getElementById('shibleThumbWrap').style.cursor = 'zoom-in';
@@ -3712,18 +3717,25 @@ function startFlappy() {
 
   // Ground tiles (simple gradient rect)
   function drawGround() {
-    ctx.fillStyle = '#1a003a';
+    // Green grass
+    ctx.fillStyle = '#4caf50';
     ctx.fillRect(0, H - 60, W, 60);
-    // Neon ground line
-    const gl = ctx.createLinearGradient(0, H-60, W, H-60);
-    gl.addColorStop(0, '#9146ff'); gl.addColorStop(0.5, '#fc5c7d'); gl.addColorStop(1, '#9146ff');
-    ctx.strokeStyle = gl; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, H-60); ctx.lineTo(W, H-60); ctx.stroke();
-    // Moving dashes
-    ctx.fillStyle = 'rgba(145,70,255,0.3)';
-    for (let i = 0; i < 10; i++) {
-      const gx = ((groundX * 1.5 + i * 55) % (W + 55)) - 10;
-      ctx.fillRect(gx, H - 46, 35, 3);
+    ctx.fillStyle = '#388e3c';
+    ctx.fillRect(0, H - 60, W, 8);
+    // Moving grass tufts
+    ctx.fillStyle = '#66bb6a';
+    for (let i = 0; i < 12; i++) {
+      const gx = ((groundX + i * 48) % (W + 48)) - 10;
+      ctx.fillRect(gx, H - 58, 24, 5);
+    }
+    // Dirt
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(0, H - 28, W, 28);
+    ctx.fillStyle = '#5d4037';
+    for (let i = 0; i < 8; i++) {
+      const gx = ((groundX * 0.7 + i * 65) % (W + 65)) - 10;
+      ctx.fillStyle = i%2===0 ? '#6d4c41' : '#4e342e';
+      ctx.fillRect(gx, H - 24, 45, 6);
     }
   }
 
@@ -3737,7 +3749,7 @@ function startFlappy() {
     if (_lastGapY < 0) {
       gapY = minTop + Math.random() * (maxGapY - minTop);
     } else {
-      const maxDelta = ES * 4;
+      const maxDelta = ES * 7;
       const lo = Math.max(minTop, _lastGapY - maxDelta);
       const hi = Math.min(maxGapY, _lastGapY + maxDelta);
       gapY = lo + Math.random() * (hi - lo);
@@ -3885,34 +3897,39 @@ function startFlappy() {
   function loop() {
     if (!_flappyRunning) return;
 
-    // Background — purple/dark city vibe
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#0a0010');
-    sky.addColorStop(0.5, '#1a0535');
-    sky.addColorStop(1, '#2d0a4a');
+    // Background — sunny green field
+    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+    sky.addColorStop(0, '#5bb8f5');
+    sky.addColorStop(1, '#b8e0f7');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
 
-    // Stars (fixed positions based on seeded positions)
-    if (!startFlappy._stars) {
-      startFlappy._stars = Array.from({length: 55}, () => ({
-        x: Math.random() * W, y: Math.random() * (H * 0.65),
-        r: Math.random() * 1.4 + 0.3, a: Math.random()
+    // Clouds (parallax, slow scroll)
+    if (!startFlappy._clouds) {
+      startFlappy._clouds = Array.from({length: 6}, (_, i) => ({
+        x: Math.random() * W * 2, y: 20 + Math.random() * (H * 0.38),
+        w: 60 + Math.random() * 80, speed: 0.2 + Math.random() * 0.25
       }));
     }
-    startFlappy._stars.forEach(s => {
-      ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(frameCount * 0.01 + s.a * 10));
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    startFlappy._clouds.forEach(cl => {
+      if (state === 'playing') cl.x -= cl.speed;
+      if (cl.x + cl.w < 0) cl.x = W + cl.w;
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.beginPath();
+      ctx.ellipse(cl.x, cl.y, cl.w/2, cl.w/5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cl.x - cl.w*0.2, cl.y - cl.w*0.1, cl.w/3, cl.w/6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cl.x + cl.w*0.2, cl.y - cl.w*0.08, cl.w/4, cl.w/7, 0, 0, Math.PI*2); ctx.fill();
     });
-    ctx.globalAlpha = 1;
 
-    // Distant city silhouette
-    ctx.fillStyle = '#150025';
-    const buildings = startFlappy._buildings || (startFlappy._buildings = Array.from({length:14}, (_,i) => ({
-      x: i * (W/13), w: 18+Math.random()*30, h: 30+Math.random()*80
-    })));
-    buildings.forEach(b => ctx.fillRect(b.x, H - 60 - b.h, b.w, b.h));
+    // Distant hills
+    ctx.fillStyle = '#7ecb52';
+    ctx.beginPath();
+    ctx.moveTo(0, H - 60);
+    ctx.bezierCurveTo(W*0.1, H-130, W*0.3, H-160, W*0.5, H-110);
+    ctx.bezierCurveTo(W*0.7, H-60, W*0.85, H-150, W, H-90);
+    ctx.lineTo(W, H-60); ctx.closePath(); ctx.fill();
 
     if (state === 'playing') {
       frameCount++;
