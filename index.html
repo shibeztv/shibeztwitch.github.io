@@ -1365,7 +1365,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">SFX</span>
-              <input id="spaceSfxVol" type="range" min="0" max="100" value="40" style="width:100px;accent-color:#fc5c7d;cursor:pointer">
+              <input id="spaceSfxVol" type="range" min="0" max="100" value="18" style="width:100px;accent-color:#fc5c7d;cursor:pointer">
             </div>
             <button onclick="spaceShopToggle()" style="font-family:var(--mono);font-size:10px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:#ffd700;padding:3px 10px;border-radius:3px;cursor:pointer" title="Press E or Tab">🛒 SHOP [E]</button>
             <button id="spaceMuteBtn" onclick="toggleMuteAll()" title="Mute all sound" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:16px;line-height:1;padding:3px 8px;border-radius:4px">🔊</button>
@@ -1379,7 +1379,7 @@
           <!-- SHOP OVERLAY — only over canvas, topbar stays visible -->
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px">🛒 UPGRADE SHOP</div>
-          <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px;display:flex;gap:16px;align-items:center">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span>&nbsp;coins &nbsp;·&nbsp; ⭐ <span id="shopUpgradePoints" style="color:#a3e635;font-weight:900">0</span>&nbsp;upgrade pts &nbsp;·&nbsp; E/Tab to close</div>
+          <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; <span style="color:#666">die = keep ½ coins + 1🪙/10 score</span></div>
           <div id="shopGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;max-width:700px;overflow-y:auto;max-height:60vh"></div>
           </div>
         </div>
@@ -4322,7 +4322,7 @@ function startSpace() {
   // ── Stars
   const stars = Array.from({length:160}, ()=>({
     x:Math.random()*W, y:Math.random()*H,
-    r:Math.random()*1.5+0.2, speed:0.2+Math.random()*0.6, a:0.3+Math.random()*0.7
+    r:Math.random()*1.5+0.2, speed:0.07+Math.random()*0.18, a:0.3+Math.random()*0.7
   }));
 
   // ── Planet emote base image
@@ -4346,11 +4346,7 @@ function startSpace() {
   const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,friends:0});
   const upgrades = _freshUpgrades();
   window._spaceUpgrades = upgrades; // expose for current run only
-  // Upgrade points: earned 1 per 50 score, persist across runs
-  if (!window._spaceUpgradePoints) window._spaceUpgradePoints = 0;
-  let upgradePoints = window._spaceUpgradePoints;
-  function saveUpgradePoints(n){ upgradePoints=n; window._spaceUpgradePoints=n; const el=document.getElementById('shopUpgradePoints'); if(el) el.textContent=upgradePoints; }
-  let activeWeapon = 'default'; // resets each run (weapons re-unlocked via points)
+  let activeWeapon = 'default'; // resets each run
   // Track which weapons are unlocked this run
   const unlockedWeapons = new Set(['default']);
   const UPGRADE_DEFS = [
@@ -4381,18 +4377,16 @@ function startSpace() {
   window.renderShopGrid = function renderShopGrid() {
     const grid=document.getElementById('shopGrid'); if(!grid) return;
     document.getElementById('shopCoinsDisp').textContent=coins;
-    const _upEl=document.getElementById('shopUpgradePoints');if(_upEl)_upEl.textContent=upgradePoints;
-
-    // ── Stat upgrades (cost upgrade points ⭐, not coins)
+    // ── Stat upgrades (cost coins 🪙)
     const statHtml = UPGRADE_DEFS.map(def=>{
-      const lvl=upgrades[def.key],maxed=lvl>=def.maxLvl,cost=def.cost(lvl),canAfford=upgradePoints>=cost&&!maxed;
-      return `<div style="background:rgba(255,255,255,0.05);border:1px solid ${canAfford?'rgba(163,230,53,0.4)':'rgba(255,255,255,0.1)'};border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+      const lvl=upgrades[def.key],maxed=lvl>=def.maxLvl,cost=def.cost(lvl),canAfford=coins>=cost&&!maxed;
+      return `<div style="background:rgba(255,255,255,0.05);border:1px solid ${canAfford?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.1)'};border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
         <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#fff">${def.label}</div>
         <div style="font-family:var(--mono);font-size:9px;color:#aaa">${def.desc}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
           <div style="font-family:var(--mono);font-size:9px;color:#bbb">Lv ${lvl}/${def.maxLvl}</div>
           ${maxed?'<span style="font-family:var(--mono);font-size:10px;color:#4ade80;font-weight:700">MAX</span>'
-          :`<button onclick="spaceBuyUpgrade('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(163,230,53,0.15)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(163,230,53,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#a3e635':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">⭐ ${cost}</button>`}
+          :`<button onclick="spaceBuyUpgrade('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">🪙 ${cost}</button>`}
         </div>
       </div>`;
     }).join('');
@@ -4415,15 +4409,21 @@ function startSpace() {
         <div style="font-family:var(--mono);font-size:12px;font-weight:800;color:#fff;white-space:nowrap">${def.label}</div>
         <div style="font-family:var(--mono);font-size:9px;color:#bbb;flex:1">${def.desc}</div>
         <div style="margin-top:${isFriends?'0':'4px'};flex-shrink:0">
-          ${active
-            ? `<span style="font-family:var(--mono);font-size:10px;color:${def.color};font-weight:700">✓ Equipped</span>`
-            : (isFriendsKey && owned)
-              ? (friendsLvl>=friendsMax
-                ? `<span style="font-family:var(--mono);font-size:10px;color:#4ade80;font-weight:700">MAX (${friendsLvl}/${friendsMax})</span>`
-                : `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:pointer">+1 follower (${friendsLvl}/${friendsMax}) 🪙 ${friendsCost}</button>`)
+          ${isFriendsKey
+            ? (()=>{
+                const parts=[];
+                if(friendsLvl>0) parts.push(`<span style="font-family:var(--mono);font-size:10px;color:${def.color};font-weight:700">${active?'✓ ':''} ${friendsLvl}/${friendsMax} followers</span>`);
+                if(!active&&friendsLvl>0) parts.push(`<button onclick="spaceEquipWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:3px 8px;border-radius:3px;cursor:pointer">EQUIP</button>`);
+                if(friendsLvl<friendsMax) parts.push(`<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.4)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 8px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">+follower 🪙${friendsCost}</button>`);
+                if(friendsLvl===0) parts.push(`<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 8px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">Buy 🪙${friendsCost}</button>`);
+                if(friendsLvl>=friendsMax) parts.push('<span style="font-family:var(--mono);font-size:10px;color:#4ade80;font-weight:700">MAX</span>');
+                return parts.join(' ');
+              })()
+            : active
+              ? `<span style="font-family:var(--mono);font-size:10px;color:${def.color};font-weight:700">✓ Equipped</span>`
               : owned
-              ? `<button onclick="spaceEquipWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:3px 10px;border-radius:3px;cursor:pointer">EQUIP</button>`
-              : `<button onclick="spaceBuyWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">🪙 ${def.cost}</button>`
+                ? `<button onclick="spaceEquipWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:3px 10px;border-radius:3px;cursor:pointer">EQUIP</button>`
+                : `<button onclick="spaceBuyWeapon('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:700;background:${canAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.05)'};border:1px solid ${canAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${canAfford?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:${canAfford?'pointer':'default'}">🪙 ${def.cost}</button>`
           }
         </div>
       </div>`;
@@ -4447,7 +4447,8 @@ function startSpace() {
       if(coins<cost) return;
       saveCoins(coins-cost);
       upgrades.friends = curLvl+1;
-      activeWeapon='friends'; window._spaceWeapon='friends';
+      unlockedWeapons.add('friends');
+      activeWeapon='friends';
       sfxPowerup(); renderShopGrid(); return;
     }
     if(coins<def.cost) return;
@@ -4465,8 +4466,8 @@ function startSpace() {
   window.spaceBuyUpgrade = function(key) {
     const def=UPGRADE_DEFS.find(d=>d.key===key); if(!def) return;
     const lvl=upgrades[key]; if(lvl>=def.maxLvl) return;
-    const cost=def.cost(lvl); if(upgradePoints<cost) return;
-    saveUpgradePoints(upgradePoints-cost); upgrades[key]++; renderShopGrid();
+    const cost=def.cost(lvl); if(coins<cost) return;
+    saveCoins(coins-cost); upgrades[key]++; renderShopGrid();
     if(key==='maxHp'){lives=Math.min(3+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
   };
 
@@ -4505,7 +4506,7 @@ function startSpace() {
   // ── Web Audio SFX
   let _audioCtx=null;
   function getACtx(){if(!_audioCtx){try{_audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return _audioCtx;}
-  function getSfxVol(){if(_spaceAllMuted)return 0;return parseInt(document.getElementById('spaceSfxVol')?.value||40)/100;}
+  function getSfxVol(){if(_spaceAllMuted)return 0;return parseInt(document.getElementById('spaceSfxVol')?.value||18)/100;}
   function playTone(freq,type,dur,vol,attack=0.005){
     const ac=getACtx();if(!ac)return;const v=getSfxVol()*vol;if(v<=0)return;
     const g=ac.createGain();g.gain.setValueAtTime(0,ac.currentTime);
@@ -4731,11 +4732,9 @@ function startSpace() {
   }
 
   function resetSpace(){
-    // Award upgrade points for last run (1 per 50 score)
-    if(score>0){
-      const earned=Math.floor(score/50);
-      if(earned>0) saveUpgradePoints(upgradePoints+earned);
-    }
+    // Keep half coins + 1 per 10 score earned
+    const coinBonus=Math.floor(score/10);
+    saveCoins(Math.floor(coins/2)+coinBonus);
     // Wipe all upgrades for new run
     Object.keys(upgrades).forEach(k=>{ upgrades[k]=0; });
     activeWeapon='default';
@@ -4904,7 +4903,7 @@ function startSpace() {
         while(_followers.length>NUM_FOLLOWERS)_followers.pop();
         while(_followers.length<NUM_FOLLOWERS){
           const idx=_followers.length;
-          _followers.push({angle:(idx/NUM_FOLLOWERS)*Math.PI*2, shootTimer:Math.floor(Math.random()*30)});
+          _followers.push({angle:(idx/NUM_FOLLOWERS)*Math.PI*2, shootTimer:Math.floor(Math.random()*60)});
           _followerShootTimers.push(0);
         }
       } else {
@@ -4922,7 +4921,7 @@ function startSpace() {
           if(nearest&&f.shootTimer<=0){
             const fa=Math.atan2(nearest.y-f.y,nearest.x-f.x);
             bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*12,vy:Math.sin(fa)*12,dmg:getBulletDmg(),size:getBulletSize(),color:'#f0abfc',fromFollower:true});
-            f.shootTimer=20;
+            f.shootTimer=40;
             playTone(900,'square',0.04,0.07);
           }
         }
@@ -5340,7 +5339,7 @@ function startSpace() {
           ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillStyle='#ccc';
           ctx.fillText('Score: '+score+'  ·  Best: '+Math.max(score,parseInt(localStorage.getItem('spaceBest')||0)),W/2,H/2+W*0.06);
           ctx.font=`${Math.floor(W*0.018)}px monospace`;ctx.fillStyle='#ffd700';
-          const earnedPts=Math.floor(score/50);const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+coins+' coins  ·  ⭐ '+(upgradePoints+(earnedPts||0))+' pts  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
+          const earnedCoins=Math.floor(score/10);const keptCoins=Math.floor(coins/2)+earnedCoins;const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+keptCoins+' coins next run  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
           const best2=parseInt(localStorage.getItem('spaceBest')||'0');
           if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
         }
