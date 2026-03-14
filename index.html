@@ -5350,12 +5350,12 @@ function startSpace() {
         const bossWave=Math.floor(survivalFrames/bossInterval); // 1,2,3...
         const bossImg=enemyImgs[Math.floor(Math.random()*enemyImgs.length)];
         const baseSize=50, bossSize=baseSize*10;
-        const bossHp=Math.ceil(600*bossWave*(1+difficulty*0.4)); // 1.5.3: much tankier
+        const bossHp=Math.ceil(420*bossWave*(1+difficulty*0.4)); // -30% hp
         // Spawn from right edge center
         enemies.push({
           x:W+bossSize, y:H/2+(Math.random()-0.5)*H*0.3,
           img:bossImg, size:bossSize, sizeScale:10, isBoss:true, isBig:false,
-          vx:-(0.25+bossWave*0.06), vy:0, // 1.5.3: slower boss
+          vx:-(0.12+bossWave*0.03), vy:0, // ~half speed
           hp:bossHp, maxHp:bossHp, age:0,
           wobble:false, wobbleAmp:0, wobbleFreq:0
         });
