@@ -1342,7 +1342,7 @@
         style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
         onmouseover="this.style.borderColor='#60a5fa';this.style.color='#60a5fa'"
         onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
-        🚀 SPACEBEZ 1.2.3
+        🚀 SPACEBEZ 1.3
       </button>
     </div>
 
@@ -1357,7 +1357,7 @@
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <button id="spacePauseBtn" onclick="toggleSpacePause()" title="Pause [P]" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:4px 9px;border-radius:4px;font-family:var(--mono)">⏸</button>
             <div style="display:flex;flex-direction:column;gap:1px">
-              <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">SPACEBEZ <span style="font-weight:400;color:#555;font-size:10px">1.2.3</span></span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">SPACEBEZ <span style="font-weight:400;color:#555;font-size:10px">1.3</span></span>
               <span style="font-family:var(--mono);font-size:9px;color:#444">WASD · Space/Click · E shop · P pause</span>
             </div>
           </div>
@@ -1370,6 +1370,7 @@
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">MUSIC</span>
               <input id="spaceMusicVol" type="range" min="0" max="100" value="18" oninput="setSpaceMusicVol(this.value)" style="width:108px;accent-color:#7c5cfc;cursor:pointer">
             </div>
+            <button onclick="_loadBgTrack(_nextBgTrack())" title="Skip to next song" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:3px 8px;border-radius:4px" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aaa'">⏭</button>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">SFX</span>
               <input id="spaceSfxVol" type="range" min="0" max="100" value="18" style="width:100px;accent-color:#fc5c7d;cursor:pointer">
@@ -1387,7 +1388,8 @@
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px">🛒 UPGRADE SHOP</div>
           <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; After Death = You keep half of current coins 🪙 + 1🪙 / every 10 score</div>
-          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:100%;max-width:900px;overflow-y:auto;max-height:72vh"></div>
+          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:100%;max-width:900px;overflow-y:auto;max-height:68vh"></div>
+          <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:#4a3a6a;letter-spacing:0.5px">♪ Now playing in the shop: Motoi Sakuraba - Majula</div>
           </div>
         </div>
       </div>
@@ -4173,7 +4175,7 @@ function _loadBgTrack(track) {
     if (_spaceMusicMuted || _spaceAllMuted) _spaceMusicPlayer.mute();
     else _spaceMusicPlayer.unMute();
     _songTitleText = track.title;
-    _songTitleTimer = 480; // ~8 seconds at 60fps (5s+ fully visible)
+    _songTitleTimer = 1440; // ~24 seconds at 60fps (~20s visible)
   } catch(e) {}
 }
 
@@ -4192,7 +4194,7 @@ function initSpaceMusic() {
           e.target.setVolume(vol);
           if(!_spaceMusicMuted && !_spaceAllMuted) e.target.playVideo(); else e.target.mute();
           _songTitleText = startTrack.title;
-          _songTitleTimer = 480;
+          _songTitleTimer = 1440;
         },
         onStateChange: e => {
           if(e.data === YT.PlayerState.ENDED && !_spaceInShop) {
@@ -4415,7 +4417,7 @@ function startSpace() {
 
   // ── Upgrades
   // Upgrades reset each run — only coins + upgrade points persist
-  const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,friends:0,tier2_default:0,tier2_sniper:0,tier2_minigun:0,tier2_towerGun:0,tier2_flamethrower:0,tier2_multiGun:0});
+  const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,friends:0,enemySwarm:0,riskReward:0,tier2_default:0,tier2_sniper:0,tier2_minigun:0,tier2_towerGun:0,tier2_flamethrower:0,tier2_multiGun:0});
   const upgrades = _freshUpgrades();
   window._spaceUpgrades = upgrades; // expose for current run only
   let activeWeapon = 'default'; // resets each run
@@ -4569,10 +4571,10 @@ function startSpace() {
   };
 
   function getShipSpeed()   { return activeWeapon==='friends' ? 0.48*(1+upgrades.speed*0.06) : 2.8*(1+upgrades.speed*0.13); }
-  function getShootCd()     { return Math.max(4,14-upgrades.atkSpeed*2); }
+  function getShootCd()     { return Math.max(4,Math.floor(18-upgrades.atkSpeed*2)); } // 30% slower base (14→18)
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
   function getBulletDmg()   { return 1+upgrades.damage; }
-  function getBulletSize()   { return 1+upgrades.bulletSize*0.2; }
+  function getBulletSize()   { return 1.15+upgrades.bulletSize*0.2; } // 15% wider base
   function getCoinRange()    { return 32*(1+upgrades.coinMagnet*0.15); }
   function getMaxHp()       { return 3+upgrades.maxHp; }
 
@@ -4601,7 +4603,7 @@ function startSpace() {
     {type:'double',  label:'2x SHOT',   color:'#60ddff',dur:480},
     {type:'triple',  label:'3x SHOT',   color:'#a855f7',dur:420},
     {type:'rapid',   label:'RAPID FIRE',color:'#fbbf24',dur:420},
-    {type:'shield',  label:'SHIELD',    color:'#4ade80',dur:480},
+    {type:'shield',  label:'SHIELD',    color:'#4ade80',dur:960},
     {type:'magnet',  label:'🧲 MAGNET',  color:'#ffd700',dur:360},
     {type:'heart',   label:'❤ HEAL',     color:'#ff4488',dur:0},
     {type:'silverheart',label:'💛 BONUS HP',color:'#ffe066',dur:0},
@@ -4718,17 +4720,39 @@ function startSpace() {
     if(state==='paused'){
       ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
       ctx.textAlign='center';
-      ctx.font=`bold ${Math.floor(W*0.07)}px monospace`;ctx.fillStyle='#fff';
+      // Check hover — is mouse within ~80px of center
+      const _pauseHover=canvas._pauseZones&&canvas._pauseZones[0]&&
+        mouseX>=canvas._pauseZones[0].x-30&&mouseX<=canvas._pauseZones[0].x+canvas._pauseZones[0].w+30&&
+        mouseY>=canvas._pauseZones[0].y-30&&mouseY<=canvas._pauseZones[0].y+canvas._pauseZones[0].h+30;
+      const _pauseScale=_pauseHover?1.2:1.0;
+      const _pauseFontPx=Math.floor(W*0.07*_pauseScale);
+      ctx.font=`bold ${_pauseFontPx}px monospace`;
+      ctx.fillStyle=_pauseHover?'#60ddff':'#fff';
+      if(_pauseHover){ctx.shadowColor='#60ddff';ctx.shadowBlur=12;}
       const pausedTxt='PAUSED';const pausedY=H/2-10;
       ctx.fillText(pausedTxt,W/2,pausedY);
+      ctx.shadowBlur=0;
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Store click zones
-      const pw=ctx.measureText(pausedTxt).width+20,ph=Math.floor(W*0.07)+10;
+      // Show song title while paused
+      if(_songTitleText){
+        const _ptfont=Math.min(13,Math.floor(W*0.022));
+        ctx.font=`${_ptfont}px monospace`;
+        const _ptnw=ctx.measureText('♪ '+_songTitleText).width+18;
+        const _ptnh=_ptfont+14;
+        const _ptnx=W-_ptnw-10,_ptny=H-_ptnh-42;
+        ctx.globalAlpha=0.88;
+        ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
+        ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle='#c4b5fd';ctx.fillText('♪ '+_songTitleText,_ptnx+9,_ptny+_ptnh*0.7);
+        ctx.globalAlpha=1;
+      }
+      // Big invisible click zone — 60% of canvas centered
+      const pw=W*0.6, ph=H*0.4;
       const rw2=ctx.measureText(resumeTxt).width+20,rh2=20;
       canvas._pauseZones=[
-        {x:W/2-pw/2,y:pausedY-ph,w:pw,h:ph+8},
+        {x:W/2-pw/2,y:H/2-ph/2,w:pw,h:ph},
         {x:W/2-rw2/2,y:resumeY-16,w:rw2,h:rh2}
       ];
       ctx.textAlign='left';
@@ -4766,7 +4790,7 @@ function startSpace() {
       bullets.push({
         laser:true, x:ship.x, y:ship.y, angle:baseAngle,
         dmg:sd, life:8, maxLife:8,
-        width: (upgrades.tier2_sniper?(sz*22+12):(sz*14+8)), // beam width in px
+        width: (upgrades.tier2_sniper?(sz*38+18):(sz*14+8)), // tier2 = ~2.5x wider
         color:'#ff6644',weaponType:'sniper',
         hitEnemies:new Set(), // track which enemies already hit this beam
       });
@@ -4775,33 +4799,34 @@ function startSpace() {
 
     } else if(activeWeapon==='minigun'){
       // Rapid tiny bullets with slight spread
-      const mgCount=upgrades.tier2_minigun?2:1;
+      const mgCount=upgrades.tier2_minigun?5:1; // tier2: 5 bullets
       for(let mi=0;mi<mgCount;mi++){const spread=(Math.random()-0.5)*0.3;bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*18,vy:Math.sin(baseAngle+spread)*18,dmg:Math.max(1,Math.floor(dmg*0.6)),size:sz*0.6,color:'#fbbf24',weaponType:'minigun'});}
       shootCooldown=Math.floor((upgrades.tier2_minigun?2:3)*rapidMod);
 
     } else if(activeWeapon==='towerGun'){
       // 8-way radial burst — fires in all directions like BTD tower
+      const _rotOff=upgrades.tier2_towerGun?(frame*0.05):0; // clockwise rotation if t2
       for(let i=0;i<8;i++){
-        const a=(i/8)*Math.PI*2;
+        const a=(i/8)*Math.PI*2+_rotOff;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*13,vy:Math.sin(a)*13,dmg:dmg,size:sz*1.1,color:'#c084fc',weaponType:'dual'});
       }
-      shootCooldown=Math.floor(22*rapidMod);
+      shootCooldown=Math.floor(44*rapidMod); // half fire rate
 
     } else if(activeWeapon==='flamethrower'){
       // Long-range cone of fire particles
-      const spread=0.45;
+      const spread=upgrades.tier2_flamethrower?0.85:0.45; // tier2 wider cone
       for(let i=0;i<5;i++){
         const a=baseAngle+(Math.random()-0.5)*spread;
-        const spd=10+Math.random()*8; // 3-4x faster = longer range
-        const life=50+Math.random()*30; // longer life too
+        const spd=7+Math.random()*5.6; // tier1 range -30%
+        const life=35+Math.random()*21; // tier1 range -30%
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:Math.max(1,Math.floor(dmg*0.45)),size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,burns:!!upgrades.tier2_flamethrower});
       }
       shootCooldown=Math.floor(5*rapidMod);
 
     } else if(activeWeapon==='multiGun'){
       // 6-way (or 12-way tier2) spread around aim direction
-      const count=upgrades.tier2_multiGun?12:6;
-      const spread=upgrades.tier2_multiGun?Math.PI*0.7:0.55;
+      const count=upgrades.tier2_multiGun?8:4;
+      const spread=upgrades.tier2_multiGun?Math.PI*0.65:0.60;
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*12,vy:Math.sin(a)*12,dmg:dmg,size:sz,color:'#4ade80',weaponType:'multi'});
@@ -5163,10 +5188,11 @@ function startSpace() {
         if(score>40&&Math.random()<0.2) spawnEnemy();
         const timeFactor=Math.max(0.3,1-survivalFrames/36000);
       const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
-      // Slow at start, ramps with time: base starts at 140, ramps down over 3 min
-      const timeRamp=Math.max(0.4,1-survivalFrames/10800);
-      const scoreRamp=Math.max(0.5,1-score*0.008);
-      const baseSpawn=Math.floor(140*timeRamp*scoreRamp);
+      // Ease-in: very slow for first minute, gradually faster
+      const secIn=survivalFrames/60;
+      const easeBase= secIn<30 ? 220 : secIn<60 ? 180 : secIn<120 ? 140 : secIn<240 ? 110 : 85;
+      const scoreRamp=Math.max(0.5,1-score*0.006);
+      const baseSpawn=Math.floor(easeBase*scoreRamp);
       enemyTimer=Math.max(12,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
       difficulty=1+score*0.010;
@@ -5311,11 +5337,35 @@ function startSpace() {
         }
         const collectR=isMagnet?52:getCoinRange();
         if(Math.sqrt((d.x-ship.x)**2+(d.y-ship.y)**2)<collectR&&!d.collected){
-          d.collected=true;saveCoins(coins+1);spawnParticles(d.x,d.y,'#ffd700',4);sfxCoin();return false;
+          d.collected=true;const _cv=d.value||1;saveCoins(coins+_cv);spawnParticles(d.x,d.y,d.green?'#4ade80':d.silver?'#aaa':'#ffd700',d.green?12:d.silver?8:4);if(_cv>1){sfxPowerup();}else{sfxCoin();}return false;
         }
         return true;
       });
-      powerupDrops=powerupDrops.filter(d=>{
+      // Coin combining: 5 settled coins within 40px → silver coin (gives 5), 5 silver → green (gives 25)
+      if(frame%30===0){ // check every 30 frames for perf
+        // Merge regular coins
+        const settled=drops.filter(d=>d.settled&&!d.collected&&!d.silver&&!d.green);
+        for(let i=0;i<settled.length;i++){
+          const near=settled.filter((d2,j)=>j!==i&&Math.sqrt((d2.x-settled[i].x)**2+(d2.y-settled[i].y)**2)<38&&!d2._merging);
+          if(near.length>=4){
+            const group=[settled[i],...near.slice(0,4)];
+            group.forEach(d=>{d._merging=true;d.life=0;}); // remove them
+            drops.push({x:settled[i].x,y:settled[i].y,vx:0,vy:0,life:99999,collected:false,settled:true,silver:true,value:5});
+          }
+        }
+        // Merge silver coins
+        const silvers=drops.filter(d=>d.settled&&!d.collected&&d.silver&&!d.green);
+        for(let i=0;i<silvers.length;i++){
+          const near=silvers.filter((d2,j)=>j!==i&&Math.sqrt((d2.x-silvers[i].x)**2+(d2.y-silvers[i].y)**2)<50&&!d2._merging);
+          if(near.length>=4){
+            const group=[silvers[i],...near.slice(0,4)];
+            group.forEach(d=>{d._merging=true;d.life=0;});
+            drops.push({x:silvers[i].x,y:silvers[i].y,vx:0,vy:0,life:99999,collected:false,settled:true,green:true,value:25});
+          }
+        }
+      }
+
+            powerupDrops=powerupDrops.filter(d=>{
         // No gravity — stay exactly where dropped
         d.life--;if(d.life<=0)return false;
         if(Math.sqrt((d.x-ship.x)**2+(d.y-ship.y)**2)<38&&!d.collected){
@@ -5407,13 +5457,24 @@ function startSpace() {
     particles.forEach(p=>{ctx.globalAlpha=p.life/55;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();});
     ctx.globalAlpha=1;
 
-    // Coins
+    // Coins (regular, silver, green)
     drops.forEach(d=>{
-      ctx.globalAlpha=Math.min(1,d.life/30);
-      ctx.fillStyle='#ffd700';ctx.strokeStyle='#b8860b';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(d.x,d.y,7,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 7px monospace';ctx.textAlign='center';
-      ctx.fillText('$',d.x,d.y+2.5);ctx.textAlign='left';ctx.globalAlpha=1;
+      if(d._merging||d.life<=0) return;
+      const cr=d.green?11:d.silver?9:7;
+      const cfill=d.green?'#22c55e':d.silver?'#d1d5db':'#ffd700';
+      const cstroke=d.green?'#16a34a':d.silver?'#9ca3af':'#b8860b';
+      const clabel=d.green?'★':d.silver?'✦':'$';
+      ctx.globalAlpha=1;
+      // Glow for special coins
+      if(d.silver||d.green){
+        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2);
+        cg.addColorStop(0,cfill+'55');cg.addColorStop(1,cfill+'00');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2,0,Math.PI*2);ctx.fill();
+      }
+      ctx.fillStyle=cfill;ctx.strokeStyle=cstroke;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(d.x,d.y,cr,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font=`bold ${d.green?9:7}px monospace`;ctx.textAlign='center';
+      ctx.fillText(clabel,d.x,d.y+(d.green?3.5:2.5));ctx.textAlign='left';ctx.globalAlpha=1;
     });
 
     // Powerup drops
@@ -5615,7 +5676,14 @@ function startSpace() {
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();
         ctx.globalAlpha=1;ctx.restore();
       }
-      if(e.img&&e.img.complete&&e.img.naturalWidth>0)try{ctx.drawImage(e.img,e.x-e.size/2,e.y-e.size/2,e.size,e.size);}catch(err){}
+      if(e.img&&e.img.complete&&e.img.naturalWidth>0){
+        try{
+          const ar=e.img.naturalWidth/(e.img.naturalHeight||e.img.naturalWidth);
+          const dw=ar>=1?e.size:e.size*ar;
+          const dh=ar>=1?e.size/ar:e.size;
+          ctx.drawImage(e.img,e.x-dw/2,e.y-dh/2,dw,dh);
+        }catch(err){}
+      }
       else{ctx.fillStyle='rgba(255,100,100,0.6)';ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();}
       if(e.maxHp>1){
         const bary=e.y+e.size/2+3, barh=e.isTitan?8:4;
@@ -5672,17 +5740,39 @@ function startSpace() {
     if(state==='paused'){
       ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
       ctx.textAlign='center';
-      ctx.font=`bold ${Math.floor(W*0.07)}px monospace`;ctx.fillStyle='#fff';
+      // Check hover — is mouse within ~80px of center
+      const _pauseHover=canvas._pauseZones&&canvas._pauseZones[0]&&
+        mouseX>=canvas._pauseZones[0].x-30&&mouseX<=canvas._pauseZones[0].x+canvas._pauseZones[0].w+30&&
+        mouseY>=canvas._pauseZones[0].y-30&&mouseY<=canvas._pauseZones[0].y+canvas._pauseZones[0].h+30;
+      const _pauseScale=_pauseHover?1.2:1.0;
+      const _pauseFontPx=Math.floor(W*0.07*_pauseScale);
+      ctx.font=`bold ${_pauseFontPx}px monospace`;
+      ctx.fillStyle=_pauseHover?'#60ddff':'#fff';
+      if(_pauseHover){ctx.shadowColor='#60ddff';ctx.shadowBlur=12;}
       const pausedTxt='PAUSED';const pausedY=H/2-10;
       ctx.fillText(pausedTxt,W/2,pausedY);
+      ctx.shadowBlur=0;
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Store click zones
-      const pw=ctx.measureText(pausedTxt).width+20,ph=Math.floor(W*0.07)+10;
+      // Show song title while paused
+      if(_songTitleText){
+        const _ptfont=Math.min(13,Math.floor(W*0.022));
+        ctx.font=`${_ptfont}px monospace`;
+        const _ptnw=ctx.measureText('♪ '+_songTitleText).width+18;
+        const _ptnh=_ptfont+14;
+        const _ptnx=W-_ptnw-10,_ptny=H-_ptnh-42;
+        ctx.globalAlpha=0.88;
+        ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
+        ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle='#c4b5fd';ctx.fillText('♪ '+_songTitleText,_ptnx+9,_ptny+_ptnh*0.7);
+        ctx.globalAlpha=1;
+      }
+      // Big invisible click zone — 60% of canvas centered
+      const pw=W*0.6, ph=H*0.4;
       const rw2=ctx.measureText(resumeTxt).width+20,rh2=20;
       canvas._pauseZones=[
-        {x:W/2-pw/2,y:pausedY-ph,w:pw,h:ph+8},
+        {x:W/2-pw/2,y:H/2-ph/2,w:pw,h:ph},
         {x:W/2-rw2/2,y:resumeY-16,w:rw2,h:rh2}
       ];
       ctx.textAlign='left';
@@ -5782,7 +5872,7 @@ function startSpace() {
     // ── Song title notification (bottom right, fades in/out)
     if(_songTitleTimer>0){
       _songTitleTimer--;
-      const SHOW=480, FADE=50; // 8s total, ~6.3s fully visible
+      const SHOW=1440, FADE=80; // ~24s total, ~22s fully visible
       let alpha;
       if(_songTitleTimer>SHOW-FADE) alpha=(SHOW-_songTitleTimer)/FADE; // fade in
       else if(_songTitleTimer<FADE)  alpha=_songTitleTimer/FADE;        // fade out
