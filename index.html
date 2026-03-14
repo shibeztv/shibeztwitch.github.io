@@ -4744,7 +4744,7 @@ function startSpace() {
     {type:'heart',      label:'❤ HEAL',     color:'#ff4488', dur:0},
     {type:'silverheart',label:'💛 BONUS HP', color:'#ffe066', dur:0},
     {type:'explosion',  label:'💥 NUKE',    color:'#ff8800', dur:0},
-    {type:'freeze',     label:'❄️ FREEZE',  color:'#88ddff', dur:300},
+    {type:'freeze',     label:'❄️ FREEZE',  color:'#88ddff', dur:420},
   ];
 
   // ── Web Audio SFX
@@ -5029,7 +5029,7 @@ function startSpace() {
           o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.15);
         },i*18));
       }
-      shootCooldown=Math.floor(8*rapidMod); // 30% slower than before (was 6)
+      shootCooldown=Math.floor(9*rapidMod); // 30% slower than flamethrower (5 * ~1.8)
 
     } else {
       const cd=Math.floor(getShootCd()*rapidMod);
@@ -5122,8 +5122,8 @@ function startSpace() {
   }
 
   function spawnDrop(x,y,type){
-    if(type==='coin')drops.push({x,y,vx:0,vy:0,life:99999,collected:false,settled:true});
-    else powerupDrops.push({x,y,vx:0,vy:0,type,life:600,collected:false,freezeFrames:180});
+    if(type==='coin')drops.push({x,y,vx:0,vy:0,life:99999999,collected:false,settled:true});
+    else powerupDrops.push({x,y,vx:0,vy:0,type,life:99999999,collected:false,freezeFrames:180});
   }
 
   function spawnParticles(x,y,color,n=10){
@@ -5508,7 +5508,7 @@ function startSpace() {
         const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
         // Ease-in: doubled base values (half spawn rate)
         const secIn=survivalFrames/60;
-        const easeBase= secIn<30 ? 900 : secIn<60 ? 740 : secIn<120 ? 580 : secIn<240 ? 420 : 320;
+        const easeBase= secIn<30 ? 780 : secIn<60 ? 640 : secIn<120 ? 500 : secIn<240 ? 360 : 280;
         const scoreRamp=Math.max(0.65,1-score*0.003);
         const baseSpawn=Math.floor(easeBase*scoreRamp);
         enemyTimer=Math.max(22,Math.floor(baseSpawn*timeFactor*swarmMod));
@@ -5677,8 +5677,8 @@ function startSpace() {
               if(b.burns&&!e.burnTimer){e.burnTimer=180;e.burnDmg=1;}
               // Frozen staff: slow enemy
               if(b.freezing){
-                e.slowTimer=(e.slowTimer||0)+8; // 8 frames of slow stacked per hit; lingers 1.5s after last hit
-                e.slowLinger=90; // 1.5s linger after last hit
+                e.slowTimer=(e.slowTimer||0)+8;
+                e.slowLinger=162; // 2.7s linger after last hit (+1.2s from before)
                 // Deep freeze tier2: track continuous hit duration
                 if(b.deepFreeze){
                   e.deepFreezeHits=(e.deepFreezeHits||0)+1;
@@ -5857,7 +5857,7 @@ function startSpace() {
             spawnParticles(ship.x,ship.y,'#ffdd00',12);
             sfxExplode();[300,500,700].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.10,0.25),i*55));
           } else if(d.type==='freeze'){
-            activePowerups.set('freeze',(activePowerups.get('freeze')||0)+300); // 5 seconds
+            activePowerups.set('freeze',(activePowerups.get('freeze')||0)+420); // 7 seconds (was 5)
             activePowerup='freeze';powerupTimer=activePowerups.get('freeze');
             _freezeFlash=15;
             for(let fi2=0;fi2<5;fi2++)spawnParticles(ship.x+(Math.random()-0.5)*W*0.5,ship.y+(Math.random()-0.5)*H*0.5,'#88ddff',14);
@@ -6162,7 +6162,25 @@ function startSpace() {
       const wt=b.weaponType||'default';
       ctx.save();
 
-      if(b.flame){
+      if(b.freezing){
+        // Frozen Staff — icy shard (check BEFORE b.flame since both have flame:true)
+        const t=(b.life||1)/(b.maxLife||1);
+        ctx.globalAlpha=t*0.92;
+        // Outer ice glow
+        const ifr=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,(b.size||1)*8);
+        ifr.addColorStop(0,'rgba(255,255,255,0.9)');
+        ifr.addColorStop(0.25,'rgba(160,230,255,0.7)');
+        ifr.addColorStop(0.6,'rgba(80,180,255,0.35)');
+        ifr.addColorStop(1,'rgba(40,120,220,0)');
+        ctx.fillStyle=ifr;ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*7,0,Math.PI*2);ctx.fill();
+        // Ice crystal core
+        ctx.globalAlpha=t*0.75;
+        ctx.fillStyle='#cceeff';ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*2.2,0,Math.PI*2);ctx.fill();
+        // Tiny white sparkle center
+        ctx.globalAlpha=t*0.9;
+        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*0.8,0,Math.PI*2);ctx.fill();
+
+      } else if(b.flame){
         // Flamethrower — glowing ember fading with life
         const t=(b.life||1)/(b.maxLife||1);
         ctx.globalAlpha=t*0.9;
@@ -6235,16 +6253,6 @@ function startSpace() {
         ctx.strokeStyle=mg2;ctx.lineWidth=5*sz;ctx.lineCap='round';
         ctx.beginPath();ctx.moveTo(-14*sz,0);ctx.lineTo(4*sz,0);ctx.stroke();
         ctx.fillStyle='#bbf7d0';ctx.beginPath();ctx.arc(4*sz,0,3.5*sz,0,Math.PI*2);ctx.fill();
-
-      } else if(b.freezing){
-        // Frozen Staff — ice shard
-        const t=(b.life||1)/(b.maxLife||1);
-        ctx.globalAlpha=t*0.88;
-        const ifr=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,(b.size||1)*7);
-        ifr.addColorStop(0,'#fff');ifr.addColorStop(0.3,'#88ddff');ifr.addColorStop(0.7,'#4499cc');ifr.addColorStop(1,'rgba(100,180,255,0)');
-        ctx.fillStyle=ifr;ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*6,0,Math.PI*2);ctx.fill();
-        ctx.globalAlpha=t*0.5;
-        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,(b.size||1)*1.5,0,Math.PI*2);ctx.fill();
 
       } else {
         // Default — classic cyan tracer
