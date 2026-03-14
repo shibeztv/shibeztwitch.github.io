@@ -1351,7 +1351,7 @@
     </div>
 
     <!-- SHIB.LE MODAL -->
-    <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;padding:20px">
+    <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:700px;overflow:hidden;position:relative;display:flex;flex-direction:column">
 
         <!-- Header -->
@@ -3660,11 +3660,15 @@ async function openFlappyShibez() {
     try {
       const r = await fetch('https://7tv.io/v3/emote-sets/' + FLAPPY_EMOTE_SET);
       const d = await r.json();
-      _flappyEmotes = (d.emotes || []).map(e => ({
-        id: e.id,
-        name: e.name,
-        url: `https://cdn.7tv.app/emote/${e.id}/2x.webp`
-      }));
+      _flappyEmotes = (d.emotes || []).map(e => {
+        const animated = e.data?.animated || false;
+        return {
+          id: e.id,
+          name: e.name,
+          animated,
+          url: `https://cdn.7tv.app/emote/${e.id}/2x.${animated ? 'gif' : 'webp'}`
+        };
+      });
     } catch(e) {
       _flappyEmotes = [{id:'01GB9W8JN80004CKF2H1TWA99H', name:'fallback', url:'https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.webp'}];
     }
@@ -3689,11 +3693,22 @@ function startFlappy() {
   birdImg.src = FLAPPY_BIRD_URL;
 
   // Preload emote images (up to 12 random ones)
+  // Animated GIFs: we place them off-screen so the browser animates them, then drawImage grabs current frame
   const shuffled = [..._flappyEmotes].sort(() => Math.random() - 0.5).slice(0, 12);
+  let _gifContainer = document.getElementById('flappyGifContainer');
+  if (!_gifContainer) {
+    _gifContainer = document.createElement('div');
+    _gifContainer.id = 'flappyGifContainer';
+    _gifContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;overflow:hidden;pointer-events:none';
+    document.body.appendChild(_gifContainer);
+  }
+  _gifContainer.innerHTML = '';
   const emoteImgs = shuffled.map(e => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = e.url;
+    img.width = 52; img.height = 52;
+    if (e.animated) _gifContainer.appendChild(img); // keep alive in DOM for animation
     return img;
   });
 
@@ -3701,7 +3716,7 @@ function startFlappy() {
   const GRAVITY = 0.14;
   const FLAP = -5.0;
   const PIPE_W = 52;
-  const PIPE_GAP = 300;
+  const PIPE_GAP = 245;
   const PIPE_SPEED = 1.6;
   const EMOTE_SIZE = 52;
   const BIRD_SIZE = 48;
@@ -3716,27 +3731,42 @@ function startFlappy() {
   let groundX = 0;
 
   // Ground tiles (simple gradient rect)
+  // Pre-generate bush positions once
+  const _bushes = Array.from({length: 14}, (_, i) => ({
+    ox: i * 52 + Math.random() * 20,
+    w: 28 + Math.floor(Math.random() * 24),
+    h: 18 + Math.floor(Math.random() * 14),
+    speed: 0.6 + Math.random() * 0.4,
+    shade: Math.random() > 0.5
+  }));
+
   function drawGround() {
-    // Green grass
+    // Grass strip
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(0, H - 60, W, 60);
-    ctx.fillStyle = '#388e3c';
-    ctx.fillRect(0, H - 60, W, 8);
-    // Moving grass tufts
-    ctx.fillStyle = '#66bb6a';
-    for (let i = 0; i < 12; i++) {
-      const gx = ((groundX + i * 48) % (W + 48)) - 10;
-      ctx.fillRect(gx, H - 58, 24, 5);
-    }
-    // Dirt
-    ctx.fillStyle = '#795548';
-    ctx.fillRect(0, H - 28, W, 28);
-    ctx.fillStyle = '#5d4037';
-    for (let i = 0; i < 8; i++) {
-      const gx = ((groundX * 0.7 + i * 65) % (W + 65)) - 10;
-      ctx.fillStyle = i%2===0 ? '#6d4c41' : '#4e342e';
-      ctx.fillRect(gx, H - 24, 45, 6);
-    }
+    ctx.fillStyle = '#2e7d32';
+    ctx.fillRect(0, H - 60, W, 6);
+
+    // Scrolling bushes
+    _bushes.forEach(b => {
+      const bx = ((groundX * b.speed + b.ox) % (W + 60)) - 30;
+      const by = H - 60 - b.h + 4;
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.beginPath();
+      ctx.ellipse(bx + b.w/2, H - 60 + 2, b.w/2, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      // Bush body
+      ctx.fillStyle = b.shade ? '#388e3c' : '#43a047';
+      ctx.beginPath();
+      ctx.arc(bx + b.w*0.3, by + b.h*0.55, b.h*0.52, 0, Math.PI*2); ctx.fill();
+      ctx.arc(bx + b.w*0.7, by + b.h*0.6, b.h*0.45, 0, Math.PI*2); ctx.fill();
+      ctx.arc(bx + b.w*0.5, by + b.h*0.3, b.h*0.5, 0, Math.PI*2); ctx.fill();
+      // Highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(bx + b.w*0.42, by + b.h*0.22, b.h*0.22, 0, Math.PI*2); ctx.fill();
+    });
   }
 
   let _lastGapY = -1;
