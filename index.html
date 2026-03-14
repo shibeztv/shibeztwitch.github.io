@@ -4403,7 +4403,7 @@ function startSpace() {
   if(!_imgPool){
     _imgPool = document.createElement('div');
     _imgPool.id='spaceImgPool';
-    _imgPool.style.cssText='position:fixed;left:0;top:-9999px;width:auto;height:auto;pointer-events:none;z-index:-9999;visibility:hidden;';
+    _imgPool.style.cssText='position:fixed;left:-1px;top:0;width:1px;height:100%;overflow:hidden;pointer-events:none;z-index:9999;opacity:0.002;';
     document.body.appendChild(_imgPool);
   } else {
     _imgPool.innerHTML='';
@@ -4455,7 +4455,7 @@ function startSpace() {
       vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
       hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
       rings:Math.random()>0.5, ringTilt:0.22+Math.random()*0.18,
-      atmOpacity:0.25+Math.random()*0.4,
+      atmOpacity:0.12+Math.random()*0.18,
       seed:Math.random()*1000,
     };
   });
@@ -4488,7 +4488,7 @@ function startSpace() {
   const WEAPON_DEFS = [
     {key:'default',     label:'🔫 Default',      desc:'Balanced auto fire',         color:'#60ddff', cost:0,      tier2:{key:'tier2_default',    label:'🔫+ Double-Shot',        desc:'Always fires 2 bullets',      cost:15}},
     {key:'sniper',      label:'🔴 Laser Gun',      desc:'Piercing laser beam, insane dmg, slow cooldown', color:'#ff6644', cost:25, tier2:{key:'tier2_sniper',  label:'🔴+ Wide Laser',         desc:'Wider beam, slightly faster',  cost:20}},
-    {key:'minigun',     label:'⚙️ Minigun',       desc:'Rapid tiny bullets, low dmg each',              color:'#fbbf24', cost:30, tier2:{key:'tier2_minigun', label:'⚙️+ Heavy Minigun',      desc:'Fires 2 bullets, even faster', cost:20}},
+    {key:'minigun',     label:'⚙️ Minigun',       desc:'5-6 bullet spray, rapid fire, low dmg each',    color:'#fbbf24', cost:30, tier2:{key:'tier2_minigun', label:'⚙️+ Heavy Minigun',      desc:'9 bullets, wider spread, faster', cost:20}},
     {key:'towerGun',    label:'🗼 Tower Gun',     desc:'8-shot radial burst in all directions',         color:'#a855f7', cost:35, tier2:{key:'tier2_towerGun',label:'🗼+ Rotating Ring',       desc:'Shots orbit & rotate on spawn',cost:22}},
     {key:'flamethrower',label:'🔥 Flamethrower',  desc:'Short range cone, deals burn over time',        color:'#ff4400', cost:40, tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',         desc:'Longer range + burn dmg 1/3s', cost:25}},
     {key:'multiGun',    label:'💥 Multi-Gun',     desc:'6-way spread, medium dmg',                      color:'#4ade80', cost:50, tier2:{key:'tier2_multiGun', label:'💥+ Shotgun Blast',      desc:'12-way, longer range',         cost:30}},
@@ -4619,7 +4619,7 @@ function startSpace() {
     if(key==='maxHp'){lives=Math.min(3+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
   };
 
-  function getShipSpeed()   { return 2.8*(1+upgrades.speed*0.13); } // 1.4: friends no longer slow
+  function getShipSpeed()   { return 2.38*(1+upgrades.speed*0.13); } // 1.5.3: -15% base speed
   function getShootCd()     { return Math.max(4,Math.floor(15-upgrades.atkSpeed*2)); } // 1.3.1: default gun 20% faster
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
   function getBulletDmg()   { return 1+upgrades.damage; }
@@ -4853,8 +4853,13 @@ function startSpace() {
 
     } else if(activeWeapon==='minigun'){
       // Rapid tiny bullets with slight spread
-      const mgCount=upgrades.tier2_minigun?5:1; // tier2: 5 bullets
-      for(let mi=0;mi<mgCount;mi++){const spread=(Math.random()-0.5)*0.3;bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*18,vy:Math.sin(baseAngle+spread)*18,dmg:Math.max(1,Math.floor(dmg*0.6)),size:sz*0.6,color:'#fbbf24',weaponType:'minigun'});}
+      // Default: 5-6 bullets tight spread; Tier2: 9 bullets slightly wider
+      const mgCount=upgrades.tier2_minigun?9:5+(Math.random()<0.5?1:0);
+      const mgSpread=upgrades.tier2_minigun?0.38:0.18;
+      for(let mi=0;mi<mgCount;mi++){
+        const spread=(Math.random()-0.5)*mgSpread;
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*18,vy:Math.sin(baseAngle+spread)*18,dmg:Math.max(1,Math.floor(dmg*0.55)),size:sz*0.65,color:'#fbbf24',weaponType:'minigun'});
+      }
       shootCooldown=Math.floor((upgrades.tier2_minigun?2:3)*rapidMod);
 
     } else if(activeWeapon==='towerGun'){
@@ -4932,8 +4937,8 @@ function startSpace() {
     const timeMins=survivalFrames/3600;
     // HP scales with time AND player damage upgrades so enemies stay tanky
     const dmgScale=Math.max(1, getBulletDmg()*0.7);
-    const timeHp=Math.floor(timeMins*2.5); // +2-3 hp per minute
-    const baseHp=Math.ceil((1+timeHp+Math.floor(difficulty*0.35))*dmgScale); // 1.4: slower hp scale
+    const timeHp=Math.floor(timeMins*1.4); // 1.5.3: slower time HP
+    const baseHp=Math.ceil((1+timeHp+Math.floor(difficulty*0.18))*dmgScale); // 1.5.3: even slower hp scale
     const riskHpMult=upgrades.riskReward?1+upgrades.riskReward*0.2:1;
     const finalBaseHp=Math.ceil(baseHp*riskHpMult);
     const hp=finalBaseHp*sizeScale;
@@ -5020,6 +5025,7 @@ function startSpace() {
   function drawPlanet(p){
     const pr=p.r;
     const d=pr*2;
+    ctx.save();ctx.globalAlpha=0.45;
 
     // ── Rings BEHIND
     if(p.rings){
@@ -5078,6 +5084,7 @@ function startSpace() {
       }
       ctx.restore();
     }
+    ctx.restore(); // end planet globalAlpha
   }
 
   // ── Draw UFO ship (emote sits IN cockpit dome — emote visible above hull)
@@ -5266,12 +5273,12 @@ function startSpace() {
         const bossWave=Math.floor(survivalFrames/bossInterval); // 1,2,3...
         const bossImg=enemyImgs[Math.floor(Math.random()*enemyImgs.length)];
         const baseSize=50, bossSize=baseSize*10;
-        const bossHp=Math.ceil(80*bossWave*(1+difficulty*0.5));
+        const bossHp=Math.ceil(600*bossWave*(1+difficulty*0.4)); // 1.5.3: much tankier
         // Spawn from right edge center
         enemies.push({
           x:W+bossSize, y:H/2+(Math.random()-0.5)*H*0.3,
           img:bossImg, size:bossSize, sizeScale:10, isBoss:true, isBig:false,
-          vx:-(0.4+bossWave*0.1), vy:0,
+          vx:-(0.25+bossWave*0.06), vy:0, // 1.5.3: slower boss
           hp:bossHp, maxHp:bossHp, age:0,
           wobble:false, wobbleAmp:0, wobbleFreq:0
         });
@@ -5529,7 +5536,7 @@ function startSpace() {
     // Coins drawn first (powerups draw on top)
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      const cr=d.green?10.7:d.silver?8.7:6.8; // 3% smaller (1.5.2)
+      const cr=d.green?13:d.silver?11:8.5; // 1.5.3: bigger coins
       ctx.globalAlpha=1;
       // Glow for special coins
       if(d.silver||d.green){
