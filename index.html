@@ -1382,7 +1382,7 @@
 
         <!-- Zoom overlay (fullscreen) -->
         <div id="shibleZoomOverlay" onclick="shibleZoomClose()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);cursor:zoom-out;align-items:center;justify-content:center">
-          <img id="shibleZoomImg" src="" onclick="event.stopPropagation()" style="max-width:95vw;max-height:92vh;object-fit:contain;border-radius:4px;cursor:default">
+          <img id="shibleZoomImg" src="" onclick="shibleZoomClose()" style="max-width:95vw;max-height:92vh;object-fit:contain;border-radius:4px;cursor:zoom-out">
           <div style="position:absolute;bottom:0;right:0;width:9%;height:6%;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(0,0,0,0.3);pointer-events:none" id="shibleZoomBlur"></div>
         </div>
 
@@ -3712,20 +3712,37 @@ function startFlappy() {
 
   // Ground tiles (simple gradient rect)
   function drawGround() {
-    ctx.fillStyle = '#1a2a1a';
+    ctx.fillStyle = '#1a003a';
     ctx.fillRect(0, H - 60, W, 60);
-    ctx.fillStyle = '#2d4a2d';
-    ctx.fillRect(0, H - 60, W, 6);
-    // Moving ground lines
-    ctx.fillStyle = '#3a5a3a';
-    for (let i = 0; i < 8; i++) {
-      const gx = ((groundX + i * 60) % W);
-      ctx.fillRect(gx, H - 54, 40, 4);
+    // Neon ground line
+    const gl = ctx.createLinearGradient(0, H-60, W, H-60);
+    gl.addColorStop(0, '#9146ff'); gl.addColorStop(0.5, '#fc5c7d'); gl.addColorStop(1, '#9146ff');
+    ctx.strokeStyle = gl; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, H-60); ctx.lineTo(W, H-60); ctx.stroke();
+    // Moving dashes
+    ctx.fillStyle = 'rgba(145,70,255,0.3)';
+    for (let i = 0; i < 10; i++) {
+      const gx = ((groundX * 1.5 + i * 55) % (W + 55)) - 10;
+      ctx.fillRect(gx, H - 46, 35, 3);
     }
   }
 
+  let _lastGapY = -1;
   function spawnPipe() {
-    const gapY = 100 + Math.random() * (H - 260 - 60);
+    const ES = EMOTE_SIZE;
+    const minTop = ES * 2;           // at least 2 emotes on top
+    const minBot = ES * 2;           // at least 2 emotes on bottom
+    const maxGapY = H - 60 - PIPE_GAP - minBot;
+    let gapY;
+    if (_lastGapY < 0) {
+      gapY = minTop + Math.random() * (maxGapY - minTop);
+    } else {
+      const maxDelta = ES * 4;
+      const lo = Math.max(minTop, _lastGapY - maxDelta);
+      const hi = Math.min(maxGapY, _lastGapY + maxDelta);
+      gapY = lo + Math.random() * (hi - lo);
+    }
+    _lastGapY = gapY;
     const eImg = emoteImgs[pipeEmoteIdx % emoteImgs.length];
     pipeEmoteIdx++;
     pipes.push({ x: W + 10, gapY, eImg, scored: false });
@@ -3817,6 +3834,7 @@ function startFlappy() {
     score = 0;
     frameCount = 0;
     pipeEmoteIdx = Math.floor(Math.random() * emoteImgs.length);
+    _lastGapY = -1;
     state = 'waiting';
     document.getElementById('flappyScore').textContent = '0';
   }
@@ -3867,19 +3885,41 @@ function startFlappy() {
   function loop() {
     if (!_flappyRunning) return;
 
-    // Background sky
+    // Background — purple/dark city vibe
     const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#0d1117');
-    sky.addColorStop(1, '#1a2a3a');
+    sky.addColorStop(0, '#0a0010');
+    sky.addColorStop(0.5, '#1a0535');
+    sky.addColorStop(1, '#2d0a4a');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
+
+    // Stars (fixed positions based on seeded positions)
+    if (!startFlappy._stars) {
+      startFlappy._stars = Array.from({length: 55}, () => ({
+        x: Math.random() * W, y: Math.random() * (H * 0.65),
+        r: Math.random() * 1.4 + 0.3, a: Math.random()
+      }));
+    }
+    startFlappy._stars.forEach(s => {
+      ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(frameCount * 0.01 + s.a * 10));
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Distant city silhouette
+    ctx.fillStyle = '#150025';
+    const buildings = startFlappy._buildings || (startFlappy._buildings = Array.from({length:14}, (_,i) => ({
+      x: i * (W/13), w: 18+Math.random()*30, h: 30+Math.random()*80
+    })));
+    buildings.forEach(b => ctx.fillRect(b.x, H - 60 - b.h, b.w, b.h));
 
     if (state === 'playing') {
       frameCount++;
       groundX = (groundX + PIPE_SPEED) % W;
 
       // Spawn pipes
-      if (frameCount % 175 === 0 || (frameCount === 1)) spawnPipe();
+      if (frameCount % 210 === 0 || (frameCount === 1)) spawnPipe();
 
       // Update bird
       bird.vy += GRAVITY;
