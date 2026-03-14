@@ -753,6 +753,8 @@
     margin-left: 6px;
   }
 
+  #spaceModal *::-webkit-scrollbar { width: 0; height: 0; }
+  #spaceModal { scrollbar-width: none; }
   /* THEATER MODE */
   .theater-btn-wrap {
     display: none;
@@ -1348,13 +1350,13 @@
 
     <!-- SPACEBEZ MODAL -->
     <div id="spaceModal" style="display:none;position:fixed;inset:0;z-index:9003;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:10px;overflow:hidden">
-      <div style="background:#050510;border:1px solid #1a1a3a;border-radius:8px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;max-width:100%;max-height:100%;overflow-y:hidden">
+      <div style="background:#050510;border:1px solid #1a1a3a;border-radius:8px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;max-width:100%;max-height:calc(100vh - 20px)">
         <div id="spaceMusicEl" style="display:none"></div>
         <div id="spaceShopMusicEl" style="display:none"></div>
         <div id="spaceShopMusicEl2" style="display:none"></div>
         <div id="spaceDeathSfxEl" style="display:none"></div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid #1a1a3a;width:100%;box-sizing:border-box;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid #1a1a3a;width:100%;box-sizing:border-box;gap:8px;flex-wrap:nowrap;overflow:hidden;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <button id="spacePauseBtn" onclick="toggleSpacePause()" title="Pause [P]" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:4px 9px;border-radius:4px;font-family:var(--mono)">⏸</button>
             <div style="display:flex;flex-direction:column;gap:1px">
@@ -1362,7 +1364,7 @@
               <span style="font-family:var(--mono);font-size:9px;color:#444">WASD · Space/Click · E shop · P pause</span>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;justify-content:flex-end;overflow:hidden">
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#aaa">SCORE: <span id="spaceScore" style="color:#fff;font-weight:900;font-size:15px">0</span></span>
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#aaa">⏱ <span id="spaceTimer" style="color:#fff;font-weight:900;font-size:15px">0:00</span></span>
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#aaa">🪙 <span id="spaceCoins" style="color:#ffd700;font-weight:900;font-size:15px">0</span></span>
