@@ -1356,7 +1356,6 @@
             <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:#aaa">❤️ <span id="spaceLives" style="color:#fc5c7d;font-weight:900;font-size:15px">3</span></span>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">MUSIC</span>
-              <button id="spaceMuteBtn" onclick="toggleSpaceMusic()" style="font-family:var(--mono);font-size:13px;background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;padding:3px 9px;border-radius:4px;cursor:pointer;line-height:1">🔊</button>
               <input id="spaceMusicVol" type="range" min="0" max="100" value="25" oninput="setSpaceMusicVol(this.value)" style="width:54px;accent-color:#7c5cfc;cursor:pointer">
             </div>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
@@ -1364,6 +1363,7 @@
               <input id="spaceSfxVol" type="range" min="0" max="100" value="40" style="width:50px;accent-color:#fc5c7d;cursor:pointer">
             </div>
             <button onclick="spaceShopToggle()" style="font-family:var(--mono);font-size:10px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:#ffd700;padding:3px 10px;border-radius:3px;cursor:pointer" title="Press E or Tab">🛒 SHOP [E]</button>
+            <button id="spaceMuteBtn" onclick="toggleMuteAll()" title="Mute all sound" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:16px;line-height:1;padding:3px 8px;border-radius:4px">🔊</button>
             <button onclick="closeSpace()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
           </div>
         </div>
@@ -4091,16 +4091,35 @@ let _spaceInShop = false;
 
 function _getActiveMusic() { return _spaceInShop ? _spaceShopMusicPlayer : _spaceMusicPlayer; }
 
-function toggleSpaceMusic() {
-  _spaceMusicMuted = !_spaceMusicMuted;
+let _spaceAllMuted = false;
+let _savedMusicVol = 25;
+let _savedSfxVol = 40;
+
+function toggleMuteAll() {
+  _spaceAllMuted = !_spaceAllMuted;
   const btn = document.getElementById('spaceMuteBtn');
-  [_spaceMusicPlayer, _spaceShopMusicPlayer].forEach(p => {
-    if (p && p.setVolume) {
-      if (_spaceMusicMuted) p.mute(); else { p.unMute(); p.setVolume(parseInt(document.getElementById('spaceMusicVol')?.value||25)); }
-    }
-  });
-  if (btn) { btn.textContent = _spaceMusicMuted ? '🔇' : '🔊'; btn.style.color = _spaceMusicMuted ? '#fc5c7d' : '#aaa'; }
+  const musicSlider = document.getElementById('spaceMusicVol');
+  const sfxSlider = document.getElementById('spaceSfxVol');
+  if (_spaceAllMuted) {
+    // Save current volumes and zero sliders visually
+    _savedMusicVol = parseInt(musicSlider?.value || 25);
+    _savedSfxVol   = parseInt(sfxSlider?.value || 40);
+    [_spaceMusicPlayer, _spaceShopMusicPlayer].forEach(p => { try { p?.mute(); } catch(e){} });
+    if (musicSlider) musicSlider.value = 0;
+    if (sfxSlider)   sfxSlider.value   = 0;
+    if (btn) { btn.textContent = '🔇'; btn.style.color = '#fc5c7d'; }
+  } else {
+    [_spaceMusicPlayer, _spaceShopMusicPlayer].forEach(p => {
+      try { p?.unMute(); p?.setVolume(_savedMusicVol); } catch(e){}
+    });
+    if (musicSlider) musicSlider.value = _savedMusicVol;
+    if (sfxSlider)   sfxSlider.value   = _savedSfxVol;
+    if (btn) { btn.textContent = '🔊'; btn.style.color = '#aaa'; }
+    _spaceMusicMuted = false;
+  }
 }
+
+function toggleSpaceMusic() { toggleMuteAll(); }
 
 function setSpaceMusicVol(v) {
   _spaceMusicMuted = false;
@@ -4326,7 +4345,7 @@ function startSpace() {
   // ── Web Audio SFX
   let _audioCtx=null;
   function getACtx(){if(!_audioCtx){try{_audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return _audioCtx;}
-  function getSfxVol(){return parseInt(document.getElementById('spaceSfxVol')?.value||40)/100;}
+  function getSfxVol(){if(_spaceAllMuted)return 0;return parseInt(document.getElementById('spaceSfxVol')?.value||40)/100;}
   function playTone(freq,type,dur,vol,attack=0.005){
     const ac=getACtx();if(!ac)return;const v=getSfxVol()*vol;if(v<=0)return;
     const g=ac.createGain();g.gain.setValueAtTime(0,ac.currentTime);
