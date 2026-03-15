@@ -5205,7 +5205,7 @@ function startSpace() {
       // Laser gun: instant persistent beam — stays visible for duration, hits all in path
       const isT2s=!!upgrades.tier2_sniper;
       const sd=isT2s?3:2; // T1:2 dmg, T2:3 dmg
-      const laserW=isT2s?sz*4.2:sz*3.0; // T2 40% wider
+      const laserW=isT2s?sz*30.0:sz*3.0; // T2 10x T1 width
       const laserLife=18; // frames beam stays visible (~0.3s)
       // Beam: stationary, angle locked, hits all enemies in line each frame
       bullets.push({
@@ -5224,7 +5224,7 @@ function startSpace() {
 
     } else if(wKey==='minigun'){
       const mgCount=(upgrades.tier2_minigun?12:8)+Math.floor(upgrades.multishot*0.5); // +0.5 bullet per multishot lvl
-      const mgSpread=upgrades.tier2_minigun?0.53:0.158; // +15% wider
+      const mgSpread=upgrades.tier2_minigun?0.398:0.158; // T2 -25% spread
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
         const _mgSpd=upgrades.tier2_minigun?7.2*0.75*1.25*1.5:7.2*0.75*1.25; // T2 +50% speed
@@ -5244,7 +5244,7 @@ function startSpace() {
       const _rotOff=hasTier2?(frame*0.05):baseAngle; // tier2 spins, base follows cursor
       for(let i=0;i<shotCount;i++){
         const a=_rotOff+(i/shotCount)*Math.PI*2;
-        const spd=isDoubleBurst?6.0*0.85:5.2*0.85; // -15% bullet speed
+        const spd=isDoubleBurst?6.0*0.85*0.92:5.2*0.85; // T2 -8% more bullet speed
         const bulletSz=isDoubleBurst?sz*1.35:sz*1.1; // sz from getBulletSize — already universal
         const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
@@ -5254,7 +5254,7 @@ function startSpace() {
         spawnParticles(ship.x,ship.y,'#e879f9',10);
         _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:2*getBulletDmg(),hitEnemies:new Set()});
       }
-      setCd(Math.floor((hasTier2?138*1.20*1.12:138*1.20)*rapidMod*atkMod)); // T1 -20%, T2 also -12%
+      setCd(Math.floor((hasTier2?138*1.20*1.12*1.15:138*1.20)*rapidMod*atkMod)); // T2 also -15%
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
@@ -5327,13 +5327,13 @@ function startSpace() {
 
     } else if(wKey==='lightning'){
       const isT2L=!!upgrades.tier2_lightning;
-      const boltCount=(isT2L?5:3)+Math.floor(upgrades.multishot*0.4);
+      const boltCount=(isT2L?4:3)+Math.floor(upgrades.multishot*0.4); // T2 now 4 bolts
       const boltDmg=(isT2L?0.36:0.30)*getBulletDmg();
       const chainCount=isT2L?2:1;    // how many enemies each bolt chains to
       const chainRange=isT2L?108:72; // T1:2x player size, T2:3x player size
       const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
       const _lcol=isT2L?'#ff4444':'#7df9ff';
-      const _lSpread=isT2L?28:22; // visible spread between bolts
+      const _lSpread=isT2L?14:22; // T2 -50% distance between bolts
       for(let bi=0;bi<boltCount;bi++){
         const offset=(bi-(boltCount-1)/2)*_lSpread;
         bullets.push({
@@ -5341,7 +5341,7 @@ function startSpace() {
           vx:Math.cos(baseAngle)*20*0.15*0.90, vy:Math.sin(baseAngle)*20*0.15*0.90, // -10% speed
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
-          isLightning:true, chainCount, chainRange, pierce:Math.max(1,upgrades.pierce||0),
+          isLightning:true, chainCount, chainRange, pierce:Math.max(isT2L?2:1, upgrades.pierce||0),
           chained:false, chainHits:new Set(),
           snakePhase:bi*2.1, snakeAng:baseAngle, // unique phase per bolt
         });
@@ -5753,7 +5753,9 @@ function startSpace() {
         const el=document.getElementById('spaceTimer');
         if(el) el.textContent=Math.floor(secs/60)+':'+(secs%60<10?'0':'')+(secs%60);
       }
-      const SPEED=getShipSpeed() * (_minigunShooting ? 0.80 : 1.0); // -20% when minigun firing
+      const _frozenActive=activeWeapons.includes('frozenStaff')||activeWeapon==='frozenStaff';
+      const _frozenSpeedBonus=_frozenActive?(upgrades.tier2_frozenStaff?1.25:1.20):1.0;
+      const SPEED=getShipSpeed() * (_minigunShooting ? 0.80 : 1.0) * _frozenSpeedBonus;
       _minigunShooting=false; // reset each frame
       if(keys['ArrowUp']||keys['w']||keys['W'])    ship.y=Math.max(30,ship.y-SPEED);
       if(keys['ArrowDown']||keys['s']||keys['S'])  ship.y=Math.min(WH-30,ship.y+SPEED);
