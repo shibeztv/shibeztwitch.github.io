@@ -3970,7 +3970,7 @@ function startFlappy() {
     if (_lastGapY < 0) {
       gapY = minTop + Math.random() * (maxGapY - minTop);
     } else {
-      const maxDelta = ES * 7;
+      const maxDelta = ES * 7 + PIPE_GAP * 2; // 2 extra gap heights of movement
       const lo = Math.max(minTop, _lastGapY - maxDelta);
       const hi = Math.min(maxGapY, _lastGapY + maxDelta);
       gapY = lo + Math.random() * (hi - lo);
