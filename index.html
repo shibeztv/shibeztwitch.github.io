@@ -4711,7 +4711,7 @@ function startSpace() {
     {key:'hpRegen',     label:'💚 HP Regen',         desc:'+0.02 HP/s per lvl',            maxLvl:10, cost:l=>Math.floor(5+l*l*1.8+l*3)},
     {key:'damage',      label:'🔥 Damage',           desc:'+15% dmg per lvl',              maxLvl:20, cost:l=>Math.floor(4+l*l*1.4+l*3)},
     {key:'bulletSize',  label:'🔵 Size Upgrade',     desc:'+16% size per lvl',             maxLvl:20, cost:l=>Math.floor(5+l*l*1.5+l*3)},
-    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% bullet range/speed',        maxLvl:15, cost:l=>Math.floor(4+l*l*1.6+l*3)},
+    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% attack range',        maxLvl:15, cost:l=>Math.floor(4+l*l*1.6+l*3)},
     {key:'coinMagnet',  label:'🧲 Pickup Range',     desc:'+15% pickup radius',            maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
     {key:'armor',       label:'🛡 Armor',             desc:'Chance to negate incoming damage', maxLvl:20, cost:l=>Math.floor(7+l*l*2.0+l*4)},
     {key:'enemySwarm',  label:'👹 Enemy Swarm',      desc:'+15% more enemies & +10% coin', maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
@@ -4906,8 +4906,8 @@ function startSpace() {
 
   function getShipSpeed()   { return 2.03*(1+upgrades.speed*0.12); } // 12% per level
   function getShootCd()     {
-    const base=Math.max(5,Math.floor(88-upgrades.atkSpeed*2)); // base pistol cd
-    const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base;
+    const base=Math.max(5,Math.floor(106-upgrades.atkSpeed*2)); // base pistol cd (-20% slower)
+    const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*1.50)) : base; // t2 -50% atk spd
     const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.40) : t2Mod;
     return friendsMod;
   }
@@ -4918,7 +4918,8 @@ function startSpace() {
   function getBulletSize()  { return Math.min(2.2, 1.15+upgrades.bulletSize*0.16); }
   function getCoinRange()   { return 32*(1+upgrades.coinMagnet*0.15); }
   function getMaxHp()       { return 5+upgrades.maxHp; } // 5 base lives
-  function getRangeMult()   { return 1+(upgrades.attackRange||0)*0.08; } // +8% per level
+  function getRangeMult()   { return 1+(upgrades.attackRange||0)*0.08; } // +8% range per level
+  function getSpeedMult()   { return 1.0; } // speed is NOT affected by attack range
   function getMaxWeaponSlots() { return 1+(upgrades.weaponSlots||0); } // 1–4
 
   let _pilotIdx = Math.floor(Math.random()*_spaceEmotes.length);
@@ -5188,7 +5189,8 @@ function startSpace() {
     // All stat bonuses applied to all weapons
     const dmg=getBulletDmg();      // damage upgrade affects every weapon
     const sz=getBulletSize();       // bullet size upgrade affects every weapon
-    const rm=getRangeMult();        // range upgrade affects every weapon
+    const rm=getRangeMult();        // range multiplier — affects life/range ONLY
+    const sm=1.0;                   // speed mult (separate from range)
     const pw=activePowerup;
     const setCd=(cd)=>{ _slotCooldowns[slot]=cd; shootCooldown=_slotCooldowns[0]; };
 
@@ -5225,14 +5227,14 @@ function startSpace() {
       sfxShoot(); return;
 
     } else if(wKey==='minigun'){
-      const mgCount=upgrades.tier2_minigun?12:8; // +3 bullets each
+      const mgCount=(upgrades.tier2_minigun?12:8)+Math.floor(upgrades.multishot*0.5); // +0.5 bullet per multishot lvl
       const mgSpread=upgrades.tier2_minigun?0.53:0.158; // +15% wider
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
         const _mgSpd=upgrades.tier2_minigun?7.2*0.75*1.25*1.5:7.2*0.75*1.25; // T2 +50% speed
-        const _mgLife=Math.floor(144);
+        const _mgLife=Math.floor(144*rm); // range multiplier on life
         const _mgDmg=(upgrades.tier2_minigun?0.09:0.08)*getBulletDmg();
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd,vy:Math.sin(baseAngle+spread)*_mgSpd,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
       setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9*1.2:17.1*1.2)*rapidMod*atkMod));
@@ -5241,12 +5243,12 @@ function startSpace() {
       const hasTier2=!!upgrades.tier2_towerGun;
       _towerGunBurstCount++; // always increment for rainbow color
       const isDoubleBurst=hasTier2&&(_towerGunBurstCount%4===0);
-      const shotCount=isDoubleBurst?16:8;
+      const shotCount=(isDoubleBurst?16:8)+Math.floor(upgrades.multishot*0.7);
       // Tower gun rotates around the aim direction
       const _rotOff=hasTier2?(frame*0.05):baseAngle; // tier2 spins, base follows cursor
       for(let i=0;i<shotCount;i++){
         const a=_rotOff+(i/shotCount)*Math.PI*2;
-        const spd=isDoubleBurst?6*rm:5.2*rm; // -60% bullet speed
+        const spd=isDoubleBurst?6.0:5.2; // speed constant — range via rm not here
         const bulletSz=isDoubleBurst?sz*1.35:sz*1.1; // sz from getBulletSize — already universal
         const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
@@ -5262,39 +5264,40 @@ function startSpace() {
       const isT2=!!upgrades.tier2_flamethrower;
       const spread=isT2?0.65:0.45; // T2 less spread
       const rangeBonus=isT2?1.15*1.15:1.0; // T2 +15% more range
-      for(let i=0;i<9;i++){
+      const _flameCount=9+Math.floor(upgrades.multishot*0.6);
+      for(let i=0;i<_flameCount;i++){
         const a=baseAngle+(Math.random()-0.5)*spread; // 9 particles same cone
-        const spd=(6+Math.random()*4.5)*rangeBonus*rm;
+        const spd=(6+Math.random()*4.5)*rangeBonus;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
           dmg: (isT2?0.00415*0.3:0.00415)*getBulletDmg(),  // scaled by dmg upgrade
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
-          burns: true,               // BOTH tiers apply burn (fix)
+          pierce:upgrades.pierce||0, burns: true,               // BOTH tiers apply burn (fix)
           _burnDur: 180,              // burn lasts 3s (180f at 60fps)
-          _burnFlat: isT2?1.5:0.5,   // T2 more burn dmg
+          _burnFlat: isT2?0.20:0.08, // small burn per second
           _burnExpire: true,          // burn expires if not re-hit for 3s
         });
       }
       setCd(Math.floor((isT2?7*1.20:7)*rapidMod*atkMod));
 
     } else if(wKey==='multiGun'){
-      const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
+      const count=(upgrades.tier2_multiGun?10:6)+Math.floor(upgrades.multishot*0.8);
       const spread=upgrades.tier2_multiGun?Math.PI*1.05*0.88*0.85:0.72*0.88; // T2 -15% more
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
         const _mSpd=upgrades.tier2_multiGun?8.55*0.80*0.70:8.55*0.80; // T1 -20%, T2 -30%
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd*rm,vy:Math.sin(a)*_mSpd*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0});
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd,vy:Math.sin(a)*_mSpd,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0});
       }
       setCd(Math.floor((upgrades.tier2_multiGun?141*1.20:141*1.15)*rapidMod*atkMod));
 
     } else if(wKey==='frozenStaff'){
       const isT2f=!!upgrades.tier2_frozenStaff;
       const coneSpread=isT2f?0.70*0.75:0.55; // T2 -25% spread
-      const rangeF=isT2f?2.80:2.24; // 2x range
-      const _fsCount=isT2f?4:5; // T2 -15% bullets
+      const rangeF=(isT2f?2.80:2.24)*0.50; // -50% range
+      const _fsCount=(isT2f?4:5)+Math.floor(upgrades.multishot*0.5);
       for(let i=0;i<_fsCount;i++){
         const a=baseAngle+(i-(_fsCount-1)/2)*(coneSpread/(_fsCount-1||1));
-        const spd=(5+Math.random()*3.5)*rangeF*rm*0.35;
+        const spd=(5+Math.random()*3.5)*rangeF*0.35*0.70; // -30% base speed
         const life=(28+Math.random()*16)*rangeF*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
           dmg: (isT2f?0.05:0.0125)*getBulletDmg(),
@@ -5328,10 +5331,10 @@ function startSpace() {
 
     } else if(wKey==='lightning'){
       const isT2L=!!upgrades.tier2_lightning;
-      const boltCount=isT2L?5:3;
+      const boltCount=(isT2L?5:3)+Math.floor(upgrades.multishot*0.4);
       const boltDmg=(isT2L?0.36:0.30)*getBulletDmg();
       const chainCount=isT2L?2:1;    // how many enemies each bolt chains to
-      const chainRange=isT2L?160:100; // chain range
+      const chainRange=isT2L?108:72; // T1:2x player size, T2:3x player size
       const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
       const _lcol=isT2L?'#ff4444':'#7df9ff';
       const _lSpread=isT2L?28:22; // visible spread between bolts
@@ -5339,7 +5342,7 @@ function startSpace() {
         const offset=(bi-(boltCount-1)/2)*_lSpread;
         bullets.push({
           x:ship.x+perpX*offset, y:ship.y+perpY*offset,
-          vx:Math.cos(baseAngle)*20*0.15*rm, vy:Math.sin(baseAngle)*20*0.15*rm, // -85% speed
+          vx:Math.cos(baseAngle)*20*0.15, vy:Math.sin(baseAngle)*20*0.15, // speed constant
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
           isLightning:true, chainCount, chainRange, pierce:Math.max(1,upgrades.pierce||0),
@@ -5362,14 +5365,15 @@ function startSpace() {
       // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
       const cd=Math.floor(getShootCd()*rapidMod);
       const count=getBulletCount();
-      const offsets=count===1?[0]:count===2?[-0.036,0.036]:count===3?[-0.06,0,0.06]:[-0.075,-0.024,0.024,0.075]; // -70% spread
-      const p=upgrades.pierce||0;
       const _fActive=activeWeapons.includes('friends')||activeWeapon==='friends';
+      // When friends active: always fire exactly 1 circle (ignore multishot)
+      const _fOffsets=_fActive?[0]:(count===1?[0]:count===2?[-0.036,0.036]:count===3?[-0.06,0,0.06]:[-0.075,-0.024,0.024,0.075]);
+      const p=upgrades.pierce||0;
       const _fSz=_fActive?sz*6:sz;
-      offsets.forEach(da=>{
-        const _fSpd=_fActive?11*rm*0.30*1.12*0.70:11*rm; // -30% speed friends
+      _fOffsets.forEach(da=>{
+        const _fSpd=_fActive?11*0.30*1.12*0.70*0.40:11.0; // speed (no rm)
         const _fDmg=_fActive?Math.max(0.1,dmg*0.9):dmg;
-        const _fPierce=_fActive?(999):(p); // friends circle pierces all
+        const _fPierce=_fActive?(999):(p);
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*_fSpd,vy:Math.sin(baseAngle+da)*_fSpd,dmg:_fDmg,size:_fSz,pierce:_fPierce,circle:_fActive});
       });
       if(upgrades.tier2_default){
@@ -5384,7 +5388,7 @@ function startSpace() {
           });
         });
       }
-      if(pw==='double'&&count<2){bullets.push({x:ship.x,y:ship.y-8,vx:Math.cos(baseAngle)*11*rm,vy:Math.sin(baseAngle)*11*rm,dmg:dmg,size:sz,pierce:p});}
+      if(pw==='double'&&count<2){bullets.push({x:ship.x,y:ship.y-8,vx:Math.cos(baseAngle)*11,vy:Math.sin(baseAngle)*11,dmg:dmg,size:sz,pierce:p});}
       if(pw==='triple'&&count<3){[-0.2,0.2].forEach(da=>bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*11*rm,vy:Math.sin(baseAngle+da)*11*rm,dmg:dmg,size:sz,pierce:p}));}
       setCd(cd);
     }
@@ -5844,7 +5848,7 @@ function startSpace() {
       // Garlic: passive AOE damage around player every second (60 frames)
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
-        const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85 : 1.0); // T2 -15% less
+        const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85 : 1.0) * getRangeMult() * getBulletSize(); // size+range upgrades
         const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) * getBulletDmg() / 60;
         // Garlic damages abandoned ships in range
         for(let _gasi=0;_gasi<abandonedShips.length;_gasi++){
@@ -6230,18 +6234,25 @@ function startSpace() {
             }
             // Lightning chain: jump to nearby enemies
             if(b.isLightning && !b.chained && (b.chainCount||1)>0){
+              // Chain range = N * player size (T1=2x, T2=3x player ~36px)
+              const _chainRangePx=(b.chainRange||72)*1.0;
               b.chainHits=b.chainHits||new Set();b.chainHits.add(e);
               const _chainTargets=enemies
-                .filter(ce=>!b.chainHits.has(ce)&&Math.sqrt((ce.x-e.x)**2+(ce.y-e.y)**2)<(b.chainRange||100)+ce.size*0.5)
+                .filter(ce=>!b.chainHits.has(ce)&&Math.sqrt((ce.x-e.x)**2+(ce.y-e.y)**2)<_chainRangePx+ce.size*0.5)
                 .sort((a,c)=>Math.sqrt((a.x-e.x)**2+(a.y-e.y)**2)-Math.sqrt((c.x-e.x)**2+(c.y-e.y)**2))
                 .slice(0,b.chainCount||1);
-              _chainTargets.forEach(ce=>{
+              _chainTargets.forEach((ce,_ci)=>{
                 b.chainHits.add(ce);
-                ce.hp-=b.dmg*0.8;
+                // Redirect bolt toward first chain target (visually bounces)
+                if(_ci===0){
+                  const _cd=Math.sqrt((ce.x-b.x)**2+(ce.y-b.y)**2)||1;
+                  const _spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy)||3;
+                  b.vx=(ce.x-b.x)/_cd*_spd;b.vy=(ce.y-b.y)/_cd*_spd;
+                  b.chained=true;
+                }
                 spawnParticles(ce.x,ce.y,b.color||'#7df9ff',5);
-                // Store chain arc for drawing this frame
                 if(!window._lightningArcs) window._lightningArcs=[];
-                window._lightningArcs.push({x1:e.x,y1:e.y,x2:ce.x,y2:ce.y,col:b.color||'#7df9ff',life:12});
+                window._lightningArcs.push({x1:e.x,y1:e.y,x2:ce.x,y2:ce.y,col:b.color||'#7df9ff',life:14});
                 if(ce.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(ce.x,ce.y,'#ffd700',10);sfxExplode();
                   // Also check abandoned ships for chain damage
                   for(let _lasi=0;_lasi<abandonedShips.length;_lasi++){
@@ -7133,7 +7144,7 @@ function startSpace() {
     // Garlic aura visual
     if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
       const _gT2v=!!upgrades.tier2_garlic;
-      const _gRv = 3 * 36 * 1.5 * (_gT2v ? 1.40*0.85 : 1.0);
+      const _gRv = 3 * 36 * 1.5 * (_gT2v ? 1.40*0.85 : 1.0) * getRangeMult() * getBulletSize();
       const _gPulse=0.5+0.25*Math.sin(frame*0.08);
       ctx.save();ctx.globalAlpha=0.12+_gPulse*0.06;
       // Filled circle 70% transparent + outline
@@ -7143,7 +7154,30 @@ function startSpace() {
       ctx.globalAlpha=0.6+_gPulse*0.2;
       ctx.strokeStyle=`${_gc},0.7)`;
       ctx.lineWidth=2.5;
-      ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.stroke();
+      // Squiggly wave edge
+      const _gSegs=48;
+      const _gWaveAmp=3+2*Math.sin(frame*0.04);
+      const _gWaveFreq=6;
+      ctx.beginPath();
+      for(let _gi=0;_gi<=_gSegs;_gi++){
+        const _ga=(_gi/_gSegs)*Math.PI*2;
+        const _gw=_gRv+_gWaveAmp*Math.sin(_ga*_gWaveFreq+frame*0.12);
+        const _gx=ship.x+Math.cos(_ga)*_gw;
+        const _gy=ship.y+Math.sin(_ga)*_gw;
+        _gi===0?ctx.moveTo(_gx,_gy):ctx.lineTo(_gx,_gy);
+      }
+      ctx.closePath();ctx.stroke();
+      // Pulsing radial lines from center to edge
+      ctx.globalAlpha=0.08+0.06*_gPulse;
+      for(let _gpi=0;_gpi<8;_gpi++){
+        const _gpa=(_gpi/8)*Math.PI*2+frame*0.015;
+        const _gpPulse=0.3+0.7*((Math.sin(frame*0.1-_gpi*0.8)+1)/2);
+        ctx.strokeStyle=`${_gc},${_gpPulse})`;
+        ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(ship.x,ship.y);
+        ctx.lineTo(ship.x+Math.cos(_gpa)*_gRv*_gpPulse,ship.y+Math.sin(_gpa)*_gRv*_gpPulse);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
