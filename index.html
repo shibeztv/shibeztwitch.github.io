@@ -3844,6 +3844,7 @@ function startFlappy() {
     img.width = 52; img.height = 52;
     // Always keep in DOM so WebP/GIF animation keeps running
     img.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:52px;height:52px;pointer-events:none';
+    img.decoding='async'; img.fetchpriority='high';
     _gifContainer.appendChild(img);
     return img;
   });
@@ -3898,7 +3899,7 @@ function startFlappy() {
       // Rarer: max 2, wider gap, smaller size
       // Spawn between pillars: find a gap between the last two pipes
       if (visible.length < 2 && rightmost < W - 150 && Math.random() < 0.25) {
-        const size = 26 + Math.floor(Math.random() * 16);
+        const size = 52 + Math.floor(Math.random() * 20);
         // Find a spot that's between two pipes (in a gap)
         let spawnX = W + size;
         // Look for a gap: find rightmost pipe that is still on screen
@@ -3916,8 +3917,12 @@ function startFlappy() {
           }
         }
         if (!_gEmoteInPipe(spawnX, size)) {
-          const idx = Math.floor(Math.random() * emoteImgs.length);
-          _gEmotes.push({ x: spawnX, size, img: emoteImgs[idx] });
+          // No overlap with existing ground emotes
+          const tooClose = _gEmotes.some(g => Math.abs(g.x - spawnX) < g.size * 0.6 + size * 0.6);
+          if (!tooClose) {
+            const idx = Math.floor(Math.random() * emoteImgs.length);
+            _gEmotes.push({ x: spawnX, size, img: emoteImgs[idx] });
+          }
         }
       }
     }
@@ -4591,6 +4596,13 @@ function startSpace() {
   shipImg.style.left='-9999px'; shipImg.style.top='-9999px';
   if(_emoteLayer) _emoteLayer.appendChild(shipImg);
 
+  // Slow effect emote overlay (for frozen staff)
+  const _slowEmoteImg = new Image();
+  _slowEmoteImg.crossOrigin='anonymous';
+  _slowEmoteImg.src='https://cdn.7tv.app/emote/01HZNCN74G000396FKBWMCGM33/2x.webp';
+  _slowEmoteImg.style.cssText='position:absolute;left:-9999px;top:0;pointer-events:none;';
+  if(_imgPool) _imgPool.appendChild(_slowEmoteImg);
+
   // Coin emote images
   const _coinImg = new Image(); _coinImg.crossOrigin='anonymous';
   _coinImg.src='https://cdn.7tv.app/emote/01HK8SDB6G000870SVK5KGZYWD/2x.webp';
@@ -4658,7 +4670,7 @@ function startSpace() {
 
 
   // Upgrades reset each run — only coins + upgrade points persist
-  const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,attackRange:0,pierce:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,frozenStaff:0,friends:0,enemySwarm:0,riskReward:0,weaponSlots:0,tier2_default:0,tier2_sniper:0,tier2_minigun:0,tier2_towerGun:0,tier2_flamethrower:0,tier2_multiGun:0,tier2_frozenStaff:0});
+  const _freshUpgrades = ()=>({speed:0,atkSpeed:0,multishot:0,maxHp:0,hpRegen:0,damage:0,bulletSize:0,attackRange:0,pierce:0,coinMagnet:0,armor:0,xpBoost:0,sniper:0,minigun:0,towerGun:0,flamethrower:0,multiGun:0,frozenStaff:0,friends:0,enemySwarm:0,riskReward:0,weaponSlots:0,tier2_default:0,tier2_sniper:0,tier2_minigun:0,tier2_towerGun:0,tier2_flamethrower:0,tier2_multiGun:0,tier2_frozenStaff:0,tier2_garlic:0,tier2_lightning:0});
   const upgrades = _freshUpgrades();
   window._spaceUpgrades = upgrades; // expose for current run only
   // Track which weapons are unlocked this run
@@ -4684,14 +4696,16 @@ function startSpace() {
   function saveCoins(n){coins=n;window._spaceCoins=n;document.getElementById('spaceCoins').textContent=coins;document.getElementById('shopCoinsDisp').textContent=coins;}
 
   const WEAPON_DEFS = [
-    {key:'default',      label:'🔫 Pistol',         desc:'Auto-aims at nearest enemy to cursor.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Triple Shot',       desc:'Fires 3 parallel projectiles at once',  cost:22}},
-    {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, high dmg, slow attack speed',                                    color:'#ff6644', cost:30,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces off walls, increased width',      cost:28}},
-    {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each.',            color:'#fbbf24', cost:38,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, even wider spread, -10% attack speed',        cost:28}},
-    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots',  cost:32}},
-    {key:'flamethrower', label:'🔥 Flamethrower',   desc:'Short range cone, burn focus, low base dmg',                                            color:'#ff4400', cost:52,  tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',           desc:'Increased range + burn dmg',           cost:35}},
-    {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:65,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way spread',cost:42}},
-    {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Slows enemies hit.',  color:'#88ddff', cost:48,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3s of continuous hits, freezes enemy for 1.5s',cost:36}},
+    {key:'default',      label:'🔫 Pistol',         desc:'Auto-aims at nearest enemy to cursor.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Triple Shot',       desc:'Fires 3 parallel projectiles at once',  cost:45}},
+    {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, high dmg, slow attack speed',                                    color:'#ff6644', cost:30,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces off walls, increased width',      cost:60}},
+    {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each.',            color:'#fbbf24', cost:40,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, even wider spread, -10% attack speed',        cost:65}},
+    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots',  cost:70}},
+    {key:'flamethrower', label:'🔥 Flamethrower',   desc:'Short range cone, burn focus, low base dmg',                                            color:'#ff4400', cost:50,  tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',           desc:'Increased range + burn dmg',           cost:75}},
+    {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:65,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way spread',cost:90}},
+    {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Slows enemies hit.',  color:'#88ddff', cost:50,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3s of continuous hits, freezes enemy for 1.5s',cost:75}},
     {key:'friends',      label:'👾 Friends',        desc:'Orbital follower that auto-shoots nearest enemy',  color:'#f0abfc', cost:30,  maxLvl:12, costPerLvl:l=>Math.floor(30+l*22)},
+    {key:'garlic',       label:'🧄 Garlic',         desc:'Damages all enemies in radius around player.',    color:'#e8d5a3', cost:55,  tier2:{key:'tier2_garlic', label:'🧄+ Super Garlic', desc:'+30% range, +0.2 dmg/s, heal 1 HP/10s', cost:85}},
+    {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'3 chaining lightning bolts, 0.3 dmg each, chains to nearby enemy.', color:'#7df9ff', cost:70, tier2:{key:'tier2_lightning', label:'⚡🔴 Storm Bolt', desc:'5 red bolts, +20% dmg, chains to 2 enemies, longer chain range', cost:95}},
   ];
 
   window.renderShopGrid = function renderShopGrid() {
@@ -4866,7 +4880,7 @@ function startSpace() {
   function getShootCd()     {
     const base=Math.max(5,Math.floor(88-upgrades.atkSpeed*2)); // base pistol cd
     const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base; // -20% atk speed vs base
-    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.15) : t2Mod; // -15% attack speed when friends active
+    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.25) : t2Mod; // -25% attack speed when friends active
     return friendsMod;
   }
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
@@ -5183,9 +5197,9 @@ function startSpace() {
       const mgSpread=upgrades.tier2_minigun?0.53:0.158; // +15% wider
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
-        const _mgSpd=upgrades.tier2_minigun?7.2*0.6:7.2*0.75; // -25% speed
+        const _mgSpd=upgrades.tier2_minigun?7.2*0.6:7.2*0.75*1.25; // +25% speed back
         const _mgLife=Math.floor(144);
-        const _mgDmg=upgrades.tier2_minigun?0.27:0.18; // -10% dmg
+        const _mgDmg=upgrades.tier2_minigun?0.3:0.2; // T1:0.2 T2:0.3
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
@@ -5200,7 +5214,7 @@ function startSpace() {
       const _rotOff=hasTier2?(frame*0.05):baseAngle; // tier2 spins, base follows cursor
       for(let i=0;i<shotCount;i++){
         const a=_rotOff+(i/shotCount)*Math.PI*2;
-        const spd=isDoubleBurst?15*rm:13*rm;
+        const spd=isDoubleBurst?6*rm:5.2*rm; // -60% bullet speed
         const bulletSz=isDoubleBurst?sz*1.35:sz*1.1;
         const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
@@ -5208,23 +5222,23 @@ function startSpace() {
       }
       if(isDoubleBurst){
         spawnParticles(ship.x,ship.y,'#e879f9',10);
-        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:280,life:30,maxLife:30,spd:isDoubleBurst?15*rm:13*rm,hue:(_towerGunBurstCount*73)%360});
+        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:500,life:45,maxLife:45,spd:6*rm*0.15,hue:(_towerGunBurstCount*73)%360,dmg:getBulletDmg()*2,hitEnemies:new Set()});
       }
-      setCd(Math.floor(100*rapidMod)); // -25% more
+      setCd(Math.floor(120*rapidMod)); // -20% more attack speed
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
       const spread=isT2?0.85:0.45;
       const rangeBonus=isT2?1.15:1.0;
-      for(let i=0;i<3;i++){
-        const a=baseAngle+(Math.random()-0.5)*spread;
+      for(let i=0;i<9;i++){
+        const a=baseAngle+(Math.random()-0.5)*spread; // 9 particles same cone
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2?0.333:0.083,       // T2: 1/3, T1: 1/3 of 0.25
+          dmg: isT2?0.1665:0.0415,     // -50% more per projectile
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
           burns: isT2,                // only T2 applies burn
-          _burnDur: 180,              // burn lasts 3s (180f) — resets on each hit
+          _burnDur: 180,              // burn lasts 3s (180f at 60fps)
           _burnFlat: 1,               // T2: 1 dmg/s flat (not %)
           _burnExpire: true,          // burn expires if not re-hit for 3s
         });
@@ -5233,10 +5247,10 @@ function startSpace() {
 
     } else if(wKey==='multiGun'){
       const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
-      const spread=upgrades.tier2_multiGun?Math.PI*1.05:0.72;
+      const spread=upgrades.tier2_multiGun?Math.PI*1.05*0.88:0.72*0.88; // -12% spread
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*9*rm,vy:Math.sin(a)*9*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0}); // -25% speed
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*8.55*rm,vy:Math.sin(a)*8.55*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0}); // -5% more speed
       }
       setCd(Math.floor(141*rapidMod)); // -25% more on top
 
@@ -5249,7 +5263,7 @@ function startSpace() {
         const spd=(5+Math.random()*3.5)*rangeF*rm*0.35;
         const life=(28+Math.random()*16)*rangeF*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2f?0.25:0.0625,     // T2: -75% of 1, T1: -75% of 0.25
+          dmg: isT2f?0.05:0.0125,     // /5 dmg for 400% speed
           size:sz*1.2,color:'#88ddff',flame:true,life,maxLife:life,
           freezing:true,
           _slowPct: isT2f?0.25:0.20,
@@ -5276,7 +5290,37 @@ function startSpace() {
           o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.1);
         },i*12));
       }
-      setCd(Math.floor(60*rapidMod)); // -65% attack speed
+      setCd(Math.floor(12*rapidMod)); // 400% faster (like a snowblower)
+
+    } else if(wKey==='lightning'){
+      const isT2L=!!upgrades.tier2_lightning;
+      const boltCount=isT2L?5:3;
+      const boltDmg=isT2L?0.36:0.30; // T2 +20% dmg
+      const chainCount=isT2L?2:1;    // how many enemies each bolt chains to
+      const chainRange=isT2L?160:100; // chain range
+      const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
+      const _lcol=isT2L?'#ff4444':'#7df9ff';
+      for(let bi=0;bi<boltCount;bi++){
+        const offset=(bi-(boltCount-1)/2)*9; // tightly packed
+        bullets.push({
+          x:ship.x+perpX*offset, y:ship.y+perpY*offset,
+          vx:Math.cos(baseAngle)*20*rm, vy:Math.sin(baseAngle)*20*rm,
+          dmg:boltDmg, size:sz*1.0,
+          color:_lcol, weaponType:'lightning',
+          isLightning:true, chainCount, chainRange,
+          chained:false, chainHits:new Set(),
+        });
+      }
+      setCd(Math.floor(22*rapidMod));
+      // Lightning SFX
+      const _lac=getACtx();if(_lac){
+        const _lv=getSfxVol()*0.08;
+        [600,900,1200].forEach((f,i)=>setTimeout(()=>{
+          const g=_lac.createGain();g.gain.setValueAtTime(_lv,_lac.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,_lac.currentTime+0.06);
+          const o=_lac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(f*1.5,_lac.currentTime);o.frequency.exponentialRampToValueAtTime(f*0.5,_lac.currentTime+0.06);
+          o.connect(g);g.connect(_lac.destination);o.start();o.stop(_lac.currentTime+0.07);
+        },i*15));
+      }
 
     } else {
       // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
@@ -5287,7 +5331,9 @@ function startSpace() {
       const _fActive=activeWeapons.includes('friends')||activeWeapon==='friends';
       const _fSz=_fActive?sz*6:sz;
       offsets.forEach(da=>{
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*11*rm,vy:Math.sin(baseAngle+da)*11*rm,dmg:dmg,size:_fSz,pierce:p,circle:_fActive});
+        const _fSpd=_fActive?11*rm*0.30:11*rm;
+        const _fDmg=_fActive?Math.max(0.1,dmg*0.9):dmg;
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*_fSpd,vy:Math.sin(baseAngle+da)*_fSpd,dmg:_fDmg,size:_fSz,pierce:p,circle:_fActive});
       });
       if(upgrades.tier2_default){
         // 3 parallel shots: center + offset perpendicular to aim direction
@@ -5754,10 +5800,41 @@ function startSpace() {
             const fa=Math.atan2(target.y-f.y,target.x-f.x);
             bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*1.26,vy:Math.sin(fa)*1.26,dmg:Math.max(1,Math.floor(getBulletDmg()*0.585)),size:getBulletSize(),color:'#f0abfc',fromFollower:true}); // 30% bullet speed
             f.shootTimer=101; // 40% of 252 = faster
-            playTone(900,'square',0.04,0.07);
+            playTone(900,'square',0.015,0.05);
           }
         }
       });
+      // Garlic: passive AOE damage around player every second (60 frames)
+      if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
+        const _gT2=!!upgrades.tier2_garlic;
+        const _gRadius = 3 * 36 * (_gT2 ? 1.30 : 1.0); // 3x player size (~36px) + T2 +30%
+        const _gDmg = (_gT2 ? 0.5 : 0.3) / 60; // per-frame dmg (0.3 or 0.5 per second)
+        enemies=enemies.map(e=>{
+          const dx=e.x-ship.x, dy=e.y-ship.y;
+          if(Math.sqrt(dx*dx+dy*dy)<_gRadius+e.size*0.5){
+            e.hp-=_gDmg;
+            if(frame%30===0) spawnParticles(e.x,e.y,'#e8d5a3',2);
+            if(e.hp<=0){
+              score++;document.getElementById('spaceScore').textContent=score;
+              spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();
+              const r2=Math.random();let du=false;
+              if(r2<0.0173){spawnDrop(e.x,e.y,'heart');du=true;}
+              else if(r2<0.0633){spawnDrop(e.x,e.y,'magnet');du=true;}
+              else if(r2<0.0863){const rp=['double','triple','rapid','shield','aura'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);du=true;}
+              const bc=du?0:(Math.random()<0.05?3:Math.random()<0.20?2:1);
+              for(let ci=0;ci<bc;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
+              return null;
+            }
+          }
+          return e;
+        }).filter(Boolean);
+        // T2: heal 1 HP every 10 seconds (600 frames)
+        if(_gT2 && frame%600===0 && lives<getMaxHp()){
+          lives++;updateHeartsDisplay(lives,silverLives,getMaxHp());
+          sfxPowerup();spawnParticles(ship.x,ship.y,'#4ade80',12);
+        }
+      }
+
       for(let _ci=0;_ci<4;_ci++){ if(_slotCooldowns[_ci]>0)_slotCooldowns[_ci]--; }
       shootCooldown=_slotCooldowns[0]; // keep legacy compat
       if(invincible>0) invincible--;
@@ -6038,6 +6115,23 @@ function startSpace() {
                     }
                   }
               }
+            }
+            // Lightning chain: jump to nearby enemies
+            if(b.isLightning && !b.chained && (b.chainCount||1)>0){
+              b.chainHits=b.chainHits||new Set();b.chainHits.add(e);
+              const _chainTargets=enemies
+                .filter(ce=>!b.chainHits.has(ce)&&Math.sqrt((ce.x-e.x)**2+(ce.y-e.y)**2)<(b.chainRange||100)+ce.size*0.5)
+                .sort((a,c)=>Math.sqrt((a.x-e.x)**2+(a.y-e.y)**2)-Math.sqrt((c.x-e.x)**2+(c.y-e.y)**2))
+                .slice(0,b.chainCount||1);
+              _chainTargets.forEach(ce=>{
+                b.chainHits.add(ce);
+                ce.hp-=b.dmg*0.8;
+                spawnParticles(ce.x,ce.y,b.color||'#7df9ff',5);
+                // Draw a chain arc particle effect
+                spawnParticles((e.x+ce.x)/2,(e.y+ce.y)/2,b.color||'#7df9ff',3);
+                if(ce.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(ce.x,ce.y,'#ffd700',10);sfxExplode();}
+              });
+              if(_chainTargets.length>0) b.chained=true;
             }
             if(e.hp<=0){
               score++;document.getElementById('spaceScore').textContent=score;
@@ -6492,15 +6586,31 @@ function startSpace() {
 
     // Burst rings (tower gun tier2 every 4th shot)
     _burstRings=_burstRings.filter(ring=>{
-      ring.r+=ring.spd*1.2; ring.life--;
+      ring.r+=ring.spd; ring.life--;
       if(ring.life<=0) return false;
       const t=ring.life/ring.maxLife;
+      // Deal damage to enemies at the ring edge
+      enemies=enemies.map(e=>{
+        if(ring.hitEnemies.has(e)) return e;
+        const dist=Math.sqrt((e.x-ring.x)**2+(e.y-ring.y)**2);
+        if(Math.abs(dist-ring.r)<e.size*0.6+8){
+          ring.hitEnemies.add(e);
+          e.hp-=ring.dmg;
+          spawnParticles(e.x,e.y,`hsl(${ring.hue},100%,70%)`,6);
+          if(e.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(e.x,e.y,'#ffd700',12);sfxExplode();return null;}
+        }
+        return e;
+      }).filter(Boolean);
+      // Draw ring — thick glowing visible circle
       ctx.save();
-      ctx.globalAlpha=t*0.7;
-      ctx.strokeStyle=`hsl(${ring.hue},100%,70%)`;
-      ctx.lineWidth=3*t;
-      ctx.shadowColor=`hsl(${ring.hue},100%,70%)`;ctx.shadowBlur=8*t;
+      ctx.globalAlpha=t*0.9;
+      ctx.shadowColor=`hsl(${ring.hue},100%,70%)`;ctx.shadowBlur=20;
+      ctx.strokeStyle=`hsl(${ring.hue},100%,75%)`;ctx.lineWidth=6*t+2;
       ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r,0,Math.PI*2);ctx.stroke();
+      // Inner fill hint
+      ctx.globalAlpha=t*0.12;
+      ctx.fillStyle=`hsl(${ring.hue},100%,65%)`;
+      ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r,0,Math.PI*2);ctx.fill();
       ctx.shadowBlur=0;ctx.restore();
       return true;
     });
@@ -6573,38 +6683,22 @@ function startSpace() {
         ctx.fillStyle='#fffde0';ctx.beginPath();ctx.arc(0,0,r*0.28,0,Math.PI*2);ctx.fill();
         ctx.restore();
 
-      } else if(wt==='sniper'||b.laser){
-        const tRaw=b.life!==undefined?(b.life/b.maxLife):1;
-        const t=tRaw; // simple linear fade out (1 at fire, 0 at expire)
-        const bw=(b.width||6)*Math.max(0.2,t);
-        const drawLaserSegment=(ox,oy,ang,len)=>{
-          ctx.save();ctx.translate(ox,oy);ctx.rotate(ang);
-          const og=ctx.createLinearGradient(0,0,len,0);
-          og.addColorStop(0,`rgba(255,80,30,${0.15*t})`);og.addColorStop(0.5,`rgba(255,50,10,${0.08*t})`);og.addColorStop(1,'rgba(255,30,0,0)');
-          ctx.strokeStyle=og;ctx.lineWidth=bw*2.2;ctx.lineCap='round';
-          ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len,0);ctx.stroke();
-          const cg=ctx.createLinearGradient(0,0,len,0);
-          cg.addColorStop(0,`rgba(255,180,120,${t*0.9})`);cg.addColorStop(0.35,`rgba(255,60,10,${0.75*t})`);cg.addColorStop(1,'rgba(255,30,0,0)');
-          ctx.strokeStyle=cg;ctx.lineWidth=bw;
-          ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len,0);ctx.stroke();
-          ctx.restore();
-        };
-        const fullLen=Math.sqrt(WW*WW+WH*WH)*1.1;
-        // Draw pre-bounce segment (from player to wall)
-        if(b._origX!==undefined){
-          drawLaserSegment(b._origX,b._origY,b._origAngle,b._bounceLen||fullLen);
-        }
-        // Draw main (post-bounce or base) segment
-        const angle=b.angle!==undefined?b.angle:Math.atan2(b.vy||0,b.vx||1);
-        ctx.save();ctx.translate(b.x,b.y);ctx.rotate(angle);
-        const og=ctx.createLinearGradient(0,0,fullLen,0);
-        og.addColorStop(0,`rgba(255,80,30,${0.15*t})`);og.addColorStop(0.5,`rgba(255,50,10,${0.08*t})`);og.addColorStop(1,'rgba(255,30,0,0)');
-        ctx.strokeStyle=og;ctx.lineWidth=bw*2.2;ctx.lineCap='round';
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(fullLen,0);ctx.stroke();
-        const cg=ctx.createLinearGradient(0,0,fullLen,0);
-        cg.addColorStop(0,`rgba(255,180,120,${t*0.9})`);cg.addColorStop(0.35,`rgba(255,60,10,${0.75*t})`);cg.addColorStop(1,'rgba(255,30,0,0)');
-        ctx.strokeStyle=cg;ctx.lineWidth=bw;
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(fullLen,0);ctx.stroke();
+      } else if(wt==='sniper'){
+        // Laser bolt — short tracer that flies and disappears
+        const angle=Math.atan2(b.vy,b.vx);
+        const sz=b.size||2;
+        const tlen=55*sz; // tracer tail length
+        ctx.translate(b.x,b.y);ctx.rotate(angle);
+        ctx.save();
+        ctx.shadowColor='#ff6644';ctx.shadowBlur=8;
+        const lg=ctx.createLinearGradient(-tlen,0,0,0);
+        lg.addColorStop(0,'rgba(255,80,30,0)');
+        lg.addColorStop(0.6,'rgba(255,140,60,0.6)');
+        lg.addColorStop(1,'rgba(255,220,180,0.95)');
+        ctx.strokeStyle=lg;ctx.lineWidth=sz*3;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(-tlen,0);ctx.lineTo(0,0);ctx.stroke();
+        ctx.fillStyle='#fff8f0';ctx.beginPath();ctx.arc(0,0,sz*1.8,0,Math.PI*2);ctx.fill();
+        ctx.shadowBlur=0;ctx.restore();
 
       } else if(wt==='minigun'){
         // Minigun — bullet tracer (60% larger)
@@ -6667,6 +6761,34 @@ function startSpace() {
         ctx.beginPath();ctx.arc(0,0,2.5*sz,0,Math.PI*2);ctx.fill();
         ctx.shadowBlur=0;ctx.restore();
 
+      } else if(wt==='lightning'){
+        // Lightning bolt — jagged electric bolt
+        const angle=Math.atan2(b.vy,b.vx);
+        const isRed=b.color==='#ff4444';
+        const _lc=b.color||'#7df9ff';
+        const sz2=b.size||1;
+        const tlen=40*sz2;
+        ctx.save();
+        ctx.translate(b.x,b.y);ctx.rotate(angle);
+        ctx.shadowColor=_lc;ctx.shadowBlur=10;
+        // Jagged lightning path
+        const segs=4;
+        const _seed2=(Math.floor(b.x*3+b.y*7))&255;
+        const _rng2=(i)=>((_seed2*9301+i*49297)%233280)/233280;
+        ctx.strokeStyle=_lc;ctx.lineWidth=isRed?2.5:1.8;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(-tlen,0);
+        for(let i=1;i<=segs;i++){
+          const px=-tlen+i*(tlen/segs);
+          const py=i===segs?0:(_rng2(i*5)-0.5)*10*sz2;
+          ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        // Bright core
+        ctx.strokeStyle='#ffffff';ctx.lineWidth=0.7;
+        ctx.beginPath();ctx.moveTo(-tlen*0.4,0);ctx.lineTo(0,0);ctx.stroke();
+        ctx.fillStyle=_lc;ctx.beginPath();ctx.arc(0,0,2.5*sz2,0,Math.PI*2);ctx.fill();
+        ctx.shadowBlur=0;ctx.restore();
+
       } else {
         // Default — classic cyan tracer
         const sz=b.size||1;
@@ -6722,7 +6844,14 @@ function startSpace() {
         ctx.save();ctx.globalAlpha=0.45;ctx.strokeStyle='#88ddff';ctx.lineWidth=3;
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();ctx.restore();
       } else if(_eSlowed){
-        ctx.save();ctx.globalAlpha=0.28;ctx.strokeStyle='#88ccff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+        // Draw snow/slow emote at 70% transparency above enemy
+        if(_slowEmoteImg&&_slowEmoteImg.complete&&_slowEmoteImg.naturalWidth>0){
+          const _seSz=Math.min(e.size*0.7,32);
+          ctx.save();ctx.globalAlpha=0.30; // 70% transparent
+          ctx.drawImage(_slowEmoteImg,e.x-_seSz/2,e.y-e.size*0.6-_seSz,_seSz,_seSz);
+          ctx.restore();
+        }
+        ctx.save();ctx.globalAlpha=0.20;ctx.strokeStyle='#88ccff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
       }
       const bary=e.y+e.size/2+3, barh=e.isTitan?8:(e.isBoss?10:4);
@@ -6815,6 +6944,21 @@ function startSpace() {
     });
 
     // Shield ring
+    // Garlic aura visual
+    if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
+      const _gT2v=!!upgrades.tier2_garlic;
+      const _gRv = 3 * 36 * (_gT2v ? 1.30 : 1.0);
+      const _gPulse=0.5+0.25*Math.sin(frame*0.08);
+      ctx.save();ctx.globalAlpha=0.12+_gPulse*0.06;
+      const _gg=ctx.createRadialGradient(ship.x,ship.y,_gRv*0.3,ship.x,ship.y,_gRv);
+      _gg.addColorStop(0,'rgba(232,213,163,0.3)');_gg.addColorStop(1,'rgba(232,213,163,0)');
+      ctx.fillStyle=_gg;ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=0.35+_gPulse*0.15;
+      ctx.strokeStyle='rgba(232,213,163,0.6)';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+    }
+
     if(_hasPowerup('shield')){
       ctx.save();
       const sg=ctx.createRadialGradient(ship.x,ship.y,28,ship.x,ship.y,52);
