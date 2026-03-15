@@ -1433,7 +1433,7 @@
 
     <!-- SHIB.LE MODAL -->
     <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1450px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1015px;overflow:hidden;position:relative;display:flex;flex-direction:column">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
@@ -3648,7 +3648,12 @@ function openShible(randomMode) {
   // We try to load a random numbered one and fall back to maxresdefault if it fails
   const vid = stream.vids[Math.floor(Math.random() * stream.vids.length)];
   const frameNum = Math.floor(Math.random() * 3) + 1;
-  const thumb = `https://i.ytimg.com/vi/${vid.id}/hqdefault.jpg`;
+  const thumb = `https://i.ytimg.com/vi/${vid.id}/maxresdefault.jpg`;
+  // Fallback to hqdefault if maxres not available
+  document.getElementById('shibleThumb').onerror = function() {
+    this.onerror = null;
+    this.src = `https://i.ytimg.com/vi/${vid.id}/hqdefault.jpg`;
+  };
   // Store vid id for zoom
   document.getElementById('shibleThumb').dataset.vidId = vid.id;
   document.getElementById('shibleThumb').src = thumb;
@@ -3752,6 +3757,7 @@ const FLAPPY_EMOTE_SET = '01F6YHT8TG0003S6SNNTMYB87P';
 
 let _flappyEmotes = [];
 let _flappyRunning = false;
+let _currentDeathSfxGlobal = null;
 let _flappyRAF = null;
 let _flappyImgPool = null; // persistent img elements, loaded once
 let _flappyImgEls = [];   // array of <img> elements, kept alive for animation
@@ -3781,7 +3787,10 @@ async function preloadFlappyEmotes() {
   }
   _flappyImgPool.innerHTML = '';
 
-  const picks = [..._flappyEmotes].sort(() => Math.random() - 0.5).slice(0, 16);
+  // Prefer static emotes, also load some animated ones for ground emotes
+  const staticPicks = [..._flappyEmotes].filter(e=>!e.animated).sort(()=>Math.random()-0.5).slice(0,16);
+  const animPicks = [..._flappyEmotes].filter(e=>e.animated).sort(()=>Math.random()-0.5).slice(0,8);
+  const picks = [...staticPicks, ...animPicks];
 
   // Create all img elements and wait for them all to load before flagging ready
   const loadPromises = picks.map(e => new Promise(resolve => {
@@ -3790,8 +3799,9 @@ async function preloadFlappyEmotes() {
     img.fetchPriority = 'high';
     img.decoding = 'async';
     img.style.cssText = 'width:52px;height:52px;display:inline-block';
+    img._isAnimated = e.animated || false; // tag for later filtering
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(img); // resolve anyway so we don't block forever
+    img.onerror = () => resolve(img);
     img.src = e.url;
     _flappyImgPool.appendChild(img);
   }));
@@ -3858,6 +3868,8 @@ function openFlappyShibez() {
 function closeFlappy() {
   _flappyRunning = false;
   if (_flappyRAF) cancelAnimationFrame(_flappyRAF);
+  // Stop death sound if still playing
+  if (_currentDeathSfxGlobal) { try { _currentDeathSfxGlobal.pause(); _currentDeathSfxGlobal.currentTime=0; } catch(e){} _currentDeathSfxGlobal=null; }
   document.getElementById('flappyModal').style.display = 'none';
 }
 
@@ -3892,6 +3904,12 @@ function startFlappy() {
     img.src='https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.avif';
     emoteImgs = [img];
   }
+  // Static-only pool for pipe pillars (animated emotes flicker on canvas drawImage)
+  const pipeEmoteImgs = emoteImgs.filter(i => !i._isAnimated && i.complete && i.naturalWidth > 0);
+  const _getPipeEmote = () => {
+    const pool = pipeEmoteImgs.length > 0 ? pipeEmoteImgs : emoteImgs;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
 
 
   // Game state
@@ -3943,7 +3961,7 @@ function startFlappy() {
       const rightmost = visible.length > 0 ? Math.max(...visible.map(g => g.x + g.size)) : 0;
       // Only spawn ground emotes once images are confirmed loaded
       if (window._flappyEmotesReady && visible.length < 2 && rightmost < W - 150 && Math.random() < 0.25) {
-        const size = 30 + Math.floor(Math.random() * 14);
+        const size = 52 + Math.floor(Math.random() * 20);
         // Always spawn off the right edge — emotes scroll in from the right
         const spawnX = W + size + Math.random() * 40;
         if (!_gEmoteInPipe(spawnX, size)) {
@@ -3979,7 +3997,7 @@ function startFlappy() {
       gapY = lo + Math.random() * (hi - lo);
     }
     _lastGapY = gapY;
-    const eImg = emoteImgs[Math.floor(Math.random() * emoteImgs.length)];
+    const eImg = _getPipeEmote();
     pipeEmoteIdx++;
     pipes.push({ x: W + 10, gapY, eImg, scored: false });
   }
@@ -4081,16 +4099,16 @@ function startFlappy() {
     'https://badoge.github.io/soundboard/forsen/rage/misclick.mp3',
     'https://badoge.github.io/soundboard/forsen/rage/wtf%20are%20the%20devs%20doing.mp3',
   ];
-  let _currentDeathSfx = null;
+  // Use module-level _currentDeathSfxGlobal so closeFlappy can stop it
 
   function playFlappyDeathSfx() {
     if(_flappyMuted) return;
-    if (_currentDeathSfx) { try { _currentDeathSfx.pause(); _currentDeathSfx.currentTime=0; } catch(e){} }
+    if (_currentDeathSfxGlobal) { try { _currentDeathSfxGlobal.pause(); _currentDeathSfxGlobal.currentTime=0; } catch(e){} }
     const url = _deathSfxUrls[Math.floor(Math.random()*_deathSfxUrls.length)];
-    _currentDeathSfx = new Audio(url);
-    _currentDeathSfx.volume = 0.54; // 10% quieter
-    _currentDeathSfx.crossOrigin = 'anonymous';
-    _currentDeathSfx.play().catch(()=>{});
+    _currentDeathSfxGlobal = new Audio(url);
+    _currentDeathSfxGlobal.volume = 0.54;
+    _currentDeathSfxGlobal.crossOrigin = 'anonymous';
+    _currentDeathSfxGlobal.play().catch(()=>{});
   }
 
   function flap() {
@@ -4517,6 +4535,7 @@ function closeSpace() {
   if (c && c._spaceCleanup) { c._spaceCleanup(); c._spaceCleanup = null; }
   const _pool=document.getElementById('spaceImgPool');if(_pool)_pool.innerHTML='';
   if (_spaceMusicPlayer) { try { _spaceMusicPlayer.stopVideo(); } catch(e){} }
+  if (_spaceShopMusicPlayer) { try { _spaceShopMusicPlayer.stopVideo(); } catch(e){} }
   document.getElementById('spaceModal').style.display = 'none';
 }
 document.addEventListener('click', e => { if (e.target === document.getElementById('spaceModal')) closeSpace(); });
@@ -5153,13 +5172,13 @@ function startSpace() {
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Show song title while paused
+      // Always show song title on pause screen — bottom-left
       if(_songTitleText){
         const _ptfont=Math.min(13,Math.floor(W*0.022));
         ctx.font=`${_ptfont}px monospace`;
         const _textMW=ctx.measureText('♪ '+_songTitleText).width; const _ptPad=9; const _ptnw=_textMW+_ptPad*2+2;
         const _ptnh=_ptfont+14;
-        const _ptnx=W-_ptnw-10,_ptny=H-_ptnh-42;
+        const _ptnx=10, _ptny=H-_ptnh-42; // bottom-left
         ctx.globalAlpha=0.88;
         ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
         ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
@@ -5210,13 +5229,17 @@ function startSpace() {
     const wKey = weaponOverride || activeWeapon;
     let baseAngle = Math.atan2(mouseWorldY - ship.y, mouseWorldX - ship.x);
     if(wKey==='default'){
-      let bestDist=999999, bestAngle=baseAngle;
+      let bestDistCursor=999999, bestAngleCursor=baseAngle;
+      let bestDistShip=999999, bestAngleShip=baseAngle;
       enemies.forEach(e=>{
-        // Distance from enemy to mouse in world space
-        const d=Math.hypot(e.x-mouseWorldX, e.y-mouseWorldY);
-        if(d<bestDist){bestDist=d;bestAngle=Math.atan2(e.y-ship.y,e.x-ship.x);}
+        const dCursor=Math.hypot(e.x-mouseWorldX, e.y-mouseWorldY);
+        const dShip=Math.hypot(e.x-ship.x, e.y-ship.y);
+        if(dCursor<bestDistCursor){bestDistCursor=dCursor;bestAngleCursor=Math.atan2(e.y-ship.y,e.x-ship.x);}
+        if(dShip<bestDistShip){bestDistShip=dShip;bestAngleShip=Math.atan2(e.y-ship.y,e.x-ship.x);}
       });
-      if(bestDist<220) baseAngle=bestAngle;
+      // Snap to enemy near cursor (large radius), otherwise snap to closest enemy to ship
+      if(bestDistCursor<420) baseAngle=bestAngleCursor;
+      else if(bestDistShip<600) baseAngle=bestAngleShip;
     }
     // All stat bonuses applied to all weapons
     const dmg=getBulletDmg();      // damage upgrade affects every weapon
@@ -5560,8 +5583,9 @@ function startSpace() {
     _twitchUserCooldowns[username] = frame + _TWITCH_COOLDOWN_FRAMES;
     // Warning flash + sound
     spawnParticles(ship.x+(Math.random()-0.5)*200, ship.y+(Math.random()-0.5)*150, '#9146ff', 12);
-    _chatEnemyWarning=180;
-    _chatEnemyName=username;
+    // Push new alert, keep max 3
+    if(_chatEnemyAlerts.length>=3) _chatEnemyAlerts.shift();
+    _chatEnemyAlerts.push({name:username, timer:300, maxTimer:300}); // 5s
     _playTwitchSound();
   }
 
@@ -5632,7 +5656,7 @@ function startSpace() {
     Object.keys(upgrades).forEach(k=>{ upgrades[k]=0; });
     _twitchUserCooldowns = {};
     _twitchSpawnQueue = [];
-    _chatEnemyWarning=0;_chatEnemyName='';
+    _chatEnemyAlerts=[];
     activeWeapon='default';
     unlockedWeapons.clear(); unlockedWeapons.add('default');
     ship={x:Math.floor(WW/2),y:Math.floor(WH/2),vx:0,vy:0,angle:0};
@@ -7374,22 +7398,25 @@ function startSpace() {
     }
 
     // Titan warning
-    if(_chatEnemyWarning>0){
-      _chatEnemyWarning--;
-      const _cew=_chatEnemyWarning;
-      const _cFlash=Math.floor(_cew/20)%2===0; // flash every 20 frames (slower)
-      if(_cFlash){
+    if(_chatEnemyAlerts.length>0){
+      _chatEnemyAlerts=_chatEnemyAlerts.filter(a=>a.timer>0);
+      const _cwFontPx=Math.min(20,Math.floor(W*0.035));
+      const _cwLineH=_cwFontPx+10;
+      const _cwBaseY=Math.floor(H*0.13);
+      _chatEnemyAlerts.forEach((a,_ai)=>{
+        a.timer--;
+        const _t=a.timer/a.maxTimer;
+        const _flash=Math.floor(a.timer/30)%2===0; // flash every 30 frames (slow)
+        if(!_flash) return;
         ctx.save();
         ctx.textAlign='center';
-        const _cwY=Math.floor(H*0.14);
-        const _cwFontPx=Math.min(22,Math.floor(W*0.04));
         ctx.font=`900 ${_cwFontPx}px monospace`;
-        ctx.shadowColor='#ff2222';ctx.shadowBlur=18;
+        ctx.shadowColor='#ff2222';ctx.shadowBlur=16;
         ctx.fillStyle='#ff4444';
-        ctx.globalAlpha=Math.min(1,_cew/15);
-        ctx.fillText(`⚠ ${_chatEnemyName} the Doubter incoming! ⚠`,W/2,_cwY);
+        ctx.globalAlpha=Math.min(1,_t*3);
+        ctx.fillText(`⚠ ${a.name} the Doubter incoming! ⚠`,W/2,_cwBaseY+_ai*_cwLineH);
         ctx.shadowBlur=0;ctx.restore();
-      }
+      });
     }
     if(_titanWarning>0){
       ctx.save();
@@ -7444,13 +7471,13 @@ function startSpace() {
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Show song title while paused
+      // Always show song title on pause screen — bottom-left
       if(_songTitleText){
         const _ptfont=Math.min(13,Math.floor(W*0.022));
         ctx.font=`${_ptfont}px monospace`;
         const _textMW=ctx.measureText('♪ '+_songTitleText).width; const _ptPad=9; const _ptnw=_textMW+_ptPad*2+2;
         const _ptnh=_ptfont+14;
-        const _ptnx=W-_ptnw-10,_ptny=H-_ptnh-42;
+        const _ptnx=10, _ptny=H-_ptnh-42; // bottom-left
         ctx.globalAlpha=0.88;
         ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
         ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
