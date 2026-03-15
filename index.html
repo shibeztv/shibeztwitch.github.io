@@ -4539,20 +4539,20 @@ function startSpace() {
   // Track which weapons are unlocked this run
   const unlockedWeapons = new Set(['default']);
   const UPGRADE_DEFS = [
-    {key:'speed',       label:'🚀 Move Speed',      desc:'+8% speed per lvl',             maxLvl:10, cost:l=>Math.floor(1+l*1.8)},
-    {key:'atkSpeed',    label:'⚡ Attack Speed',     desc:'-6% shoot cooldown',            maxLvl:20, cost:l=>Math.floor(1+l*2.2)},
-    {key:'multishot',   label:'💥 I Need More Boolets', desc:'+1 extra bullet',           maxLvl:20, cost:l=>Math.floor(3+l*3.2)},
-    {key:'maxHp',       label:'❤️ Max HP',           desc:'+1 max heart',                  maxLvl:20, cost:l=>Math.floor(2+l*2.0)},
-    {key:'hpRegen',     label:'💚 HP Regen',         desc:'regen 1hp/30s',                 maxLvl:10, cost:l=>Math.floor(3+l*2.8)},
-    {key:'damage',      label:'🔥 Damage',           desc:'+1 bullet damage',              maxLvl:20, cost:l=>Math.floor(3+l*2.5)},
-    {key:'bulletSize',  label:'🔵 Bullet Size',      desc:'+16% bullet hitbox (capped)',   maxLvl:20, cost:l=>Math.floor(4+l*3.0)},
-    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% bullet range/speed per lvl',maxLvl:15, cost:l=>Math.floor(3+l*2.8)},
-    {key:'coinMagnet',  label:'🧲 Coin Range',       desc:'+15% pickup radius',            maxLvl:20, cost:l=>Math.floor(2+l*2.0)},
-    {key:'armor',       label:'🛡 Armor',             desc:'↑block% per lvl',              maxLvl:20, cost:l=>Math.floor(4+l*3.5)},
-    {key:'enemySwarm',  label:'👹 Enemy Swarm',      desc:'+15% more enemies & +10% coin per lvl',maxLvl:20, cost:l=>Math.floor(2+l*1.8)},
-    {key:'riskReward',  label:'💰 Risk & Reward',    desc:'Enemies +20% hp, +20% coins per lvl',  maxLvl:20, cost:l=>Math.floor(4+l*3.0)},
-    {key:'pierce',      label:'🔫 Penetration',     desc:'+1 enemy pierced per shot (laser/flame/ice always pierce)',maxLvl:5, cost:l=>Math.floor(5+l*4.0)},
-    {key:'weaponSlots', label:'🗡️ I Need More Weapons', desc:'Unlock extra weapon slots (1→4 slots total)', maxLvl:3, cost:l=>[100,150,200][l]||999},
+    {key:'speed',       label:'🚀 Move Speed',      desc:'+8% speed per lvl',             maxLvl:10, cost:l=>Math.floor(3+l*l*1.2+l*2)},
+    {key:'atkSpeed',    label:'⚡ Attack Speed',     desc:'-6% shoot cooldown',            maxLvl:20, cost:l=>Math.floor(3+l*l*0.9+l*2)},
+    {key:'multishot',   label:'💥 I Need More Boolets', desc:'+1 extra bullet',           maxLvl:20, cost:l=>Math.floor(5+l*l*1.5+l*3)},
+    {key:'maxHp',       label:'❤️ Max HP',           desc:'+1 max heart',                  maxLvl:20, cost:l=>Math.floor(4+l*l*1.0+l*2)},
+    {key:'hpRegen',     label:'💚 HP Regen',         desc:'regen 1hp/30s',                 maxLvl:10, cost:l=>Math.floor(5+l*l*1.8+l*3)},
+    {key:'damage',      label:'🔥 Damage',           desc:'+1 bullet damage',              maxLvl:20, cost:l=>Math.floor(5+l*l*1.4+l*3)},
+    {key:'bulletSize',  label:'🔵 Bullet Size',      desc:'+16% bullet hitbox (capped)',   maxLvl:20, cost:l=>Math.floor(6+l*l*1.5+l*3)},
+    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% bullet range/speed per lvl',maxLvl:15, cost:l=>Math.floor(5+l*l*1.6+l*3)},
+    {key:'coinMagnet',  label:'🧲 Coin Range',       desc:'+15% pickup radius',            maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
+    {key:'armor',       label:'🛡 Armor',             desc:'↑block% per lvl',              maxLvl:20, cost:l=>Math.floor(7+l*l*2.0+l*4)},
+    {key:'enemySwarm',  label:'👹 Enemy Swarm',      desc:'+15% more enemies & +10% coin per lvl',maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
+    {key:'riskReward',  label:'💰 Risk & Reward',    desc:'Enemies +20% hp, +20% coins per lvl',  maxLvl:20, cost:l=>Math.floor(6+l*l*1.6+l*4)},
+    {key:'pierce',      label:'🔫 Penetration',     desc:'+1 enemy pierced per shot (laser/flame/ice always pierce)',maxLvl:5, cost:l=>Math.floor(10+l*l*4+l*6)},
+    {key:'weaponSlots', label:'🗡️ I Need More Weapons', desc:'Unlock extra weapon slots (1→4 slots total)', maxLvl:3, cost:l=>[120,200,300][l]||999},
   ];
 
   let coins = window._spaceCoins||0;
@@ -5606,7 +5606,7 @@ function startSpace() {
         const baseSpawn=Math.floor(easeBase*scoreRamp);
         enemyTimer=Math.max(22,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
-      difficulty=1+score*0.007;
+      difficulty=1+score*0.003; // slower speed scaling (was 0.007)
 
       // ── Mega-boss every 3 minutes (10800 frames = 180s)
       const bossInterval=10800;
@@ -5783,15 +5783,15 @@ function startSpace() {
               document.getElementById('spaceScore').textContent=score;
               spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();
               const riskBonus=Math.floor((upgrades.riskReward||0)*0.2);
-              const coinCount=(e.sizeScale||1)+(Math.random()<0.35?1:0)+riskBonus;
+              const coinCount=Math.random()<0.45?1:0; // ~1 coin per kill
               for(let ci=0;ci<coinCount;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
               const roll=Math.random();
-              if(roll<0.06)spawnDrop(e.x,e.y,'heart');
-              else if(roll<0.10)spawnDrop(e.x,e.y,'silverheart');
-              else if(roll<0.14)spawnDrop(e.x,e.y,'explosion');
-              else if(roll<0.18)spawnDrop(e.x,e.y,'freeze');
-              else if(roll<0.22)spawnDrop(e.x,e.y,'magnet');
-              else if(roll<0.30){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
+              if(roll<0.015)spawnDrop(e.x,e.y,'heart');
+              else if(roll<0.025)spawnDrop(e.x,e.y,'silverheart');
+              else if(roll<0.035)spawnDrop(e.x,e.y,'explosion');
+              else if(roll<0.045)spawnDrop(e.x,e.y,'freeze');
+              else if(roll<0.055)spawnDrop(e.x,e.y,'magnet');
+              else if(roll<0.075){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
               return null;
             }
           }
@@ -5833,15 +5833,16 @@ function startSpace() {
               spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();
               const swarmCoinMult=1+(upgrades.enemySwarm||0)*0.10;
               const riskBonus=Math.floor((upgrades.riskReward||0)*0.2);
-              const coinCount=Math.ceil(((e.sizeScale||1)+(Math.random()<0.35?1:0)+riskBonus)*swarmCoinMult);
+              const swarmBonus=(Math.random()<Math.min(0.9,0.45+(upgrades.enemySwarm||0)*0.04))?1:0;
+              const coinCount=swarmBonus+(Math.random()<(upgrades.riskReward||0)*0.04?1:0);
               for(let ci=0;ci<coinCount;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
               const roll=Math.random();
-              if(roll<0.06)spawnDrop(e.x,e.y,'heart');
-              else if(roll<0.10)spawnDrop(e.x,e.y,'silverheart');
-              else if(roll<0.14)spawnDrop(e.x,e.y,'explosion');
-              else if(roll<0.18)spawnDrop(e.x,e.y,'freeze');
-              else if(roll<0.22)spawnDrop(e.x,e.y,'magnet');
-              else if(roll<0.30){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
+              if(roll<0.015)spawnDrop(e.x,e.y,'heart');
+              else if(roll<0.025)spawnDrop(e.x,e.y,'silverheart');
+              else if(roll<0.035)spawnDrop(e.x,e.y,'explosion');
+              else if(roll<0.045)spawnDrop(e.x,e.y,'freeze');
+              else if(roll<0.055)spawnDrop(e.x,e.y,'magnet');
+              else if(roll<0.075){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
               return null;
             }
           }
@@ -6198,8 +6199,8 @@ function startSpace() {
     // Coins
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      const cr=d.gold?9:d.green?8:d.silver?7:6.5; // smaller coins — higher value = smaller, less cluttering
-      ctx.globalAlpha=d.gold?0.82:d.green?0.72:d.silver?0.65:0.58; // higher value = more transparent/blended
+      const cr=d.gold?9:d.green?8:d.silver?7:8; // base coin bigger (was 6.5)
+      ctx.globalAlpha=d.gold?0.82:d.green?0.72:d.silver?0.65:0.80; // base coins brighter (was 0.58)
       if(d.gold){
         // Rainbow glow — cycling hue ring around coin
         const rainbowHue=(frame*3)%360; // spin hue each frame
@@ -6232,84 +6233,21 @@ function startSpace() {
       ctx.globalAlpha=1;
     });
 
-    // Powerup drops
+    // Powerup drops — emoji only, no circle
     powerupDrops.forEach(d=>{
-      const pt=POWERUP_TYPES.find(p=>p.type===d.type);const col=pt?.color||'#fff';
-      const pulse=0.9+0.1*Math.sin(frame*0.12);
-      ctx.globalAlpha=1; // always fully opaque
-      // Bigger glow ring
-      const gr=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,18);
-      gr.addColorStop(0,col+'55');gr.addColorStop(1,col+'00');
-      ctx.fillStyle=gr;ctx.beginPath();ctx.arc(d.x,d.y,18,0,Math.PI*2);ctx.fill();
-      const PR=11; // 1.5: 15% smaller
-      ctx.fillStyle=col;ctx.beginPath();ctx.arc(d.x,d.y,PR,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;ctx.stroke();
-      // Emoji icon centered on circle
-      // Emoji icon on circle (all types)
-      ctx.save();ctx.translate(d.x,d.y);
-      const iconSize=8;
-      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'💥',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'💛',riskReward:'⚠️'};
-      if(_emojiMap[d.type]){
-        ctx.font='11px serif';ctx.textAlign='center';ctx.fillStyle='#fff';
-        ctx.shadowColor='rgba(0,0,0,0.8)';ctx.shadowBlur=3;
-        ctx.fillText(_emojiMap[d.type],0,4);ctx.shadowBlur=0;
-      } else {
-      // fallback custom icon shapes
-      if(d.type==='shield'){
-        // Shield shape
-        ctx.fillStyle=col;ctx.beginPath();
-        ctx.moveTo(0,-iconSize);ctx.lineTo(iconSize,-iconSize*0.5);ctx.lineTo(iconSize,iconSize*0.3);
-        ctx.quadraticCurveTo(0,iconSize*1.4,-iconSize,iconSize*0.3);
-        ctx.lineTo(-iconSize,-iconSize*0.5);ctx.closePath();ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();
-        ctx.moveTo(0,-iconSize*0.6);ctx.lineTo(iconSize*0.6,-iconSize*0.3);ctx.lineTo(iconSize*0.6,iconSize*0.1);
-        ctx.quadraticCurveTo(0,iconSize*0.9,-iconSize*0.6,iconSize*0.1);ctx.closePath();ctx.fill();
-      } else if(d.type==='double'){
-        // 2 bullet lines
-        ctx.fillStyle=col;
-        ctx.fillRect(-iconSize,-3,iconSize*1.8,2.5);
-        ctx.fillRect(-iconSize,2,iconSize*1.8,2.5);
-        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(iconSize*0.8,-1.75,2.5,0,Math.PI*2);ctx.fill();
-        ctx.beginPath();ctx.arc(iconSize*0.8,3.25,2.5,0,Math.PI*2);ctx.fill();
-      } else if(d.type==='triple'){
-        // 3 bullet lines
-        ctx.fillStyle=col;
-        ctx.fillRect(-iconSize,-5,iconSize*1.8,2);
-        ctx.fillRect(-iconSize,-1,iconSize*1.8,2);
-        ctx.fillRect(-iconSize,3,iconSize*1.8,2);
-        ctx.fillStyle='#fff';
-        [-4,0,4].forEach(y=>{ctx.beginPath();ctx.arc(iconSize*0.8,y,2,0,Math.PI*2);ctx.fill();});
-      } else if(d.type==='rapid'){
-        // 3 bullet lines close together (fast fire)
-        ctx.fillStyle=col;
-        for(let ri=0;ri<3;ri++){
-          const rx=-iconSize+ri*iconSize*0.8;
-          ctx.fillRect(rx,-3,iconSize*0.55,6);
-        }
-        ctx.fillStyle='#fff';
-        for(let ri=0;ri<3;ri++){ctx.beginPath();ctx.arc(-iconSize+ri*iconSize*0.8+iconSize*0.27,0,2,0,Math.PI*2);ctx.fill();}
-      } else if(d.type==='magnet'){
-        ctx.font='16px serif';ctx.fillStyle=col;ctx.textAlign='center';ctx.fillText('🧲',0,5);
-      } else if(d.type==='heart'){
-        // Heart shape
-        ctx.fillStyle=col;ctx.beginPath();
-        ctx.moveTo(0,iconSize*0.5);ctx.bezierCurveTo(-iconSize*1.2,-iconSize*0.6,-iconSize*1.2,-iconSize*1.4,0,-iconSize*0.6);
-        ctx.bezierCurveTo(iconSize*1.2,-iconSize*1.4,iconSize*1.2,-iconSize*0.6,0,iconSize*0.5);
-        ctx.closePath();ctx.fill();
-      } else if(d.type==='silverheart'){
-        ctx.fillStyle='#ffe066';ctx.beginPath();
-        ctx.moveTo(0,iconSize*0.5);ctx.bezierCurveTo(-iconSize*1.2,-iconSize*0.6,-iconSize*1.2,-iconSize*1.4,0,-iconSize*0.6);
-        ctx.bezierCurveTo(iconSize*1.2,-iconSize*1.4,iconSize*1.2,-iconSize*0.6,0,iconSize*0.5);
-        ctx.closePath();ctx.fill();
-      } else if(d.type==='explosion'){
-        ctx.font='18px serif';ctx.fillStyle=col;ctx.textAlign='center';ctx.fillText('💥',0,6);
-      } else {
-        // Default: colored letter
-        ctx.fillStyle=col;ctx.font='bold 11px monospace';ctx.textAlign='center';
-        ctx.fillText((pt?.label||d.type).slice(0,2),0,4);
-      }
-      } // close fallback else
-      ctx.restore();ctx.textAlign='left';ctx.globalAlpha=1;
+      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'💥',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'💛',riskReward:'⚠️',explosion:'💣'};
+      const em=_emojiMap[d.type]||'✨';
+      const bob=Math.sin(frame*0.08+d.x*0.1)*2; // gentle bob
+      ctx.save();
+      ctx.globalAlpha=0.92;
+      ctx.font='18px serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=4;
+      ctx.fillText(em, d.x, d.y+bob);
+      ctx.shadowBlur=0;
+      ctx.restore();
+      ctx.textAlign='left';ctx.textBaseline='alphabetic';
     });
 
     // Bullets — each weapon type has its own draw style
