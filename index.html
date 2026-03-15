@@ -3868,54 +3868,44 @@ function startFlappy() {
 
   // Ground tiles (simple gradient rect)
   // Ground emotes: spawn randomly, scroll left and despawn
-  let _gEmotes = [];
+  let _gEmotes = []; // {x, size, img} — scroll left, drawn on canvas
+  let _gEmoteTimer = 0;
 
-  // Overlay sits over the canvas — use z-index to appear on top
-  let _gEmoteContainer = document.getElementById('flappyGroundEmotes');
-  if (_gEmoteContainer) _gEmoteContainer.remove();
-  _gEmoteContainer = document.createElement('div');
-  _gEmoteContainer.id = 'flappyGroundEmotes';
-  _gEmoteContainer.style.cssText = `position:absolute;pointer-events:none;left:0;top:0;width:${W}px;height:${H}px;transform-origin:top left;z-index:2;overflow:visible;`;
-  canvas.style.position = 'relative';
-  canvas.style.zIndex = '1';
-  canvas.parentElement.style.position = 'relative';
-  canvas.parentElement.appendChild(_gEmoteContainer);
-
-  function syncGroundContainer() {
-    const scaleX = canvas.clientWidth / W;
-    const scaleY = canvas.clientHeight / H;
-    _gEmoteContainer.style.transform = `scale(${scaleX},${scaleY})`;
-    // Position directly on top of canvas
-    _gEmoteContainer.style.left = canvas.offsetLeft + 'px';
-    _gEmoteContainer.style.top = canvas.offsetTop + 'px';
-  }
+  // Remove any leftover overlay
+  document.getElementById('flappyGroundEmotes')?.remove();
 
   function spawnGroundEmote() {
-    const count = 5 + Math.floor(Math.random() * 4);
+    const count = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
-      const e = shuffled[Math.floor(Math.random() * shuffled.length)];
-      if (!e) continue;
-      const size = 44 + Math.floor(Math.random() * 28);
-      const xPos = Math.random() * (W - size);
-      const yPos = H - 60 - size + 2;
-      const img = document.createElement('img');
-      img.crossOrigin = 'anonymous';
-      img.src = e.url;
-      img.style.cssText = `position:absolute;left:${xPos}px;top:${yPos}px;width:${size}px;height:${size}px;object-fit:contain;pointer-events:none;image-rendering:auto;display:block;`;
-      _gEmoteContainer.appendChild(img);
-      _gEmotes.push(img);
+      const idx = Math.floor(Math.random() * emoteImgs.length);
+      const size = 40 + Math.floor(Math.random() * 24);
+      _gEmotes.push({
+        x: W + 20 + i * (size + 8 + Math.random() * 30),
+        size,
+        img: emoteImgs[idx]
+      });
     }
+    _gEmoteTimer = 120 + Math.floor(Math.random() * 160);
   }
-
-  spawnGroundEmote();
-  setTimeout(syncGroundContainer, 50); // sync after canvas is visible
 
   function drawGround() {
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(0, H - 60, W, 60);
     ctx.fillStyle = '#2e7d32';
     ctx.fillRect(0, H - 60, W, 5);
-    syncGroundContainer();
+
+    if (state === 'playing') {
+      _gEmoteTimer--;
+      if (_gEmoteTimer <= 0) spawnGroundEmote();
+      _gEmotes.forEach(g => { g.x -= PIPE_SPEED * 0.85; });
+      _gEmotes = _gEmotes.filter(g => g.x > -g.size - 10);
+    }
+
+    _gEmotes.forEach(g => {
+      if (!g.img) return;
+      const gy = H - 60 - g.size + 4;
+      try { ctx.drawImage(g.img, g.x, gy, g.size, g.size); } catch(e) {}
+    });
   }
 
   let _lastGapY = -1;
@@ -4060,7 +4050,7 @@ function startFlappy() {
     pipeEmoteIdx = Math.floor(Math.random() * emoteImgs.length);
     _lastGapY = -1;
     _gEmotes = []; _gEmoteTimer = 60;
-    if (_gEmoteContainer) _gEmoteContainer.innerHTML = '';
+    if (document.getElementById('flappyGroundEmotes')) document.getElementById('flappyGroundEmotes').remove();
     state = 'waiting';
     document.getElementById('flappyScore').textContent = '0';
   }
@@ -4604,7 +4594,17 @@ function startSpace() {
   _planetEmoteImg.src='https://cdn.7tv.app/emote/01F00Z3A9G0007E4VV006YKSK9/2x.webp';
   if(_imgPool){ _planetEmoteImg.style.cssText='position:absolute;width:1px;height:1px;'; _imgPool.appendChild(_planetEmoteImg); }
 
-  const planets = Array.from({length:12}, (_,pi)=>({
+  // Add a few giant background planets
+  const _giantPlanets = Array.from({length:4}, ()=>({
+    x: Math.random()*WW,
+    y: Math.random()*WH,
+    r: 90+Math.random()*130, // 6-12x normal
+    hue: PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
+    rings: Math.random()>0.4, ringTilt: 0.22+Math.random()*0.18,
+    atmOpacity: 0.08+Math.random()*0.10,
+    seed: Math.random()*1000,
+  }));
+  const planets = [..._giantPlanets, ...Array.from({length:12}, (_,pi)=>({
     // Scatter evenly across the world with some randomness
     x: (pi%4)*(WW/4)+WW/8 + (Math.random()-0.5)*WW*0.15,
     y: Math.floor(pi/4)*(WH/3)+WH/6 + (Math.random()-0.5)*WH*0.18,
@@ -4613,7 +4613,7 @@ function startSpace() {
     rings: Math.random()>0.5, ringTilt: 0.22+Math.random()*0.18,
     atmOpacity: 0.12+Math.random()*0.18,
     seed: Math.random()*1000,
-  }));
+  }))];
 
   // ── Wreck emote image for abandoned ships
   const _wreckImg = new Image(); _wreckImg.crossOrigin='anonymous';
@@ -4905,6 +4905,7 @@ function startSpace() {
     {type:'silverheart',label:'💛 BONUS HP', color:'#ffe066', dur:0},
     {type:'explosion',  label:'💥 NUKE',    color:'#ff8800', dur:0},
     {type:'freeze',     label:'❄️ FREEZE',  color:'#88ddff', dur:420},
+    {type:'aura',       label:'⚡ AURA',    color:'#facc15', dur:720},
   ];
 
   // ── Web Audio SFX
@@ -5131,7 +5132,7 @@ function startSpace() {
     const setCd=(cd)=>{ _slotCooldowns[slot]=cd; shootCooldown=_slotCooldowns[0]; };
 
     if(wKey==='sniper'){
-      const sd=dmg*8+6;
+      const sd=(dmg*8+6)*0.60; // -40% laser dmg
       bullets.push({
         laser:true, x:ship.x, y:ship.y, angle:baseAngle,
         dmg:sd, life:0, maxLife:12,
@@ -5140,7 +5141,7 @@ function startSpace() {
         hitEnemies:new Set(),
         bounceCount: upgrades.tier2_sniper?1:0, bounced: false,
       });
-      setCd(Math.floor((upgrades.tier2_sniper?53:122)*rapidMod)); // laser -20% more
+      setCd(Math.floor((upgrades.tier2_sniper?56:128)*rapidMod)); // laser -5% more attack speed
       sfxShoot(); return;
 
     } else if(wKey==='minigun'){
@@ -5246,7 +5247,14 @@ function startSpace() {
 
   // Enemies spawn from ALL sides
   function spawnEnemy() {
-    const img=enemyImgs[Math.floor(Math.random()*enemyImgs.length)];
+    // Clone img so each enemy has its own element (prevents shared-img visibility bugs)
+    const srcImg=enemyImgs[Math.floor(Math.random()*enemyImgs.length)];
+    const img=srcImg.cloneNode(false);
+    img.crossOrigin='anonymous'; img.src=srcImg.src;
+    img.className='space-emote-overlay';
+    img._cloned=true;
+    img.style.cssText='position:absolute;left:-9999px;top:-9999px;pointer-events:none;';
+    if(_emoteLayer) _emoteLayer.appendChild(img);
     const size=(28+Math.random()*22)*0.78;
     // Spawn from viewport edges (so enemies appear just off-screen)
     const edge=Math.floor(Math.random()*4);
@@ -5301,10 +5309,10 @@ function startSpace() {
     const x=cam.x+W+size, y=cam.y+H*0.3+Math.random()*H*0.4;
     const tx=ship.x, ty=ship.y;
     const dx=tx-x, dy=ty-y, len=Math.sqrt(dx*dx+dy*dy)||1;
-    const speed=(0.3+Math.random()*0.2)*0.90*0.90*0.80; // additional 20% slower
+    const speed=(0.3+Math.random()*0.2)*0.90*0.90*0.80*0.85; // 15% more reduction
     const timeMins=survivalFrames/3600;
     const dmgScale=Math.max(1,getBulletDmg()*0.7);
-    const titanHp=Math.ceil((180+timeMins*48)*dmgScale);
+    const titanHp=Math.ceil((180+timeMins*48)*dmgScale*0.60); // -40% HP
     spawnParticles(ship.x,ship.y,'#ff6600',20);
     enemies.push({
       x,y,img,size,sizeScale:4,isBoss:false,isBig:false,isTitan:true,
@@ -5703,6 +5711,21 @@ function startSpace() {
         if(newT<=0) activePowerups.delete(key);
         else activePowerups.set(key,newT);
       });
+
+      // Aura: knockback all nearby enemies every 120 frames (2s)
+      if(_hasPowerup('aura') && frame%120===0){
+        const auraR=220;
+        enemies.forEach(e=>{
+          const dx=e.x-ship.x, dy=e.y-ship.y;
+          const dist=Math.sqrt(dx*dx+dy*dy)||1;
+          if(dist<auraR){
+            const force=(auraR-dist)/auraR*8;
+            e.vx=(dx/dist)*force; e.vy=(dy/dist)*force;
+          }
+        });
+        spawnParticles(ship.x,ship.y,'#facc15',20);
+        playTone(440,'sine',0.15,0.08);
+      }
       // Keep legacy freeze compat
       if(_hasPowerup('freeze')){activePowerup='freeze';powerupTimer=activePowerups.get('freeze');}
       else if(activePowerup==='freeze'){activePowerup=null;powerupTimer=0;}
@@ -5777,7 +5800,7 @@ function startSpace() {
         enemies.push({
           x:cam.x+W+bossSize, y:cam.y+H/2+(Math.random()-0.5)*H*0.3,
           img:bossImg, size:bossSize, sizeScale:10, isBoss:true, isBig:false,
-          vx:-(0.18+bossWave*0.02)*0.54, vy:0, // 25% slower than before
+          vx:-(0.18+bossWave*0.02)*0.459, vy:0, // extra -15% speed
           hp:bossHp, maxHp:bossHp, age:0,
           wobble:false, wobbleAmp:0, wobbleFreq:0,
           minionSpawnCd: Math.floor(180+Math.random()*120),
@@ -5943,7 +5966,7 @@ function startSpace() {
               else if(roll<0.0403){spawnDrop(e.x,e.y,'explosion');droppedUpgrade=true;}
               else if(roll<0.0518){spawnDrop(e.x,e.y,'freeze');droppedUpgrade=true;}
               else if(roll<0.0633){spawnDrop(e.x,e.y,'magnet');droppedUpgrade=true;}
-              else if(roll<0.0863){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);droppedUpgrade=true;}
+              else if(roll<0.0863){const rp=['double','triple','rapid','shield','aura'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);droppedUpgrade=true;}
               // Always drop at least 1 coin unless an upgrade dropped
               const baseCoin = droppedUpgrade ? 0 : (()=>{ const r=Math.random(); return r<0.05?3:r<0.20?2:1; })();
               const bonusCoin = riskBonus>0&&Math.random()<0.4?1:0;
@@ -5999,7 +6022,7 @@ function startSpace() {
               else if(roll2<0.0403){spawnDrop(e.x,e.y,'explosion');droppedUpgrade2=true;}
               else if(roll2<0.0518){spawnDrop(e.x,e.y,'freeze');droppedUpgrade2=true;}
               else if(roll2<0.0633){spawnDrop(e.x,e.y,'magnet');droppedUpgrade2=true;}
-              else if(roll2<0.0863){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);droppedUpgrade2=true;}
+              else if(roll2<0.0863){const rp=['double','triple','rapid','shield','aura'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);droppedUpgrade2=true;}
               const baseCoin2 = droppedUpgrade2 ? 0 : (()=>{ const r=Math.random(); return r<0.05?3:r<0.20?2:1; })();
               const swarmCoinMult2=1+(upgrades.enemySwarm||0)*0.10;
               const coinCount2=Math.ceil((baseCoin2+swarmBonus2+(riskBonus2>0&&Math.random()<0.4?1:0))*swarmCoinMult2);
@@ -6072,7 +6095,7 @@ function startSpace() {
         const isMagnet=_hasPowerup('magnet');
         // Super-magnet: strong pull for coins tagged by pickup (frames countdown)
         if(d._superMagnet>0){
-          d._superMagnet--;
+          if(d._superMagnet<99999) d._superMagnet--; // countdown (but tagged coins persist)
           const dx=ship.x-d.x,dy=ship.y-d.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
           const pull=2.64; // 130% of base player speed (2.03 * 1.3)
           d.x+=dx/dist*pull;d.y+=dy/dist*pull;
@@ -6219,7 +6242,11 @@ function startSpace() {
         if(b.laser)return b.life<b.maxLife;
         return b.x>cam.x-80&&b.x<cam.x+W+80&&b.y>cam.y-80&&b.y<cam.y+H+80;
       });
-      enemies=enemies.filter(e=>e.x>cam.x-300&&e.x<cam.x+W+300&&e.y>cam.y-300&&e.y<cam.y+H+300);
+      enemies=enemies.filter(e=>{
+        const keep=e.x>cam.x-300&&e.x<cam.x+W+300&&e.y>cam.y-300&&e.y<cam.y+H+300;
+        if(!keep && e.img && e.img._cloned) { try{e.img.remove();}catch(_){} }
+        return keep;
+      });
       particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=0.93;p.vy*=0.93;p.life--;});
       particles=particles.filter(p=>p.life>0);
       // planets are static world-space, no movement needed
@@ -6359,7 +6386,7 @@ function startSpace() {
     // Coins
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      const cr=d.gold?9:d.green?8:d.silver?7:8; // base coin bigger (was 6.5)
+      const cr=d.gold?11:d.green?9.7:d.silver?8.7:7.8; // tiered sizes each 12% bigger, base -3%
       ctx.globalAlpha=d.gold?0.82:d.green?0.72:d.silver?0.65:0.96; // base coins 20% brighter
       if(d.gold){
         // Rainbow glow — cycling hue ring around coin
@@ -6395,7 +6422,7 @@ function startSpace() {
 
     // Powerup drops — emoji only, no circle
     powerupDrops.forEach(d=>{
-      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'💥',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'💛',riskReward:'⚠️',explosion:'💣'};
+      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'💥',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'💛',riskReward:'⚠️',aura:'⚡'};
       const em=_emojiMap[d.type]||'✨';
       const bob=Math.sin(frame*0.08+d.x*0.1)*2; // gentle bob
       ctx.save();
@@ -6656,6 +6683,17 @@ function startSpace() {
       ctx.fillStyle=sg;ctx.beginPath();ctx.arc(ship.x,ship.y,52,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='rgba(74,222,128,0.7)';ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(ship.x,ship.y,52,0,Math.PI*2);ctx.stroke();
+      ctx.restore();
+    }
+    if(_hasPowerup('aura')){
+      const _aRem=activePowerups.get('aura')||0;
+      const _aFrac=(_aRem%120)/120; // pulse per 2s cycle
+      const _aPulse=0.4+0.3*Math.sin(_aFrac*Math.PI*2);
+      ctx.save();ctx.globalAlpha=_aPulse*0.5;
+      ctx.strokeStyle='#facc15';ctx.lineWidth=2+_aPulse*2;
+      ctx.beginPath();ctx.arc(ship.x,ship.y,220,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=_aPulse*0.08;
+      ctx.fillStyle='#facc15';ctx.fill();
       ctx.restore();
     }
 
