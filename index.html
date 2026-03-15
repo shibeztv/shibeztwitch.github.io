@@ -2039,19 +2039,25 @@ function groupIntoStreams(videos) {
       if (!byDay[titleDay]) byDay[titleDay] = [];
       byDay[titleDay].push(v);
     } else {
-      // No date in title — use upload date minus 1 day (streams uploaded next day)
+      // No date in title — each video gets its own entry using publishedAt - 1 day
       const d = new Date(v.publishedAt);
       d.setUTCDate(d.getUTCDate() - 1);
       const fallbackDay = d.toISOString().slice(0, 10);
-      if (!byDay[fallbackDay]) byDay[fallbackDay] = [];
-      byDay[fallbackDay].push(v);
+      // Use a unique key per video to avoid grouping different streams together
+      const uniqueKey = fallbackDay + '_' + v.id;
+      byDay[uniqueKey] = [v];
     }
   });
 
   return Object.entries(byDay)
-    .sort((a, b) => b[0].localeCompare(a[0])) // newest first
-    .map(([day, vids]) => {
+    .sort((a, b) => {
+      const da = a[0].slice(0, 10);
+      const db = b[0].slice(0, 10);
+      return db.localeCompare(da);
+    })
+    .map(([key, vids]) => {
       vids.sort((a,b) => a.publishedAt.localeCompare(b.publishedAt));
+      const day = key.slice(0, 10); // works for both "2025-07-29" and "2025-07-29_videoId"
       const totalDuration = vids.reduce((s,v) => s + v.duration, 0);
       const games = parseGamesFromDescriptions(vids);
       return { day, vids, totalDuration, games, thumb: vids[0].thumb, title: buildStreamTitle(vids, day) };
