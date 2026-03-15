@@ -5252,7 +5252,7 @@ function startSpace() {
       }
       if(isDoubleBurst){
         spawnParticles(ship.x,ship.y,'#e879f9',10);
-        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:2*getBulletDmg(),hitEnemies:new Set()});
+        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:1.5*getBulletDmg(),hitEnemies:new Set()}); // same dmg as normal shot
       }
       setCd(Math.floor((hasTier2?138*1.20*1.12*1.15:138*1.20)*rapidMod*atkMod)); // T2 also -15%
 
@@ -5266,7 +5266,7 @@ function startSpace() {
         const spd=(4+Math.random()*3.0)*rangeBonus; // -30% bullet speed
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: (isT2?0.00415*0.15:0.00415*0.5)*getBulletDmg(), // further nerf
+          dmg: (isT2?0.00415*0.1:0.00415*0.15)*getBulletDmg(), // nerf base further
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
           pierce:upgrades.pierce||0, burns: true,               // BOTH tiers apply burn (fix)
           _burnDur: 180,              // burn lasts 3s (180f at 60fps)
@@ -5281,7 +5281,7 @@ function startSpace() {
       const spread=upgrades.tier2_multiGun?Math.PI*1.05*0.88*0.85:0.72*0.88; // T2 -15% more
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
-        const _mSpd=upgrades.tier2_multiGun?8.55*0.80*0.70:8.55*0.80; // T1 -20%, T2 -30%
+        const _mSpd=upgrades.tier2_multiGun?8.55*0.80*0.70*0.85:8.55*0.80*0.75; // T1 -25% more, T2 -15% more
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd,vy:Math.sin(a)*_mSpd,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0});
       }
       setCd(Math.floor((upgrades.tier2_multiGun?141*1.20*0.95:141*1.15*0.95)*rapidMod*atkMod)); // +5% atk speed
@@ -5289,7 +5289,8 @@ function startSpace() {
     } else if(wKey==='frozenStaff'){
       const isT2f=!!upgrades.tier2_frozenStaff;
       const coneSpread=isT2f?0.70*0.75:0.55; // T2 -25% spread
-      const rangeF=(isT2f?2.80:2.24)*0.50; // -50% range
+      const _fsRangeBonus=isT2f?1.60:1.40; // T1 +40%, T2 +60% max range
+      const rangeF=(isT2f?2.80:2.24)*0.50*_fsRangeBonus;
       const _fsCount=(isT2f?4:5)+Math.floor(upgrades.multishot*0.5);
       for(let i=0;i<_fsCount;i++){
         const a=baseAngle+(i-(_fsCount-1)/2)*(coneSpread/(_fsCount-1||1));
@@ -5338,7 +5339,7 @@ function startSpace() {
         const offset=(bi-(boltCount-1)/2)*_lSpread;
         bullets.push({
           x:ship.x+perpX*offset, y:ship.y+perpY*offset,
-          vx:Math.cos(baseAngle)*20*0.15*0.90, vy:Math.sin(baseAngle)*20*0.15*0.90, // -10% speed
+          vx:Math.cos(baseAngle)*20*0.15*0.90*(isT2L?0.88:1.0), vy:Math.sin(baseAngle)*20*0.15*0.90*(isT2L?0.88:1.0), // T2 -12% more speed
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
           isLightning:true, chainCount, chainRange, pierce:Math.max(isT2L?2:1, upgrades.pierce||0),
@@ -5346,7 +5347,7 @@ function startSpace() {
           snakePhase:bi*2.1, snakeAng:baseAngle, // unique phase per bolt
         });
       }
-      setCd(Math.floor(22*6.67*rapidMod*atkMod));
+      setCd(Math.floor(22*6.67*(isT2L?0.95:1.0)*rapidMod*atkMod)); // T2 +5% atk spd
       // Lightning SFX
       const _lac=getACtx();if(_lac){
         const _lv=getSfxVol()*0.08;
@@ -5754,7 +5755,7 @@ function startSpace() {
         if(el) el.textContent=Math.floor(secs/60)+':'+(secs%60<10?'0':'')+(secs%60);
       }
       const _frozenActive=activeWeapons.includes('frozenStaff')||activeWeapon==='frozenStaff';
-      const _frozenSpeedBonus=_frozenActive?(upgrades.tier2_frozenStaff?1.25:1.20):1.0;
+      const _frozenSpeedBonus=_frozenActive?(upgrades.tier2_frozenStaff?1.20:1.10):1.0; // T1+10%, T2+20%
       const SPEED=getShipSpeed() * (_minigunShooting ? 0.80 : 1.0) * _frozenSpeedBonus;
       _minigunShooting=false; // reset each frame
       if(keys['ArrowUp']||keys['w']||keys['W'])    ship.y=Math.max(30,ship.y-SPEED);
@@ -5850,7 +5851,7 @@ function startSpace() {
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
         const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85 : 1.0) * getRangeMult() * getBulletSize(); // size+range upgrades
-        const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) * getBulletDmg() / 60;
+        const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) * 0.80 * getBulletDmg() / 60; // -20% dmg
         // Garlic damages abandoned ships in range
         for(let _gasi=0;_gasi<abandonedShips.length;_gasi++){
           const _gas=abandonedShips[_gasi];if(_gas.dead)continue;
