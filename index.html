@@ -1395,7 +1395,7 @@
         <div style="position:relative;flex:1;display:flex;flex-direction:column;width:100%">
           <canvas id="spaceCanvas" style="display:block;cursor:crosshair;touch-action:none;width:100%"></canvas>
           <div id="spaceEmoteLayer" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
-          <div id="spacePowerup" style="height:22px;padding:2px 16px;font-family:var(--mono);font-size:10px;color:#ffd700;background:#050510;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px"></div>
+          <div id="spacePowerup" style="height:26px;padding:2px 16px;font-family:var(--mono);font-size:10px;color:#ffd700;background:#050510;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px"></div>
 
           <!-- SHOP OVERLAY — only over canvas, topbar stays visible -->
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
@@ -1420,7 +1420,7 @@
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-family:var(--mono);font-size:13px;color:#bbb;font-weight:700">Score:</span>
             <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--text)" id="flappyScore">0</span>
-            <input id="flappyVolSlider" type="range" min="0" max="100" value="39" title="Volume"
+            <input id="flappyVolSlider" type="range" min="0" max="100" value="31" title="Volume"
               oninput="setFlappyVol(+this.value)"
               style="width:60px;accent-color:#ffd700;cursor:pointer;vertical-align:middle">
             <button id="flappyMuteBtn" onclick="toggleFlappyMute()" title="Mute/Unmute sounds" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">🔊</button>
@@ -3825,7 +3825,7 @@ let _flappyMusicPlayer = null;
 const FLAPPY_MUSIC_ID = 'YzdAI3kseTg';
 const FLAPPY_MUSIC_TITLE = '♪ Johann Strauss — Blue Danube';
 let _flappyMuted = false;
-let _flappyVolLevel = 39; // 25% quieter
+let _flappyVolLevel = 31; // quieter
 
 window.setFlappyVol = function(v) {
   _flappyVolLevel = v;
@@ -4118,7 +4118,7 @@ function startFlappy() {
     if (_currentDeathSfxGlobal) { try { _currentDeathSfxGlobal.pause(); _currentDeathSfxGlobal.currentTime=0; } catch(e){} }
     const url = _deathSfxUrls[Math.floor(Math.random()*_deathSfxUrls.length)];
     _currentDeathSfxGlobal = new Audio(url);
-    _currentDeathSfxGlobal.volume = 0.54;
+    _currentDeathSfxGlobal.volume = 0.46;
     _currentDeathSfxGlobal.crossOrigin = 'anonymous';
     _currentDeathSfxGlobal.play().catch(()=>{});
   }
@@ -4557,6 +4557,10 @@ async function openSpacebez() {
 function closeSpace() {
   _spaceRunning = false;
   if (_spaceRAF) { cancelAnimationFrame(_spaceRAF); _spaceRAF = null; }
+  // Force-close shop if open
+  const shop = document.getElementById('spaceShop');
+  if (shop) shop.style.display = 'none';
+  _spaceInShop = false;
   const c = document.getElementById('spaceCanvas');
   if (c && c._spaceCleanup) { c._spaceCleanup(); c._spaceCleanup = null; }
   const _pool=document.getElementById('spaceImgPool');if(_pool)_pool.innerHTML='';
@@ -5199,19 +5203,7 @@ function startSpace() {
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Always show song title on pause screen — bottom-left
-      if(_songTitleText){
-        const _ptfont=Math.min(13,Math.floor(W*0.022));
-        ctx.font=`${_ptfont}px monospace`;
-        const _textMW=ctx.measureText('♪ '+_songTitleText).width; const _ptPad=9; const _ptnw=_textMW+_ptPad*2+2;
-        const _ptnh=_ptfont+14;
-        const _ptnx=10, _ptny=H-_ptnh-42; // bottom-left
-        ctx.globalAlpha=0.88;
-        ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
-        ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
-        ctx.fillStyle='#c4b5fd';ctx.fillText('♪ '+_songTitleText,_ptnx+_ptPad,_ptny+_ptnh*0.72);
-        ctx.globalAlpha=1;
-      }
+      // Song title shown in bottom bar (not pause screen)
       // Big invisible click zone — 60% of canvas centered
       const pw=W*0.6, ph=H*0.4;
       const rw2=ctx.measureText(resumeTxt).width+20,rh2=20;
@@ -5606,8 +5598,7 @@ function startSpace() {
       wobbleAmp:0.4+Math.random()*0.3, wobbleFreq:0.04+Math.random()*0.02,
       bossName, speed:spd,
     });
-    // Set cooldown for this user
-    _twitchUserCooldowns[username] = frame + _TWITCH_COOLDOWN_FRAMES;
+    // Cooldown already set in onmessage before spawn
     // Warning flash + sound
     spawnParticles(ship.x+(Math.random()-0.5)*200, ship.y+(Math.random()-0.5)*150, '#9146ff', 12);
     // Push new alert, keep max 3
@@ -5634,6 +5625,7 @@ function startSpace() {
     try {
       _twitchChatWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
       _twitchChatWs.onopen = () => {
+        _twitchChatWs.send('CAP REQ :twitch.tv/tags'); // request badge/tag info
         _twitchChatWs.send('PASS oauth:justinfan12345');
         _twitchChatWs.send('NICK justinfan12345');
         _twitchChatWs.send(`JOIN #${_TWITCH_CHANNEL}`);
@@ -5641,16 +5633,21 @@ function startSpace() {
       _twitchChatWs.onmessage = (ev) => {
         const raw = ev.data;
         if(raw.startsWith('PING')) { _twitchChatWs.send('PONG :tmi.twitch.tv'); return; }
-        const match = raw.match(/^:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :/);
+        const match = raw.match(/^(?:@([^ ]+) )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :/);
         if(match) {
-          const user = match[1];
+          const tags = match[1] || '';
+          const user = match[2];
+          // Check if moderator or broadcaster via badge tags
+          const isMod = /badges=[^;]*moderator/.test(tags) && !isStreamer;
+          const isStreamer = user.toLowerCase() === 'shlbez';
+          // Cooldown: streamer = none, mod = 5s (300 frames), normal = 25s (1500 frames)
+          const cooldownFrames = isStreamer ? 0 : isMod ? 300 : _TWITCH_COOLDOWN_FRAMES;
           const cooldownUntil = _twitchUserCooldowns[user] || 0;
-          if(frame < cooldownUntil) return; // still on cooldown, ignore
-          // If game is active → spawn immediately, else queue
+          if(frame < cooldownUntil) return; // still on cooldown
+          _twitchUserCooldowns[user] = frame + cooldownFrames;
           if(state === 'playing' && !_spaceInShop) {
             spawnTwitchEnemy(user);
           } else {
-            // Queue up (avoid duplicate queuing)
             if(!_twitchSpawnQueue.includes(user)) {
               _twitchSpawnQueue.push(user);
             }
@@ -7458,8 +7455,8 @@ function startSpace() {
 
     // Mini-map (bottom-right, above powerup bar)
     {
-      const mm_w=90, mm_h=Math.floor(mm_w*(WH/WW));
-      const mm_x=W-mm_w-8, mm_y=H-mm_h-34;
+      const mm_w=126, mm_h=Math.floor(mm_w*(WH/WW));
+      const mm_x=W-mm_w-6, mm_y=H-mm_h-28; // bigger, lower
       ctx.save();ctx.globalAlpha=0.55;
       ctx.fillStyle='rgba(5,5,25,0.85)';ctx.beginPath();ctx.roundRect(mm_x,mm_y,mm_w,mm_h,4);ctx.fill();
       ctx.strokeStyle='rgba(100,120,255,0.35)';ctx.lineWidth=1;ctx.stroke();
@@ -7498,19 +7495,7 @@ function startSpace() {
       ctx.font='13px monospace';ctx.fillStyle='#7c8aaa';
       const resumeTxt='click here or press P to resume';const resumeY=H/2+24;
       ctx.fillText(resumeTxt,W/2,resumeY);
-      // Always show song title on pause screen — bottom-left
-      if(_songTitleText){
-        const _ptfont=Math.min(13,Math.floor(W*0.022));
-        ctx.font=`${_ptfont}px monospace`;
-        const _textMW=ctx.measureText('♪ '+_songTitleText).width; const _ptPad=9; const _ptnw=_textMW+_ptPad*2+2;
-        const _ptnh=_ptfont+14;
-        const _ptnx=10, _ptny=H-_ptnh-42; // bottom-left
-        ctx.globalAlpha=0.88;
-        ctx.fillStyle='rgba(10,10,25,0.8)';ctx.beginPath();ctx.roundRect(_ptnx,_ptny,_ptnw,_ptnh,5);ctx.fill();
-        ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
-        ctx.fillStyle='#c4b5fd';ctx.fillText('♪ '+_songTitleText,_ptnx+_ptPad,_ptny+_ptnh*0.72);
-        ctx.globalAlpha=1;
-      }
+      // Song title shown in bottom bar (not pause screen)
       // Big invisible click zone — 60% of canvas centered
       const pw=W*0.6, ph=H*0.4;
       const rw2=ctx.measureText(resumeTxt).width+20,rh2=20;
@@ -7581,28 +7566,20 @@ function startSpace() {
     // HP hearts are shown in the topbar only (removed from canvas overlay)
 
     // ── Song title notification (bottom right, fades in/out)
-    if(_songTitleTimer>0){
-      _songTitleTimer--;
-      const SHOW=1440, FADE=80; // ~24s total, ~22s fully visible
-      let alpha;
-      if(_songTitleTimer>SHOW-FADE) alpha=(SHOW-_songTitleTimer)/FADE; // fade in
-      else if(_songTitleTimer<FADE)  alpha=_songTitleTimer/FADE;        // fade out
-      else                           alpha=1;
-      if(alpha>0){
-        ctx.save();
-        ctx.globalAlpha=alpha*0.9;
-        const titleFontPx=Math.min(13,Math.floor(W*0.022));
-        ctx.font=`${titleFontPx}px monospace`;
-        const noteW=ctx.measureText('♪ '+_songTitleText).width+18;
-        const noteH=titleFontPx+14;
-        const nx=W-noteW-10, ny=H-noteH-6; // 1.4: bottom-right near powerup bar
-        ctx.fillStyle='rgba(10,10,25,0.75)';
-        ctx.beginPath();ctx.roundRect(nx,ny,noteW,noteH,5);ctx.fill();
-        ctx.strokeStyle='rgba(124,92,252,0.4)';ctx.lineWidth=1;ctx.stroke();
-        ctx.fillStyle='#c4b5fd';
-        ctx.fillText('♪ '+_songTitleText,nx+9,ny+noteH*0.7);
-        ctx.restore();
-      }
+    // Song title — always visible, far right of powerup bar row (canvas overlay)
+    if(_songTitleText){
+      ctx.save();ctx.globalAlpha=0.85;
+      const _stFontPx=10;
+      ctx.font=`${_stFontPx}px monospace`;
+      const _stW=ctx.measureText('♪ '+_songTitleText).width+16;
+      const _stH=_stFontPx+10;
+      const _stX=W-_stW-4, _stY=H-_stH-2; // bottom-right corner inside powerup bar area
+      ctx.fillStyle='rgba(10,10,25,0.0)'; // transparent bg (sits in powerup bar)
+      ctx.fillStyle='#c4b5fd';
+      ctx.textAlign='right';
+      ctx.fillText('♪ '+_songTitleText, W-8, H-8);
+      ctx.textAlign='left';
+      ctx.restore();
     }
     positionEmoteOverlays();
     // Dim emote overlay when game is not actively playing
