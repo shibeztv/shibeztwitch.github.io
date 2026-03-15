@@ -1420,7 +1420,7 @@
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-family:var(--mono);font-size:13px;color:#bbb;font-weight:700">Score:</span>
             <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--text)" id="flappyScore">0</span>
-            <input id="flappyVolSlider" type="range" min="0" max="100" value="52" title="Volume"
+            <input id="flappyVolSlider" type="range" min="0" max="100" value="39" title="Volume"
               oninput="setFlappyVol(+this.value)"
               style="width:60px;accent-color:#ffd700;cursor:pointer;vertical-align:middle">
             <button id="flappyMuteBtn" onclick="toggleFlappyMute()" title="Mute/Unmute sounds" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">🔊</button>
@@ -3755,7 +3755,7 @@ let _flappyMusicPlayer = null;
 const FLAPPY_MUSIC_ID = 'YzdAI3kseTg';
 const FLAPPY_MUSIC_TITLE = '♪ Johann Strauss — Blue Danube';
 let _flappyMuted = false;
-let _flappyVolLevel = 52; // current vol 0-100
+let _flappyVolLevel = 39; // 25% quieter
 
 window.setFlappyVol = function(v) {
   _flappyVolLevel = v;
@@ -3896,9 +3896,25 @@ function startFlappy() {
       const visible = _gEmotes.filter(g => g.x < W + g.size);
       const rightmost = visible.length > 0 ? Math.max(...visible.map(g => g.x + g.size)) : 0;
       // Rarer: max 2, wider gap, smaller size
-      if (visible.length < 2 && rightmost < W - 200 && Math.random() < 0.3) {
-        const size = 28 + Math.floor(Math.random() * 18); // smaller: 28-46px
-        const spawnX = W + size;
+      // Spawn between pillars: find a gap between the last two pipes
+      if (visible.length < 2 && rightmost < W - 150 && Math.random() < 0.25) {
+        const size = 26 + Math.floor(Math.random() * 16);
+        // Find a spot that's between two pipes (in a gap)
+        let spawnX = W + size;
+        // Look for a gap: find rightmost pipe that is still on screen
+        const rightPipes = pipes.filter(p => p.x > -PIPE_W && p.x < W + 300);
+        if (rightPipes.length >= 2) {
+          // Sort by x and find a gap between consecutive pipes
+          const sorted = [...rightPipes].sort((a,b) => a.x - b.x);
+          for (let pi = 0; pi < sorted.length - 1; pi++) {
+            const gapStart = sorted[pi].x + PIPE_W + size + 4;
+            const gapEnd = sorted[pi+1].x - size - 4;
+            if (gapEnd - gapStart > size * 2) {
+              spawnX = gapStart + Math.random() * (gapEnd - gapStart - size);
+              break;
+            }
+          }
+        }
         if (!_gEmoteInPipe(spawnX, size)) {
           const idx = Math.floor(Math.random() * emoteImgs.length);
           _gEmotes.push({ x: spawnX, size, img: emoteImgs[idx] });
@@ -4600,20 +4616,20 @@ function startSpace() {
   if(_imgPool){ _planetEmoteImg.style.cssText='position:absolute;width:1px;height:1px;'; _imgPool.appendChild(_planetEmoteImg); }
 
   // Add a few giant background planets
-  const _giantPlanets = [
-    ...Array.from({length:4}, ()=>({x:Math.random()*WW,y:Math.random()*WH,r:200+Math.random()*80,hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],rings:Math.random()>0.3,ringTilt:0.22+Math.random()*0.18,atmOpacity:0.06+Math.random()*0.08,seed:Math.random()*1000})),
-    ...Array.from({length:4}, ()=>({x:Math.random()*WW,y:Math.random()*WH,r:90+Math.random()*100,hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],rings:Math.random()>0.4,ringTilt:0.22+Math.random()*0.18,atmOpacity:0.08+Math.random()*0.10,seed:Math.random()*1000}))
-  ];
-  const planets = [..._giantPlanets, ...Array.from({length:12}, (_,pi)=>({
-    // Scatter evenly across the world with some randomness
-    x: (pi%4)*(WW/4)+WW/8 + (Math.random()-0.5)*WW*0.15,
-    y: Math.floor(pi/4)*(WH/3)+WH/6 + (Math.random()-0.5)*WH*0.18,
-    r: 12+Math.random()*20,
-    hue: PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],
-    rings: Math.random()>0.5, ringTilt: 0.22+Math.random()*0.18,
-    atmOpacity: 0.12+Math.random()*0.18,
-    seed: Math.random()*1000,
-  }))];
+  // Generate planets with no-overlap guarantee
+  function _makePlanet(r){return{r,hue:PLANET_HUES[Math.floor(Math.random()*PLANET_HUES.length)],rings:Math.random()>0.4,ringTilt:0.22+Math.random()*0.18,atmOpacity:0.07+Math.random()*0.12,seed:Math.random()*1000};}
+  function _placePlanet(placed,r){
+    for(let attempt=0;attempt<50;attempt++){
+      const x=r+Math.random()*(WW-r*2), y=r+Math.random()*(WH-r*2);
+      const minDist=r*2.5;
+      if(placed.every(p=>Math.hypot(p.x-x,p.y-y)>p.r+r+minDist)){return{x,y,..._makePlanet(r)};}
+    }
+    return null; // couldn't place
+  }
+  const allPlanets=[];
+  [280,260,180,160,120,110,100,90].forEach(r=>{const p=_placePlanet(allPlanets,r);if(p)allPlanets.push(p);});
+  for(let pi=0;pi<12;pi++){const r=12+Math.random()*20;const p=_placePlanet(allPlanets,r);if(p)allPlanets.push(p);}
+  const planets=allPlanets;
 
   // ── Wreck emote image for abandoned ships
   const _wreckImg = new Image(); _wreckImg.crossOrigin='anonymous';
@@ -5132,30 +5148,48 @@ function startSpace() {
     const setCd=(cd)=>{ _slotCooldowns[slot]=cd; shootCooldown=_slotCooldowns[0]; };
 
     if(wKey==='sniper'){
-      const sd=Math.max(1,(dmg*8+6)*0.60); // -40% laser dmg, min 1
+      // Laser gun: a single fast piercing bolt — shoots, travels, and hits
+      const sd=Math.max(1,(dmg*8+6)*0.60);
+      const laserSpd=upgrades.tier2_sniper?28:22;
+      const laserW=upgrades.tier2_sniper?sz*3.0:sz*2.0;
+      // Fire a fast bolt that pierces all enemies (high pierce count)
       bullets.push({
-        laser:true, x:ship.x, y:ship.y, angle:baseAngle,
-        dmg:sd, life:30, maxLife:30, // count DOWN from 30
-        width: (upgrades.tier2_sniper?(sz*10+5):(sz*8+5)), // 1/3 width
+        x:ship.x, y:ship.y,
+        vx:Math.cos(baseAngle)*laserSpd*rm,
+        vy:Math.sin(baseAngle)*laserSpd*rm,
+        dmg:sd, size:laserW,
         color:'#ff6644', weaponType:'sniper',
-        hitEnemies:new Set(),
-        bounceCount: upgrades.tier2_sniper?1:0, bounced: false,
+        pierce:999, // pierces everything
+        isLaserBolt:true,
       });
-      setCd(Math.floor((upgrades.tier2_sniper?56:128)*rapidMod)); // laser -5% more attack speed
+      if(upgrades.tier2_sniper){
+        // Bouncing: fire a second bolt at slight angle after delay
+        setTimeout(()=>{
+          if(state==='playing') bullets.push({
+            x:ship.x, y:ship.y,
+            vx:Math.cos(baseAngle+0.15)*laserSpd*rm,
+            vy:Math.sin(baseAngle+0.15)*laserSpd*rm,
+            dmg:sd*0.7, size:laserW,
+            color:'#ff9966', weaponType:'sniper',
+            pierce:999, isLaserBolt:true,
+          });
+        },60);
+      }
+      setCd(Math.floor((upgrades.tier2_sniper?56:128)*rapidMod));
       sfxShoot(); return;
 
     } else if(wKey==='minigun'){
-      const mgCount=upgrades.tier2_minigun?9:5; // 5 default bullets
-      const mgSpread=upgrades.tier2_minigun?0.46:0.137; // +15% more
+      const mgCount=upgrades.tier2_minigun?12:8; // +3 bullets each
+      const mgSpread=upgrades.tier2_minigun?0.53:0.158; // +15% wider
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
-        const _mgSpd=upgrades.tier2_minigun?7.2*0.6:7.2; // tier2 -40% bullet speed
+        const _mgSpd=upgrades.tier2_minigun?7.2*0.6:7.2*0.75; // -25% speed
         const _mgLife=Math.floor(144);
-        const _mgDmg=upgrades.tier2_minigun?0.3:0.2;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.88,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // T1:0.2 T2:0.3, +60% size
+        const _mgDmg=upgrades.tier2_minigun?0.27:0.18; // -10% dmg
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
-      setCd(Math.floor((upgrades.tier2_minigun?18.6:14.9)*rapidMod)); // tier2 -25% slower
+      setCd(Math.floor((upgrades.tier2_minigun?21.4:17.1)*rapidMod)); // -15% more
 
     } else if(wKey==='towerGun'){
       const hasTier2=!!upgrades.tier2_towerGun;
@@ -5187,7 +5221,7 @@ function startSpace() {
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2?1:0.25,           // T2: 1 base dmg, T1: 0.25
+          dmg: isT2?0.333:0.083,       // T2: 1/3, T1: 1/3 of 0.25
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
           burns: isT2,                // only T2 applies burn
           _burnDur: 180,              // burn lasts 3s (180f) — resets on each hit
@@ -5208,19 +5242,19 @@ function startSpace() {
 
     } else if(wKey==='frozenStaff'){
       const isT2f=!!upgrades.tier2_frozenStaff;
-      const spread=isT2f?0.65:0.40;
-      for(let i=0;i<3;i++){
-        const a=baseAngle+(Math.random()-0.5)*spread;
-        const rangeF=isT2f?1.40:1.12;
+      const coneSpread=isT2f?0.70:0.55; // wide cone
+      const rangeF=isT2f?2.80:2.24; // 2x range
+      for(let i=0;i<5;i++){ // 5 cone shots
+        const a=baseAngle+(i-2)*(coneSpread/4);
         const spd=(5+Math.random()*3.5)*rangeF*rm*0.35;
         const life=(28+Math.random()*16)*rangeF*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2f?1:0.25,          // T2: 1 dmg, T1: 0.25 dmg
-          size:sz*1.4,color:'#88ddff',flame:true,life,maxLife:life,
+          dmg: isT2f?0.25:0.0625,     // T2: -75% of 1, T1: -75% of 0.25
+          size:sz*1.2,color:'#88ddff',flame:true,life,maxLife:life,
           freezing:true,
-          _slowPct: isT2f?0.25:0.20,  // T2: 25% slow, T1: 20% slow
-          _slowExpire: true,           // slow expires if not re-hit for 3s
-          deepFreeze: isT2f,           // T2: deep freeze after 4s continuous
+          _slowPct: isT2f?0.25:0.20,
+          _slowExpire: true,
+          deepFreeze: isT2f,
         });
       }
       // Frost/wind SFX: white noise burst + high shimmer
@@ -5718,8 +5752,8 @@ function startSpace() {
           f.shootTimer=(f.shootTimer||0)-1;
           if(target&&f.shootTimer<=0){
             const fa=Math.atan2(target.y-f.y,target.x-f.x);
-            bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*4.2,vy:Math.sin(fa)*4.2,dmg:Math.max(1,Math.floor(getBulletDmg()*0.585)),size:getBulletSize(),color:'#f0abfc',fromFollower:true}); // -65% bullet speed
-            f.shootTimer=252; // -40% more fire rate (180 * 1.4)
+            bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*1.26,vy:Math.sin(fa)*1.26,dmg:Math.max(1,Math.floor(getBulletDmg()*0.585)),size:getBulletSize(),color:'#f0abfc',fromFollower:true}); // 30% bullet speed
+            f.shootTimer=101; // 40% of 252 = faster
             playTone(900,'square',0.04,0.07);
           }
         }
@@ -5925,126 +5959,12 @@ function startSpace() {
           e.x+=e.vx; e.y+=e.vy;
         }
       });
-      bullets.forEach(b=>{if(!b.laser){b.x+=b.vx;b.y+=b.vy;}});
+      bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;}); // all bullets move including laser bolts
 
-      // Laser-enemy (piercing) + tier2 bounce off world edges / abandoned ships
-      bullets.filter(b=>b.laser).forEach(laser=>{
-        // Tier2 sniper: find the CLOSEST wall/ship hit and bounce once
-        if(laser.bounceCount>0&&!laser.bounced){
-          const cosA=Math.cos(laser.angle), sinA=Math.sin(laser.angle);
-          let bounceT=Infinity, bounceNx=0, bounceNy=0;
-
-          // Ray-vs-world-edge intersection (find the closest wall)
-          // Left wall: x=0 → t=(0-laser.x)/cosA
-          // Right wall: x=WW → t=(WW-laser.x)/cosA
-          // Top wall: y=0 → t=(0-laser.y)/sinA
-          // Bottom wall: y=WH → t=(WH-laser.y)/sinA
-          const walls=[
-            {t:(0-laser.x)/cosA,     nx:1, ny:0},
-            {t:(WW-laser.x)/cosA,    nx:-1,ny:0},
-            {t:(0-laser.y)/sinA,     nx:0, ny:1},
-            {t:(WH-laser.y)/sinA,    nx:0, ny:-1},
-          ];
-          walls.forEach(w=>{
-            if(w.t>1&&w.t<bounceT){ bounceT=w.t; bounceNx=w.nx; bounceNy=w.ny; }
-          });
-
-          // Ray-vs-abandoned-ship (circle intersection)
-          abandonedShips.forEach(as=>{
-            if(as.dead) return;
-            // Ray-circle: solve |P+t*D - C|² = r²
-            const ocx=laser.x-as.x, ocy=laser.y-as.y;
-            const r=as.size*0.65;
-            const a2=cosA*cosA+sinA*sinA; // always 1
-            const b2=2*(ocx*cosA+ocy*sinA);
-            const c2=ocx*ocx+ocy*ocy-r*r;
-            const disc=b2*b2-4*a2*c2;
-            if(disc>=0){
-              const t0=(-b2-Math.sqrt(disc))/(2*a2);
-              const t1=(-b2+Math.sqrt(disc))/(2*a2);
-              const ht=t0>1?t0:(t1>1?t1:Infinity);
-              if(ht<bounceT){
-                bounceT=ht;
-                // Normal = outward from ship center at hit point
-                const hx=laser.x+cosA*ht-as.x, hy=laser.y+sinA*ht-as.y;
-                const hl=Math.sqrt(hx*hx+hy*hy)||1;
-                bounceNx=hx/hl; bounceNy=hy/hl;
-              }
-            }
-          });
-
-          if(bounceT<Infinity){
-            // Store pre-bounce segment so we can draw both segments
-            laser._origX=laser.x; laser._origY=laser.y;
-            laser._origAngle=laser.angle; laser._bounceLen=bounceT;
-            // Move laser origin to the bounce point
-            laser.x+=cosA*bounceT;
-            laser.y+=sinA*bounceT;
-            // Reflect: D' = D - 2(D·N)N
-            const dot=cosA*bounceNx+sinA*bounceNy;
-            const rx=cosA-2*dot*bounceNx, ry=sinA-2*dot*bounceNy;
-            laser.angle=Math.atan2(ry,rx);
-            laser.bounced=true;
-            laser.hitEnemies=new Set(); // fresh hit set after bounce
-          }
-        }
-        const cosA=Math.cos(laser.angle), sinA=Math.sin(laser.angle);
-        enemies=enemies.map(e=>{
-          if(laser.hitEnemies.has(e)) return e;
-          const dx=e.x-laser.x, dy=e.y-laser.y;
-          const along=dx*cosA+dy*sinA;
-          const perp=Math.abs(-dx*sinA+dy*cosA);
-          if(along>0&&along<Math.sqrt(WW*WW+WH*WH)&&perp<laser.width/2+e.size*0.45){
-            laser.hitEnemies.add(e);
-            e.hp-=laser.dmg;
-            spawnParticles(e.x,e.y,'#ff6644',6);
-            if(e.hp<=0){
-              score+=1+Math.floor(upgrades.xpBoost*0.1*score*0.05||0);
-              document.getElementById('spaceScore').textContent=score;
-              spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();
-              const riskBonus=Math.floor((upgrades.riskReward||0)*0.2);
-              const roll=Math.random();
-              let droppedUpgrade=false;
-              if(roll<0.0173){spawnDrop(e.x,e.y,'heart');droppedUpgrade=true;}
-              else if(roll<0.0288){spawnDrop(e.x,e.y,'silverheart');droppedUpgrade=true;}
-              else if(roll<0.0403){spawnDrop(e.x,e.y,'explosion');droppedUpgrade=true;}
-              else if(roll<0.0518){spawnDrop(e.x,e.y,'freeze');droppedUpgrade=true;}
-              else if(roll<0.0633){spawnDrop(e.x,e.y,'magnet');droppedUpgrade=true;}
-              else if(roll<0.0863){const rp=['double','triple','rapid','shield','aura'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);droppedUpgrade=true;}
-              // Always drop at least 1 coin unless an upgrade dropped
-              const baseCoin = droppedUpgrade ? 0 : (()=>{ const r=Math.random(); return r<0.05?3:r<0.20?2:1; })();
-              const bonusCoin = riskBonus>0&&Math.random()<0.4?1:0;
-              const coinCount = baseCoin + bonusCoin;
-              for(let ci=0;ci<coinCount;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
-              return null;
-            }
-          }
-          return e;
-        }).filter(Boolean);
-        // Laser hits abandoned ships
-        abandonedShips.forEach(as=>{
-          if(as.dead) return;
-          const cosA=Math.cos(laser.angle), sinA=Math.sin(laser.angle);
-          const dx=as.x-laser.x, dy=as.y-laser.y;
-          const along=dx*cosA+dy*sinA;
-          const perp=Math.abs(-dx*sinA+dy*cosA);
-          if(along>0&&along<Math.sqrt(WW*WW+WH*WH)&&perp<laser.width/2+as.size*0.55){
-            as.hp-=laser.dmg;
-            spawnParticles(as.x,as.y,'#ff6644',4);
-            if(as.hp<=0){
-              as.dead=true; as.deathFrame=frame;
-              let coinReward=as.maxHp>=200?50:as.maxHp>=100?25:10;
-              for(let ci=0;ci<coinReward;ci++){const ca=Math.random()*Math.PI*2,cr=Math.random()*as.size*0.8;spawnDrop(as.x+Math.cos(ca)*cr,as.y+Math.sin(ca)*cr,'coin');}
-              spawnParticles(as.x,as.y,'#ffd700',20);sfxPowerup();
-              for(let ni=0;ni<8;ni++)spawnParticles(as.x+(Math.random()-0.5)*as.size*1.2,as.y+(Math.random()-0.5)*as.size*1.2,'#ff8800',10);
-            }
-          }
-        });
-      });
+      // (laser bolt processing removed — handled by normal bullet collision)
 
       // Bullet-enemy — pierce allows hitting 1+pierce enemies before bullet disappears
       bullets=bullets.filter(b=>{
-        if(b.laser) return true; // laser handled separately
         if(b.flame){
           // Flame/Frozen staff: circle collision like normal bullets but keeps flying
           enemies=enemies.map(e=>{
@@ -6340,11 +6260,11 @@ function startSpace() {
 
       bullets.forEach(b=>{
         if(b.flame&&b.life!==undefined)b.life--;
-        if(b.laser)b.life--;
+
       });
       bullets=bullets.filter(b=>{
         if(b.flame)return b.life>0;
-        if(b.laser)return b.life>0;
+
         if(b.life!==undefined){b.life--;if(b.life<=0)return false;}
         return b.x>cam.x-80&&b.x<cam.x+W+80&&b.y>cam.y-80&&b.y<cam.y+H+80;
       });
@@ -6705,7 +6625,7 @@ function startSpace() {
         ctx.translate(b.x,b.y);
         // Outer glow
         const pg=ctx.createRadialGradient(0,0,0,0,0,_br*1.8);
-        pg.addColorStop(0,_bc+'44');pg.addColorStop(1,_bc+'00');
+        pg.addColorStop(0,'rgba(200,200,255,0.3)');pg.addColorStop(1,'rgba(200,200,255,0)');
         ctx.fillStyle=pg;ctx.beginPath();ctx.arc(0,0,_br*1.8,0,Math.PI*2);ctx.fill();
         // Bubble outline
         ctx.strokeStyle=_bc;ctx.lineWidth=2*sz;ctx.globalAlpha=0.9;
