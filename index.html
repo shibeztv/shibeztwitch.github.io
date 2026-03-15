@@ -1401,7 +1401,7 @@
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><img src="https://cdn.7tv.app/emote/01FC5B2AH00005D6HG0ANTP0H3/2x.webp" style="width:28px;height:28px;object-fit:contain;image-rendering:auto"> UPGRADE SHOP</div>
           <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; After Death = You keep half of current coins 🪙 + 1🪙 / every 10 score</div>
-          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;width:100%;max-width:960px;overflow-y:auto;overflow-x:hidden;max-height:68vh;box-sizing:border-box"></div>
+          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:1200px;overflow-y:auto;overflow-x:hidden;max-height:72vh;box-sizing:border-box;padding:2px 4px"></div>
           <div class="shopMusicLabel" style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#6a5a9a;letter-spacing:0.5px">♪ Shop music: Motoi Sakuraba — Majula</div>
           </div>
         </div>
@@ -4606,12 +4606,12 @@ function startSpace() {
       const t1BuyFn = isFriendsKey ? `spaceBuyFriendsUnlock()` : `spaceBuyWeapon('${def.key}')`;
       const t1Btn = t1owned
         ? (isActive
-            ? `<button onclick="spaceDeequipWeapon('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.4);color:#ff8888;padding:2px 7px;border-radius:3px;cursor:pointer;white-space:nowrap">✕ ${activeSlotLabel}</button>`
-            : `<button onclick="spaceEquipWeaponAuto('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:2px 8px;border-radius:3px;cursor:pointer;white-space:nowrap">EQUIP</button>`)
-        : `<button onclick="${t1BuyFn}" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t1CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t1CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${t1CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t1CanAfford?'pointer':'default'};white-space:nowrap">🪙${t1Cost}</button>`;
-      const t1Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t1owned?'rgba(100,200,255,0.08)':'rgba(255,255,255,0.03)'};border:1px solid ${t1owned?'rgba(100,200,255,0.3)':'rgba(255,255,255,0.08)'}">
-        <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#60ddff':'#666'};min-width:52px;flex-shrink:0">UNLOCK</span>
-        <span style="font-family:var(--mono);font-size:9px;color:${t1owned?'#bbb':'#555'};flex:1;min-width:0">${t1Desc}</span>
+            ? `<button onclick="spaceDeequipWeapon('${def.key}')" style="font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.4);color:#ff8888;padding:4px 9px;border-radius:3px;cursor:pointer;white-space:nowrap">✕ ${activeSlotLabel}</button>`
+            : `<button onclick="spaceEquipWeaponAuto('${def.key}')" style="font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:4px 10px;border-radius:3px;cursor:pointer;white-space:nowrap">EQUIP</button>`)
+        : `<button onclick="${t1BuyFn}" style="font-family:var(--mono);font-size:10px;font-weight:900;background:${t1CanAfford?'rgba(255,215,0,0.25)':'rgba(255,255,255,0.05)'};border:1px solid ${t1CanAfford?'rgba(255,215,0,0.7)':'rgba(255,255,255,0.15)'};color:${t1CanAfford?'#ffd700':'#555'};padding:5px 12px;border-radius:4px;cursor:${t1CanAfford?'pointer':'default'};white-space:nowrap">🪙${t1Cost}</button>`;
+      const t1Row = `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:5px;background:${t1owned?'rgba(100,200,255,0.08)':'rgba(255,255,255,0.03)'};border:1px solid ${t1owned?'rgba(100,200,255,0.3)':'rgba(255,255,255,0.08)'}">
+        <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#60ddff':'#555'};min-width:56px;flex-shrink:0">UNLOCK</span>
+        <span style="font-family:var(--mono);font-size:10px;color:#aaa;flex:1;min-width:0;line-height:1.4">${t1Desc}</span>
         ${t1Btn}
       </div>`;
 
@@ -4624,30 +4624,30 @@ function startSpace() {
         const fa = coins>=fc && fl<maxFl && t1owned;
         const t2bg = t1owned ? (fl>1?'rgba(240,171,252,0.08)':'rgba(255,255,255,0.03)') : 'rgba(20,20,30,0.5)';
         const t2border = t1owned ? 'rgba(240,171,252,0.25)' : 'rgba(255,255,255,0.03)';
-        t2Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
-          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#f0abfc':'#333'};min-width:52px;flex-shrink:0">ENHANCE</span>
-          <span style="font-family:var(--mono);font-size:9px;color:${t1owned?'#bbb':'#333'};flex:1;min-width:0">+1 follower (${fl}/${maxFl})</span>
-          ${fl>=maxFl?'<span style="font-family:var(--mono);font-size:8px;color:#4ade80;font-weight:900;white-space:nowrap">MAX</span>':
-            !t1owned?'<span style="font-family:var(--mono);font-size:8px;color:#333;white-space:nowrap">🔒 Unlock first</span>':
-            `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${fa?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${fa?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.08)'};color:${fa?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${fa?'pointer':'default'};white-space:nowrap">⬆ 🪙${fc}</button>`}
+        t2Row = `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#f0abfc':'#333'};min-width:56px;flex-shrink:0">ENHANCE</span>
+          <span style="font-family:var(--mono);font-size:10px;color:#aaa;flex:1;min-width:0;line-height:1.4">+1 follower (${fl}/${maxFl})</span>
+          ${fl>=maxFl?'<span style="font-family:var(--mono);font-size:9px;color:#4ade80;font-weight:900;white-space:nowrap">MAX</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">🔒 Unlock first</span>':
+            `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:10px;font-weight:900;background:${fa?'rgba(255,215,0,0.25)':'rgba(255,255,255,0.05)'};border:1px solid ${fa?'rgba(255,215,0,0.7)':'rgba(255,255,255,0.15)'};color:${fa?'#ffd700':'#555'};padding:5px 12px;border-radius:4px;cursor:${fa?'pointer':'default'};white-space:nowrap">⬆ 🪙${fc}</button>`}
         </div>`;
       } else if(def.tier2){
         const t2CanAfford = coins>=def.tier2.cost && !t2owned && t1owned;
         const t2bg = t2owned?'rgba(80,80,120,0.14)':t1owned?'rgba(255,255,255,0.03)':'rgba(20,20,30,0.5)';
         const t2border = t2owned?def.color+'55':t1owned?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.03)';
         const t2desc = def.tier2.desc;
-        t2Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
-          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t2owned?def.color:t1owned?'#555':'#333'};min-width:52px;flex-shrink:0">ENHANCE</span>
-          <span style="font-family:var(--mono);font-size:9px;color:${t2owned?'#bbb':t1owned?'#555':'#333'};flex:1;min-width:0">${t2desc}</span>
-          ${t2owned?'<span style="font-family:var(--mono);font-size:8px;color:#4ade80;font-weight:900;white-space:nowrap">✓ ON</span>':
-            !t1owned?'<span style="font-family:var(--mono);font-size:8px;color:#333;white-space:nowrap">🔒 Unlock first</span>':
-            `<button onclick="spaceBuyTier2('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t2CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t2CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.08)'};color:${t2CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t2CanAfford?'pointer':'default'};white-space:nowrap">⬆ 🪙${def.tier2.cost}</button>`}
+        t2Row = `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t2owned?def.color:t1owned?'#555':'#333'};min-width:56px;flex-shrink:0">ENHANCE</span>
+          <span style="font-family:var(--mono);font-size:10px;color:#aaa;flex:1;min-width:0;line-height:1.4">${t2desc}</span>
+          ${t2owned?'<span style="font-family:var(--mono);font-size:9px;color:#4ade80;font-weight:900;white-space:nowrap">✓ ON</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">🔒 Unlock first</span>':
+            `<button onclick="spaceBuyTier2('${def.key}')" style="font-family:var(--mono);font-size:10px;font-weight:900;background:${t2CanAfford?'rgba(255,215,0,0.25)':'rgba(255,255,255,0.05)'};border:1px solid ${t2CanAfford?'rgba(255,215,0,0.7)':'rgba(255,255,255,0.15)'};color:${t2CanAfford?'#ffd700':'#555'};padding:5px 12px;border-radius:4px;cursor:${t2CanAfford?'pointer':'default'};white-space:nowrap">⬆ 🪙${def.tier2.cost}</button>`}
         </div>`;
       }
 
-      return `<div style="background:${isActive?'rgba(100,200,255,0.07)':'rgba(255,255,255,0.03)'};border:2px solid ${isActive?def.color:'rgba(255,255,255,0.08)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;position:relative;min-width:0">
-        ${isActive?`<div style="position:absolute;top:5px;right:7px;font-family:var(--mono);font-size:8px;color:${def.color};font-weight:900">${activeSlotLabel}</div>`:''}
-        <div style="font-family:var(--mono);font-size:12px;font-weight:800;color:#fff;padding-right:${isActive?'24px':'0'}">${def.label}</div>
+      return `<div style="background:${isActive?'rgba(100,200,255,0.07)':'rgba(255,255,255,0.03)'};border:2px solid ${isActive?def.color:'rgba(255,255,255,0.08)'};border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;position:relative;min-width:0">
+        ${isActive?`<div style="position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7px;color:${def.color};font-weight:900;white-space:nowrap">${t2owned?'Enhanced':t1owned?'Unlocked':''} ${inSlots.map(si=>`[T${si+1}]`).join('')}</div>`:''}
+        <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;padding-right:${isActive?'60px':'0'}">${def.label}</div>
         ${t1Row}
         ${t2Row}
       </div>`;
@@ -4657,7 +4657,7 @@ function startSpace() {
       <div style="grid-column:1/-1;font-family:var(--mono);font-size:11px;font-weight:900;color:#aaa;letter-spacing:2px;padding:4px 0 2px;border-bottom:1px solid #1a1a3a;margin-bottom:4px">▸ STAT UPGRADES</div>
       ${statHtml}
       <div style="grid-column:1/-1;font-family:var(--mono);font-size:11px;font-weight:900;color:#aaa;letter-spacing:2px;padding:10px 0 2px;border-bottom:1px solid #1a1a3a;margin-bottom:4px;margin-top:8px">▸ WEAPONS — buy once, equip anytime ${getMaxWeaponSlots()>1?`<span style="color:#ffd700;font-size:9px;margin-left:8px">(${getMaxWeaponSlots()} slots active)</span>`:''}</div>
-      ${weaponHtml}
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${weaponHtml}</div>
     `;
   };
 
