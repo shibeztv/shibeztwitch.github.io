@@ -3900,7 +3900,7 @@ function startFlappy() {
         const spawnX = W + size;
         // Only spawn if not inside a pipe
         if (!_gEmoteInPipe(spawnX, size)) {
-          const idx = Math.floor(Math.random() * emoteImgs.length);
+          const idx = Math.floor(Math.random() * shuffled.length);
           _gEmotes.push({ x: spawnX, size, img: emoteImgs[idx] });
         }
       }
@@ -3929,7 +3929,7 @@ function startFlappy() {
       gapY = lo + Math.random() * (hi - lo);
     }
     _lastGapY = gapY;
-    const eImg = emoteImgs[pipeEmoteIdx % emoteImgs.length];
+    const eImg = emoteImgs[Math.floor(Math.random() * emoteImgs.length)];
     pipeEmoteIdx++;
     pipes.push({ x: W + 10, gapY, eImg, scored: false });
   }
@@ -5135,8 +5135,8 @@ function startSpace() {
       const sd=Math.max(1,(dmg*8+6)*0.60); // -40% laser dmg, min 1
       bullets.push({
         laser:true, x:ship.x, y:ship.y, angle:baseAngle,
-        dmg:sd, life:0, maxLife:3, // brief shot flash
-        width: (upgrades.tier2_sniper?(sz*30+14):(sz*24+15)), // base 3x width
+        dmg:sd, life:0, maxLife:30, // 0.5s visible
+        width: (upgrades.tier2_sniper?(sz*10+5):(sz*8+5)), // 1/3 width
         color:'#ff6644', weaponType:'sniper',
         hitEnemies:new Set(),
         bounceCount: upgrades.tier2_sniper?1:0, bounced: false,
@@ -5146,10 +5146,10 @@ function startSpace() {
 
     } else if(wKey==='minigun'){
       const mgCount=upgrades.tier2_minigun?9:5; // 5 default bullets
-      const mgSpread=upgrades.tier2_minigun?0.31:0.092; // -40% spread
+      const mgSpread=upgrades.tier2_minigun?0.40:0.119; // +30% from reduced
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
-        const _mgLife=Math.floor(18); // range limited: life frames
+        const _mgLife=Math.floor(72); // 4x range
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*7.2*rm,vy:Math.sin(baseAngle+spread)*7.2*rm,dmg:0.15,size:sz*0.55,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -60% speed=-60% range, -15% size
       }
       _minigunShooting=true;
@@ -5157,7 +5157,7 @@ function startSpace() {
 
     } else if(wKey==='towerGun'){
       const hasTier2=!!upgrades.tier2_towerGun;
-      if(hasTier2) _towerGunBurstCount++;
+      _towerGunBurstCount++; // always increment for rainbow color
       const isDoubleBurst=hasTier2&&(_towerGunBurstCount%4===0);
       const shotCount=isDoubleBurst?16:8;
       // Tower gun rotates around the aim direction
@@ -5166,7 +5166,7 @@ function startSpace() {
         const a=_rotOff+(i/shotCount)*Math.PI*2;
         const spd=isDoubleBurst?15*rm:13*rm;
         const bulletSz=isDoubleBurst?sz*1.35:sz*1.1;
-        const _shotHue=(_towerGunBurstCount*47)%360; // different hue each shot
+        const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:dmg,size:bulletSz,color:col,weaponType:'dual',pierce:upgrades.pierce||0});
       }
@@ -5181,32 +5181,32 @@ function startSpace() {
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg:Math.max(1,Math.floor(getBulletDmg()*0.7)), // 70% of base dmg
+          dmg:0.5, // 0.5 base dmg per flame particle
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
           burns:true, // always burns now
           _burnDur:upgrades.tier2_flamethrower?360:180,
           _burnPct:upgrades.tier2_flamethrower?0.08:0.05, // % of maxHp per second
         });
       }
-      setCd(Math.floor(5*rapidMod));
+      setCd(Math.floor(7*rapidMod)); // -40% attack speed
 
     } else if(wKey==='multiGun'){
       const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
       const spread=upgrades.tier2_multiGun?Math.PI*1.05:0.72;
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*12*rm,vy:Math.sin(a)*12*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0}); // -20% dmg
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*9*rm,vy:Math.sin(a)*9*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0}); // -25% speed
       }
-      setCd(Math.floor(113*rapidMod)); // -25% more
+      setCd(Math.floor(141*rapidMod)); // -25% more on top
 
     } else if(wKey==='frozenStaff'){
       const spread=upgrades.tier2_frozenStaff?0.65:0.40;
       for(let i=0;i<3;i++){
         const a=baseAngle+(Math.random()-0.5)*spread;
         const rangeF=upgrades.tier2_frozenStaff?1.40:1.12;
-        const spd=(5+Math.random()*3.5)*rangeF*rm;
+        const spd=(5+Math.random()*3.5)*rangeF*rm*0.35; // -65% speed
         const life=(28+Math.random()*16)*rangeF*rm;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:Math.max(1,Math.floor(getBulletDmg()*0.7)),size:sz*1.4,color:'#88ddff',flame:true,life,maxLife:life,freezing:true,deepFreeze:!!upgrades.tier2_frozenStaff});
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:0.5,size:sz*1.4,color:'#88ddff',flame:true,life,maxLife:life,freezing:true,deepFreeze:!!upgrades.tier2_frozenStaff});
       }
       // Frost/wind SFX: white noise burst + high shimmer
       const _ac=getACtx();if(_ac){
@@ -5227,7 +5227,7 @@ function startSpace() {
           o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.1);
         },i*12));
       }
-      setCd(Math.floor(21*rapidMod)); // 40% more on top
+      setCd(Math.floor(60*rapidMod)); // -65% attack speed
 
     } else {
       // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
@@ -5703,8 +5703,8 @@ function startSpace() {
           f.shootTimer=(f.shootTimer||0)-1;
           if(target&&f.shootTimer<=0){
             const fa=Math.atan2(target.y-f.y,target.x-f.x);
-            bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*12,vy:Math.sin(fa)*12,dmg:Math.max(1,Math.floor(getBulletDmg()*0.585)),size:getBulletSize(),color:'#f0abfc',fromFollower:true}); // 45% * 1.3 = 58.5% dmg
-            f.shootTimer=180; // slower fire rate
+            bullets.push({x:f.x,y:f.y,vx:Math.cos(fa)*4.2,vy:Math.sin(fa)*4.2,dmg:Math.max(1,Math.floor(getBulletDmg()*0.585)),size:getBulletSize(),color:'#f0abfc',fromFollower:true}); // -65% bullet speed
+            f.shootTimer=252; // -40% more fire rate (180 * 1.4)
             playTone(900,'square',0.04,0.07);
           }
         }
