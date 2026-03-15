@@ -5690,7 +5690,7 @@ function startSpace() {
     else powerupDrops.push({x,y,vx:0,vy:0,type,life:99999999,collected:false,freezeFrames:180});
   }
 
-  function spawnParticles(x,y,color,n=10){
+  function spawnParticles(x,y,color,n=10){if(particles.length>300)return;
     for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*3,life:35+Math.random()*20,color});}
   }
 
@@ -5883,29 +5883,17 @@ function startSpace() {
       if(offScreen){
         // Big/boss/titan: keep animated but invisible so WebP loop doesn't reset
         if(e.isBoss||e.isTitan||e.isBig){
-          e.img.style.width  = sw + 'px';
-          e.img.style.height = sh + 'px';
-          e.img.style.left   = sx + 'px';
-          e.img.style.top    = sy + 'px';
-          e.img.style.display = 'block';
-          e.img.style.opacity = '0'; // invisible but animation keeps running
+          e.img.style.cssText = `position:absolute;width:${sw}px;height:${sh}px;left:${sx}px;top:${sy}px;display:block;opacity:0;pointer-events:none`;
         } else {
           e.img.style.left=OFF; e.img.style.top=OFF;
         }
         return;
       }
-      e.img.style.width  = sw + 'px';
-      e.img.style.height = sh + 'px';
-      e.img.style.left   = sx + 'px';
-      e.img.style.top    = sy + 'px';
-      e.img.style.display = 'block';
-      e.img.style.opacity = '1';
-      e.img.style.visibility = 'visible';
-      e.img.style.borderRadius = '0';
       const isSlowed = e.slowTimer>0||e.deepFrozen>0;
-      e.img.style.filter = (isFrozen||e.deepFrozen>0) ? 'hue-rotate(195deg) saturate(1.5) brightness(0.85)'
-                         : isSlowed ? 'hue-rotate(195deg) saturate(1.4) brightness(1.1) drop-shadow(0 0 4px #88ddff)'
-                         : '';
+      const _fil = (isFrozen||e.deepFrozen>0) ? 'hue-rotate(195deg) saturate(1.5) brightness(0.85)'
+                 : isSlowed ? 'hue-rotate(195deg) saturate(1.4) brightness(1.1) drop-shadow(0 0 4px #88ddff)'
+                 : 'none';
+      e.img.style.cssText = `position:absolute;width:${sw}px;height:${sh}px;left:${sx}px;top:${sy}px;display:block;opacity:1;border-radius:0;filter:${_fil};pointer-events:none`;
     });
 
     Array.from(_emoteLayer.querySelectorAll('.space-emote-overlay')).forEach(el=>{
@@ -6262,6 +6250,10 @@ function startSpace() {
       // Enemies move toward ship (frozen if freeze active)
       const isFrozen = _hasPowerup('freeze');
       enemies.forEach(e=>{
+        // Skip AI for enemies far off screen — saves CPU with many enemies
+        const _offX = e.x - cam.x, _offY = e.y - cam.y;
+        const _farOff = _offX < -W*1.5 || _offX > W*2.5 || _offY < -H*1.5 || _offY > H*2.5;
+        if(_farOff && !e.isBoss && !e.isTitan){ e.age++; return; } // skip full AI
         e.age++;
         // Tick slow/deepFreeze/burn timers
         if(e.slowLinger>0){ e.slowLinger--; if(e.slowLinger<=0){e.slowTimer=0;e._slowPct=undefined;} }
@@ -7593,17 +7585,9 @@ function startSpace() {
     // Song title — always visible, far right of powerup bar row (canvas overlay)
     // Song title — always visible bottom-right with fade in/out
     if(_songTitleText){
-      // Smooth fade: ramp alpha up on new track, hold, fade out after ~22s
-      if(_songTitleTimer > 0){
-        _songTitleTimer--;
-        // Fade in quickly
-        if(_songTitleAlpha < 1) _songTitleAlpha = Math.min(1, _songTitleAlpha + 1/20);
-        // Fade out only in last 60 frames
-        else if(_songTitleTimer < 60) _songTitleAlpha = Math.max(0, _songTitleTimer / 60);
-      } else {
-        // Timer done — hold at current alpha, ramp to full if needed
-        if(_songTitleAlpha < 1) _songTitleAlpha = Math.min(1, _songTitleAlpha + 1/20);
-      }
+      // Simple: fade in on new track (alpha starts at 0), then stay fully visible forever
+      if(_songTitleTimer > 0) _songTitleTimer--;
+      _songTitleAlpha = Math.min(1, _songTitleAlpha + 1/25); // smooth fade in, never fades out
       if(_songTitleAlpha > 0.01){
         ctx.save();
         const titleFontPx = Math.min(13, Math.floor(W*0.022));
