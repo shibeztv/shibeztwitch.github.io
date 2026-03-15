@@ -3844,7 +3844,7 @@ function startFlappy() {
     img.width = 52; img.height = 52;
     // Always keep in DOM so WebP/GIF animation keeps running
     img.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:52px;height:52px;pointer-events:none';
-    img.decoding='async'; img.fetchpriority='high';
+    img.decoding='sync'; img.fetchpriority='high';
     _gifContainer.appendChild(img);
     return img;
   });
@@ -3899,7 +3899,7 @@ function startFlappy() {
       // Rarer: max 2, wider gap, smaller size
       // Spawn between pillars: find a gap between the last two pipes
       if (visible.length < 2 && rightmost < W - 150 && Math.random() < 0.25) {
-        const size = 52 + Math.floor(Math.random() * 20);
+        const size = 30 + Math.floor(Math.random() * 14);
         // Find a spot that's between two pipes (in a gap)
         let spawnX = W + size;
         // Look for a gap: find rightmost pipe that is still on screen
@@ -4704,8 +4704,8 @@ function startSpace() {
     {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:65,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way spread',cost:90}},
     {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Slows enemies hit.',  color:'#88ddff', cost:50,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3s of continuous hits, freezes enemy for 1.5s',cost:75}},
     {key:'friends',      label:'👾 Friends',        desc:'Orbital follower that auto-shoots nearest enemy',  color:'#f0abfc', cost:30,  maxLvl:12, costPerLvl:l=>Math.floor(30+l*22)},
-    {key:'garlic',       label:'🧄 Garlic',         desc:'Damages all enemies in radius around player.',    color:'#e8d5a3', cost:55,  tier2:{key:'tier2_garlic', label:'🧄+ Super Garlic', desc:'+30% range, +0.2 dmg/s, heal 1 HP/10s', cost:85}},
-    {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'3 chaining lightning bolts, 0.3 dmg each, chains to nearby enemy.', color:'#7df9ff', cost:70, tier2:{key:'tier2_lightning', label:'⚡🔴 Storm Bolt', desc:'5 red bolts, +20% dmg, chains to 2 enemies, longer chain range', cost:95}},
+    {key:'garlic',       label:'🧄 Garlic',         desc:'Damages enemies around you.',    color:'#e8d5a3', cost:55,  tier2:{key:'tier2_garlic', label:'🧄+ Super Garlic', desc:'Increased range, dmg, and heals the player!', cost:85}},
+    {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'Chaining lightning bolts to closest enemy.', color:'#7df9ff', cost:70, tier2:{key:'tier2_lightning', label:'⚡🔴 Storm Bolt', desc:'Increased projectile count, damage and chaining!', cost:95}},
   ];
 
   window.renderShopGrid = function renderShopGrid() {
@@ -4880,7 +4880,7 @@ function startSpace() {
   function getShootCd()     {
     const base=Math.max(5,Math.floor(88-upgrades.atkSpeed*2)); // base pistol cd
     const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base; // -20% atk speed vs base
-    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.25) : t2Mod; // -25% attack speed when friends active
+    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.15) : t2Mod; // -15% attack speed when friends
     return friendsMod;
   }
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
@@ -5162,34 +5162,35 @@ function startSpace() {
     const setCd=(cd)=>{ _slotCooldowns[slot]=cd; shootCooldown=_slotCooldowns[0]; };
 
     if(wKey==='sniper'){
-      // Laser gun: a single fast piercing bolt — shoots, travels, and hits
-      const sd=Math.max(1,(dmg*8+6)*0.60);
-      const laserSpd=upgrades.tier2_sniper?28:22;
-      const laserW=upgrades.tier2_sniper?sz*3.0:sz*2.0;
-      // Fire a fast bolt that pierces all enemies (high pierce count)
+      // Laser gun: instant persistent beam — stays visible for duration, hits all in path
+      const isT2s=!!upgrades.tier2_sniper;
+      const sd=isT2s?3:2; // T1:2 dmg, T2:3 dmg
+      const laserW=isT2s?sz*4.2:sz*3.0; // T2 40% wider
+      const laserLife=18; // frames beam stays visible (~0.3s)
+      // Beam: stationary, angle locked, hits all enemies in line each frame
       bullets.push({
-        x:ship.x, y:ship.y,
-        vx:Math.cos(baseAngle)*laserSpd*rm,
-        vy:Math.sin(baseAngle)*laserSpd*rm,
+        x:ship.x, y:ship.y, vx:0, vy:0,
         dmg:sd, size:laserW,
         color:'#ff6644', weaponType:'sniper',
-        pierce:999, // pierces everything
-        isLaserBolt:true,
+        pierce:999, isLaserBeam:true,
+        beamAngle:baseAngle, beamLife:laserLife, life:laserLife, maxLife:laserLife,
+        beamX:ship.x, beamY:ship.y,
+        hitEnemiesBeam:new Set(),
       });
-      if(upgrades.tier2_sniper){
-        // Bouncing: fire a second bolt at slight angle after delay
-        setTimeout(()=>{
-          if(state==='playing') bullets.push({
-            x:ship.x, y:ship.y,
-            vx:Math.cos(baseAngle+0.15)*laserSpd*rm,
-            vy:Math.sin(baseAngle+0.15)*laserSpd*rm,
-            dmg:sd*0.7, size:laserW,
-            color:'#ff9966', weaponType:'sniper',
-            pierce:999, isLaserBolt:true,
-          });
-        },60);
+      if(isT2s){
+        // T2: second beam slightly offset
+        bullets.push({
+          x:ship.x, y:ship.y, vx:0, vy:0,
+          dmg:sd*0.8, size:laserW*0.7,
+          color:'#ff9966', weaponType:'sniper',
+          pierce:999, isLaserBeam:true,
+          beamAngle:baseAngle+0.08, beamLife:laserLife, life:laserLife, maxLife:laserLife,
+          beamX:ship.x, beamY:ship.y,
+          hitEnemiesBeam:new Set(),
+        });
       }
-      setCd(Math.floor((upgrades.tier2_sniper?56:128)*rapidMod));
+      // T2 50% slower, T1 20% slower vs old (old was 128/56)
+      setCd(Math.floor((isT2s?84:154)*rapidMod));
       sfxShoot(); return;
 
     } else if(wKey==='minigun'){
@@ -5197,13 +5198,13 @@ function startSpace() {
       const mgSpread=upgrades.tier2_minigun?0.53:0.158; // +15% wider
       for(let mi=0;mi<mgCount;mi++){
         const spread=(Math.random()-0.5)*mgSpread;
-        const _mgSpd=upgrades.tier2_minigun?7.2*0.6:7.2*0.75*1.25; // +25% speed back
+        const _mgSpd=upgrades.tier2_minigun?7.2*0.75*1.25*1.5:7.2*0.75*1.25; // T2 +50% speed
         const _mgLife=Math.floor(144);
-        const _mgDmg=upgrades.tier2_minigun?0.3:0.2; // T1:0.2 T2:0.3
+        const _mgDmg=upgrades.tier2_minigun?0.1:0.1; // T1:0.1 T2:0.1
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
-      setCd(Math.floor((upgrades.tier2_minigun?21.4:17.1)*rapidMod)); // -15% more
+      setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9:17.1)*rapidMod)); // T2 10% faster
 
     } else if(wKey==='towerGun'){
       const hasTier2=!!upgrades.tier2_towerGun;
@@ -5218,13 +5219,13 @@ function startSpace() {
         const bulletSz=isDoubleBurst?sz*1.35:sz*1.1;
         const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:dmg,size:bulletSz,color:col,weaponType:'dual',pierce:upgrades.pierce||0});
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:1.5,size:bulletSz,color:col,weaponType:'dual',pierce:upgrades.pierce||0});
       }
       if(isDoubleBurst){
         spawnParticles(ship.x,ship.y,'#e879f9',10);
-        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:500,life:45,maxLife:45,spd:6*rm*0.15,hue:(_towerGunBurstCount*73)%360,dmg:getBulletDmg()*2,hitEnemies:new Set()});
+        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:90,maxLife:90,spd:28,hue:(_towerGunBurstCount*73)%360,dmg:getBulletDmg()*3,hitEnemies:new Set()});
       }
-      setCd(Math.floor(120*rapidMod)); // -20% more attack speed
+      setCd(Math.floor(138*rapidMod)); // 15% slower
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
@@ -5235,11 +5236,11 @@ function startSpace() {
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2?0.1665:0.0415,     // -50% more per projectile
+          dmg: isT2?0.00415*0.3:0.00415,  // T1 -90%, T2 -70%
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
-          burns: isT2,                // only T2 applies burn
+          burns: true,               // BOTH tiers apply burn (fix)
           _burnDur: 180,              // burn lasts 3s (180f at 60fps)
-          _burnFlat: 1,               // T2: 1 dmg/s flat (not %)
+          _burnFlat: isT2?1.5:0.5,   // T2 more burn dmg
           _burnExpire: true,          // burn expires if not re-hit for 3s
         });
       }
@@ -5247,19 +5248,21 @@ function startSpace() {
 
     } else if(wKey==='multiGun'){
       const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
-      const spread=upgrades.tier2_multiGun?Math.PI*1.05*0.88:0.72*0.88; // -12% spread
+      const spread=upgrades.tier2_multiGun?Math.PI*1.05*0.88*0.85:0.72*0.88; // T2 -15% more
       for(let i=0;i<count;i++){
         const a=baseAngle+(i-(count-1)/2)*(spread/(count-1));
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*8.55*rm,vy:Math.sin(a)*8.55*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0}); // -5% more speed
+        const _mSpd=upgrades.tier2_multiGun?8.55*0.80*0.70:8.55*0.80; // T1 -20%, T2 -30%
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd*rm,vy:Math.sin(a)*_mSpd*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0});
       }
-      setCd(Math.floor(141*rapidMod)); // -25% more on top
+      setCd(Math.floor(upgrades.tier2_multiGun?141*1.20:141*1.15)*rapidMod); // T1 -15% T2 -20%
 
     } else if(wKey==='frozenStaff'){
       const isT2f=!!upgrades.tier2_frozenStaff;
-      const coneSpread=isT2f?0.70:0.55; // wide cone
+      const coneSpread=isT2f?0.70*0.75:0.55; // T2 -25% spread
       const rangeF=isT2f?2.80:2.24; // 2x range
-      for(let i=0;i<5;i++){ // 5 cone shots
-        const a=baseAngle+(i-2)*(coneSpread/4);
+      const _fsCount=isT2f?4:5; // T2 -15% bullets
+      for(let i=0;i<_fsCount;i++){
+        const a=baseAngle+(i-(_fsCount-1)/2)*(coneSpread/(_fsCount-1||1));
         const spd=(5+Math.random()*3.5)*rangeF*rm*0.35;
         const life=(28+Math.random()*16)*rangeF*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
@@ -5300,18 +5303,20 @@ function startSpace() {
       const chainRange=isT2L?160:100; // chain range
       const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
       const _lcol=isT2L?'#ff4444':'#7df9ff';
+      const _lSpread=isT2L?9*0.85:9*0.70; // T1 -30%, T2 -15%
       for(let bi=0;bi<boltCount;bi++){
-        const offset=(bi-(boltCount-1)/2)*9; // tightly packed
+        const offset=(bi-(boltCount-1)/2)*_lSpread;
         bullets.push({
           x:ship.x+perpX*offset, y:ship.y+perpY*offset,
-          vx:Math.cos(baseAngle)*20*rm, vy:Math.sin(baseAngle)*20*rm,
+          vx:Math.cos(baseAngle)*20*0.15*rm, vy:Math.sin(baseAngle)*20*0.15*rm, // -85% speed
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
           isLightning:true, chainCount, chainRange,
           chained:false, chainHits:new Set(),
+          snakePhase:0, snakeAng:baseAngle,
         });
       }
-      setCd(Math.floor(22*rapidMod));
+      setCd(Math.floor(22*6.67*rapidMod)); // -85% attack speed
       // Lightning SFX
       const _lac=getACtx();if(_lac){
         const _lv=getSfxVol()*0.08;
@@ -5331,9 +5336,10 @@ function startSpace() {
       const _fActive=activeWeapons.includes('friends')||activeWeapon==='friends';
       const _fSz=_fActive?sz*6:sz;
       offsets.forEach(da=>{
-        const _fSpd=_fActive?11*rm*0.30:11*rm;
+        const _fSpd=_fActive?11*rm*0.30*1.12:11*rm; // +12% speed when friends
         const _fDmg=_fActive?Math.max(0.1,dmg*0.9):dmg;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*_fSpd,vy:Math.sin(baseAngle+da)*_fSpd,dmg:_fDmg,size:_fSz,pierce:p,circle:_fActive});
+        const _fPierce=_fActive?(999):(p); // friends circle pierces all
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*_fSpd,vy:Math.sin(baseAngle+da)*_fSpd,dmg:_fDmg,size:_fSz,pierce:_fPierce,circle:_fActive});
       });
       if(upgrades.tier2_default){
         // 3 parallel shots: center + offset perpendicular to aim direction
@@ -5807,8 +5813,8 @@ function startSpace() {
       // Garlic: passive AOE damage around player every second (60 frames)
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
-        const _gRadius = 3 * 36 * (_gT2 ? 1.30 : 1.0); // 3x player size (~36px) + T2 +30%
-        const _gDmg = (_gT2 ? 0.5 : 0.3) / 60; // per-frame dmg (0.3 or 0.5 per second)
+        const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40 : 1.0); // +50% base, T2 +40%
+        const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) / 60; // +12% dmg
         enemies=enemies.map(e=>{
           const dx=e.x-ship.x, dy=e.y-ship.y;
           if(Math.sqrt(dx*dx+dy*dy)<_gRadius+e.size*0.5){
@@ -6036,7 +6042,35 @@ function startSpace() {
           e.x+=e.vx; e.y+=e.vy;
         }
       });
-      bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;}); // all bullets move including laser bolts
+      bullets.forEach(b=>{
+        // Snake movement for lightning bolts
+        if(b.isLightning&&b.snakePhase!==undefined){
+          b.snakePhase=(b.snakePhase||0)+0.3;
+          const perpX=-Math.sin(b.snakeAng), perpY=Math.cos(b.snakeAng);
+          const snakeAmt=Math.sin(b.snakePhase)*3.5;
+          b.x+=b.vx+perpX*snakeAmt;b.y+=b.vy+perpY*snakeAmt;
+          return; // handled
+        }
+        if(b.isLaserBeam){
+          // Beam stays at origin, hits enemies in line each frame
+          const cosA=Math.cos(b.beamAngle), sinA=Math.sin(b.beamAngle);
+          enemies=enemies.map(e=>{
+            if(b.hitEnemiesBeam.has(e)) return e;
+            const dx=e.x-b.beamX, dy=e.y-b.beamY;
+            const along=dx*cosA+dy*sinA;
+            const perp=Math.abs(-dx*sinA+dy*cosA);
+            if(along>0 && along<Math.sqrt(WW*WW+WH*WH) && perp<b.size*0.5+e.size*0.45){
+              b.hitEnemiesBeam.add(e);
+              e.hp-=b.dmg; spawnParticles(e.x,e.y,'#ff6644',4); sfxHit();
+              if(e.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(e.x,e.y,'#ffd700',12);sfxExplode();return null;}
+            }
+            return e;
+          }).filter(Boolean);
+          b.life--;
+          return;
+        }
+        b.x+=b.vx;b.y+=b.vy;
+      });
 
       // (laser bolt processing removed — handled by normal bullet collision)
 
@@ -6127,8 +6161,12 @@ function startSpace() {
                 b.chainHits.add(ce);
                 ce.hp-=b.dmg*0.8;
                 spawnParticles(ce.x,ce.y,b.color||'#7df9ff',5);
-                // Draw a chain arc particle effect
-                spawnParticles((e.x+ce.x)/2,(e.y+ce.y)/2,b.color||'#7df9ff',3);
+                // Visual chain arc: multiple particles along the line e→ce
+                const _cSteps=5;
+                for(let _ci=0;_ci<_cSteps;_ci++){
+                  const _cf=_ci/_cSteps;
+                  spawnParticles(e.x+(ce.x-e.x)*_cf,e.y+(ce.y-e.y)*_cf,b.color||'#7df9ff',2);
+                }
                 if(ce.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(ce.x,ce.y,'#ffd700',10);sfxExplode();}
               });
               if(_chainTargets.length>0) b.chained=true;
@@ -6357,6 +6395,7 @@ function startSpace() {
 
       });
       bullets=bullets.filter(b=>{
+        if(b.isLaserBeam)return b.life>0;
         if(b.flame)return b.life>0;
 
         if(b.life!==undefined){b.life--;if(b.life<=0)return false;}
@@ -6684,20 +6723,27 @@ function startSpace() {
         ctx.restore();
 
       } else if(wt==='sniper'){
-        // Laser bolt — short tracer that flies and disappears
-        const angle=Math.atan2(b.vy,b.vx);
-        const sz=b.size||2;
-        const tlen=55*sz; // tracer tail length
-        ctx.translate(b.x,b.y);ctx.rotate(angle);
+        // Laser beam — continuous beam from origin to edge of screen
+        if(!b.isLaserBeam){ ctx.restore(); return; } // skip non-beam sniper bullets
+        const t=(b.life||1)/(b.maxLife||1);
+        const ang=b.beamAngle||0;
+        const bw=(b.size||3)*Math.max(0.3,t);
+        const fullLen=Math.sqrt(WW*WW+WH*WH)*1.2;
         ctx.save();
-        ctx.shadowColor='#ff6644';ctx.shadowBlur=8;
-        const lg=ctx.createLinearGradient(-tlen,0,0,0);
-        lg.addColorStop(0,'rgba(255,80,30,0)');
-        lg.addColorStop(0.6,'rgba(255,140,60,0.6)');
-        lg.addColorStop(1,'rgba(255,220,180,0.95)');
-        ctx.strokeStyle=lg;ctx.lineWidth=sz*3;ctx.lineCap='round';
-        ctx.beginPath();ctx.moveTo(-tlen,0);ctx.lineTo(0,0);ctx.stroke();
-        ctx.fillStyle='#fff8f0';ctx.beginPath();ctx.arc(0,0,sz*1.8,0,Math.PI*2);ctx.fill();
+        ctx.translate(b.beamX||b.x, b.beamY||b.y);
+        ctx.rotate(ang);
+        ctx.globalAlpha=Math.min(1,t*1.4);
+        // Outer glow
+        const og=ctx.createLinearGradient(0,0,fullLen,0);
+        og.addColorStop(0,`rgba(255,80,30,${0.25*t})`);og.addColorStop(0.3,`rgba(255,60,20,${0.12*t})`);og.addColorStop(1,'rgba(255,30,0,0)');
+        ctx.strokeStyle=og;ctx.lineWidth=bw*3;ctx.lineCap='round';
+        ctx.shadowColor='#ff6644';ctx.shadowBlur=12*t;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(fullLen,0);ctx.stroke();
+        // Core beam
+        const cg=ctx.createLinearGradient(0,0,fullLen,0);
+        cg.addColorStop(0,`rgba(255,220,180,${t})`);cg.addColorStop(0.4,`rgba(255,100,40,${0.8*t})`);cg.addColorStop(1,'rgba(255,30,0,0)');
+        ctx.strokeStyle=cg;ctx.lineWidth=bw;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(fullLen,0);ctx.stroke();
         ctx.shadowBlur=0;ctx.restore();
 
       } else if(wt==='minigun'){
@@ -6731,35 +6777,19 @@ function startSpace() {
         ctx.globalAlpha=1;
 
       } else if(wt==='multi'||wt==='multiGun'){
-        // Multi-Gun — lightning bolt with jagged path
+        // Multi-Gun — arch/half-circle projectile
         const sz=b.size||1;
         const angle=Math.atan2(b.vy,b.vx);
         ctx.translate(b.x,b.y);ctx.rotate(angle);
-        const blen=22*sz;
-        // Outer electric glow
         ctx.save();
-        ctx.shadowColor='#7df9ff';ctx.shadowBlur=8*sz;
-        // Jagged lightning path using seeded random (consistent per bullet position)
-        const _seed=(b.x*7+b.y*13)&255;
-        const _rng=(i)=>((_seed*9301+i*49297)%233280)/233280;
-        ctx.strokeStyle=`rgba(180,240,255,0.85)`;ctx.lineWidth=1.5*sz;ctx.lineCap='round';
-        ctx.beginPath();
-        ctx.moveTo(-blen,0);
-        const segs=5;
-        for(let i=1;i<=segs;i++){
-          const px=-blen+i*(blen/segs);
-          const py=(_rng(i*3)-0.5)*7*sz;
-          if(i===segs) ctx.lineTo(0,0);
-          else ctx.lineTo(px,py);
-        }
-        ctx.stroke();
-        // Bright core
-        ctx.strokeStyle='#ffffff';ctx.lineWidth=0.8*sz;
-        ctx.beginPath();ctx.moveTo(-blen*0.3,0);ctx.lineTo(0,0);ctx.stroke();
-        // Front spark
-        ctx.fillStyle='#7df9ff';
-        ctx.beginPath();ctx.arc(0,0,2.5*sz,0,Math.PI*2);ctx.fill();
+        ctx.shadowColor='#4ade80';ctx.shadowBlur=6;
+        ctx.strokeStyle='#4ade80';ctx.lineWidth=2.5*sz;ctx.lineCap='round';
+        ctx.beginPath();ctx.arc(0,0,8*sz,Math.PI/2,Math.PI*1.5);ctx.stroke();
+        // Glow fill inside arch
+        ctx.globalAlpha=0.25;ctx.fillStyle='#86efac';
+        ctx.beginPath();ctx.arc(0,0,8*sz,Math.PI/2,Math.PI*1.5);ctx.fill();
         ctx.shadowBlur=0;ctx.restore();
+
 
       } else if(wt==='lightning'){
         // Lightning bolt — jagged electric bolt
@@ -6947,16 +6977,18 @@ function startSpace() {
     // Garlic aura visual
     if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
       const _gT2v=!!upgrades.tier2_garlic;
-      const _gRv = 3 * 36 * (_gT2v ? 1.30 : 1.0);
+      const _gRv = 3 * 36 * 1.5 * (_gT2v ? 1.40 : 1.0);
       const _gPulse=0.5+0.25*Math.sin(frame*0.08);
       ctx.save();ctx.globalAlpha=0.12+_gPulse*0.06;
-      const _gg=ctx.createRadialGradient(ship.x,ship.y,_gRv*0.3,ship.x,ship.y,_gRv);
-      _gg.addColorStop(0,'rgba(232,213,163,0.3)');_gg.addColorStop(1,'rgba(232,213,163,0)');
-      ctx.fillStyle=_gg;ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.fill();
-      ctx.globalAlpha=0.35+_gPulse*0.15;
-      ctx.strokeStyle='rgba(232,213,163,0.6)';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+      // Filled circle 70% transparent + outline
+      const _gc=_gT2v?'rgba(180,40,40':'rgba(232,213,163';
+      ctx.fillStyle=`${_gc},0.30)`;
+      ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=0.6+_gPulse*0.2;
+      ctx.strokeStyle=`${_gc},0.7)`;
+      ctx.lineWidth=2.5;
       ctx.beginPath();ctx.arc(ship.x,ship.y,_gRv,0,Math.PI*2);ctx.stroke();
-      ctx.setLineDash([]);ctx.restore();
+      ctx.restore();
     }
 
     if(_hasPowerup('shield')){
