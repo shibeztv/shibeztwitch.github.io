@@ -4596,6 +4596,13 @@ function startSpace() {
   shipImg.style.left='-9999px'; shipImg.style.top='-9999px';
   if(_emoteLayer) _emoteLayer.appendChild(shipImg);
 
+  // Burn effect emote overlay (fire emote)
+  const _burnEmoteImg = new Image();
+  _burnEmoteImg.crossOrigin='anonymous';
+  _burnEmoteImg.src='https://cdn.7tv.app/emote/01FPAEGT8R000FZADBM40VTF22/2x.webp';
+  _burnEmoteImg.style.cssText='position:absolute;left:-9999px;top:0;pointer-events:none;';
+  if(_imgPool) _imgPool.appendChild(_burnEmoteImg);
+
   // Slow effect emote overlay (for frozen staff)
   const _slowEmoteImg = new Image();
   _slowEmoteImg.crossOrigin='anonymous';
@@ -4880,7 +4887,7 @@ function startSpace() {
   function getShootCd()     {
     const base=Math.max(5,Math.floor(88-upgrades.atkSpeed*2)); // base pistol cd
     const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base; // -20% atk speed vs base
-    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.15) : t2Mod; // -15% attack speed when friends
+    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.40) : t2Mod; // -40% attack speed when friends
     return friendsMod;
   }
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
@@ -5200,11 +5207,11 @@ function startSpace() {
         const spread=(Math.random()-0.5)*mgSpread;
         const _mgSpd=upgrades.tier2_minigun?7.2*0.75*1.25*1.5:7.2*0.75*1.25; // T2 +50% speed
         const _mgLife=Math.floor(144);
-        const _mgDmg=upgrades.tier2_minigun?0.1:0.1; // T1:0.1 T2:0.1
+        const _mgDmg=upgrades.tier2_minigun?0.09:0.08; // slightly less dmg
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
-      setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9:17.1)*rapidMod)); // T2 10% faster
+      setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9*1.2:17.1*1.2)*rapidMod)); // -20% attack speed
 
     } else if(wKey==='towerGun'){
       const hasTier2=!!upgrades.tier2_towerGun;
@@ -5223,14 +5230,14 @@ function startSpace() {
       }
       if(isDoubleBurst){
         spawnParticles(ship.x,ship.y,'#e879f9',10);
-        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:90,maxLife:90,spd:28,hue:(_towerGunBurstCount*73)%360,dmg:getBulletDmg()*3,hitEnemies:new Set()});
+        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:2,hitEnemies:new Set()});
       }
       setCd(Math.floor(138*rapidMod)); // 15% slower
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
-      const spread=isT2?0.85:0.45;
-      const rangeBonus=isT2?1.15:1.0;
+      const spread=isT2?0.65:0.45; // T2 less spread
+      const rangeBonus=isT2?1.15*1.15:1.0; // T2 +15% more range
       for(let i=0;i<9;i++){
         const a=baseAngle+(Math.random()-0.5)*spread; // 9 particles same cone
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
@@ -5244,7 +5251,7 @@ function startSpace() {
           _burnExpire: true,          // burn expires if not re-hit for 3s
         });
       }
-      setCd(Math.floor(7*rapidMod));
+      setCd(Math.floor((isT2?7*1.20:7)*rapidMod)); // T2 -20% attack speed
 
     } else if(wKey==='multiGun'){
       const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
@@ -5311,9 +5318,9 @@ function startSpace() {
           vx:Math.cos(baseAngle)*20*0.15*rm, vy:Math.sin(baseAngle)*20*0.15*rm, // -85% speed
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
-          isLightning:true, chainCount, chainRange,
+          isLightning:true, chainCount, chainRange, pierce:1,
           chained:false, chainHits:new Set(),
-          snakePhase:0, snakeAng:baseAngle,
+          snakePhase:bi*2.1, snakeAng:baseAngle, // unique phase per bolt
         });
       }
       setCd(Math.floor(22*6.67*rapidMod)); // -85% attack speed
@@ -5336,7 +5343,7 @@ function startSpace() {
       const _fActive=activeWeapons.includes('friends')||activeWeapon==='friends';
       const _fSz=_fActive?sz*6:sz;
       offsets.forEach(da=>{
-        const _fSpd=_fActive?11*rm*0.30*1.12:11*rm; // +12% speed when friends
+        const _fSpd=_fActive?11*rm*0.30*1.12*0.70:11*rm; // -30% speed friends
         const _fDmg=_fActive?Math.max(0.1,dmg*0.9):dmg;
         const _fPierce=_fActive?(999):(p); // friends circle pierces all
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*_fSpd,vy:Math.sin(baseAngle+da)*_fSpd,dmg:_fDmg,size:_fSz,pierce:_fPierce,circle:_fActive});
@@ -5813,7 +5820,7 @@ function startSpace() {
       // Garlic: passive AOE damage around player every second (60 frames)
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
-        const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40 : 1.0); // +50% base, T2 +40%
+        const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85 : 1.0); // T2 -15% less
         const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) / 60; // +12% dmg
         enemies=enemies.map(e=>{
           const dx=e.x-ship.x, dy=e.y-ship.y;
@@ -6004,7 +6011,7 @@ function startSpace() {
         // Deep freeze timer decays when not being hit
         if(e._deepFreezeTimer>0 && !e._deepFreezeHitThisFrame){e._deepFreezeTimer=Math.max(0,e._deepFreezeTimer-1);}
         e._deepFreezeHitThisFrame=false;
-        if(e.burnTimer>0){ e.burnTimer--; if(e.burnTimer%60===0){const bd=e._burnFlat||1;e.hp-=bd;spawnParticles(e.x,e.y,'#ff4400',3);if(e.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(e.x,e.y,'#ffd700',10);return;}} }
+        if(e.burnTimer>0){ e.burnTimer--; if(e.burnTimer%60===0){const bd=e._burnFlat||1;e.hp-=bd;spawnParticles(e.x,e.y,'#ff4400',3);if(e.hp<=0){score++;document.getElementById('spaceScore').textContent=score;spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();const bc2=Math.ceil(Math.min(3,e.sizeScale||1));for(let bi=0;bi<bc2;bi++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');enemies=enemies.filter(x=>x!==e);return;}} }
         if(e.deepFrozen>0){ e.deepFrozen--; e.vx=0; e.vy=0; return; }
         if(isFrozen){e.vx=0;e.vy=0;return;}
         const slowMult = e.slowTimer>0 ? (1-(e._slowPct||0.20)) : 1.0; // dynamic slow %
@@ -6047,7 +6054,7 @@ function startSpace() {
         if(b.isLightning&&b.snakePhase!==undefined){
           b.snakePhase=(b.snakePhase||0)+0.3;
           const perpX=-Math.sin(b.snakeAng), perpY=Math.cos(b.snakeAng);
-          const snakeAmt=Math.sin(b.snakePhase)*3.5;
+          const snakeAmt=Math.sin(b.snakePhase)*0.7; // -80% shake
           b.x+=b.vx+perpX*snakeAmt;b.y+=b.vy+perpY*snakeAmt;
           return; // handled
         }
@@ -6642,13 +6649,12 @@ function startSpace() {
       }).filter(Boolean);
       // Draw ring — thick glowing visible circle
       ctx.save();
-      ctx.globalAlpha=t*0.9;
-      ctx.shadowColor=`hsl(${ring.hue},100%,70%)`;ctx.shadowBlur=20;
-      ctx.strokeStyle=`hsl(${ring.hue},100%,75%)`;ctx.lineWidth=6*t+2;
+      ctx.globalAlpha=t*0.55;
+      ctx.shadowColor=`hsl(${ring.hue},100%,70%)`;ctx.shadowBlur=8;
+      ctx.strokeStyle=`hsl(${ring.hue},100%,65%)`;ctx.lineWidth=3*t+1;
       ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r,0,Math.PI*2);ctx.stroke();
-      // Inner fill hint
-      ctx.globalAlpha=t*0.12;
-      ctx.fillStyle=`hsl(${ring.hue},100%,65%)`;
+      ctx.globalAlpha=t*0.05;
+      ctx.fillStyle=`hsl(${ring.hue},100%,55%)`;
       ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r,0,Math.PI*2);ctx.fill();
       ctx.shadowBlur=0;ctx.restore();
       return true;
@@ -6791,6 +6797,33 @@ function startSpace() {
         ctx.shadowBlur=0;ctx.restore();
 
 
+      } else if(b.circle){
+        // Friends weapon circle — meteorite/fireball
+        const sz=b.size||5;
+        const angle=Math.atan2(b.vy||0.001,b.vx||0.001);
+        ctx.translate(b.x,b.y);ctx.rotate(angle+Math.PI);
+        ctx.save();
+        // Outer fire glow
+        const mg=ctx.createRadialGradient(0,0,0,0,0,sz*1.8);
+        mg.addColorStop(0,'rgba(255,200,80,0.7)');mg.addColorStop(0.5,'rgba(255,80,10,0.4)');mg.addColorStop(1,'rgba(200,20,0,0)');
+        ctx.fillStyle=mg;ctx.beginPath();ctx.arc(0,0,sz*1.8,0,Math.PI*2);ctx.fill();
+        // Rocky core
+        ctx.fillStyle='#b0522a';ctx.beginPath();ctx.arc(0,0,sz*0.9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#7a3515';ctx.beginPath();ctx.arc(-sz*0.2,-sz*0.15,sz*0.35,0,Math.PI*2);ctx.fill();
+        // Flame tail
+        const tl=sz*2.5;
+        const fg=ctx.createLinearGradient(0,0,tl,0);
+        fg.addColorStop(0,'rgba(255,160,20,0.9)');fg.addColorStop(0.5,'rgba(255,60,0,0.5)');fg.addColorStop(1,'rgba(255,20,0,0)');
+        ctx.strokeStyle=fg;ctx.lineWidth=sz*0.8;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(tl,0);ctx.stroke();
+        // Sparks
+        for(let si=0;si<3;si++){
+          const sa=si*0.7-0.7+Math.sin(frame*0.2+si)*0.3;
+          ctx.strokeStyle=`rgba(255,220,80,0.6)`;ctx.lineWidth=sz*0.25;
+          ctx.beginPath();ctx.moveTo(sz*0.5,0);ctx.lineTo(sz*0.5+Math.cos(sa)*sz*1.2,Math.sin(sa)*sz*1.2);ctx.stroke();
+        }
+        ctx.restore();
+
       } else if(wt==='lightning'){
         // Lightning bolt — jagged electric bolt
         const angle=Math.atan2(b.vy,b.vx);
@@ -6824,11 +6857,12 @@ function startSpace() {
         const sz=b.size||1;
         const angle=Math.atan2(b.vy,b.vx);
         ctx.translate(b.x,b.y);ctx.rotate(angle);
-        const bg2=ctx.createLinearGradient(-20*sz,0,0,0);
+        const _plen=32*sz; // 60% longer
+        const bg2=ctx.createLinearGradient(-_plen,0,0,0);
         bg2.addColorStop(0,'rgba(96,221,255,0)');bg2.addColorStop(1,'#60ddff');
-        ctx.strokeStyle=bg2;ctx.lineWidth=3*sz;
-        ctx.beginPath();ctx.moveTo(-20*sz,0);ctx.lineTo(0,0);ctx.stroke();
-        ctx.fillStyle='#e0f8ff';ctx.beginPath();ctx.arc(0,0,2.5*sz,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=bg2;ctx.lineWidth=9*sz; // 3x wider
+        ctx.beginPath();ctx.moveTo(-_plen,0);ctx.lineTo(0,0);ctx.stroke();
+        ctx.fillStyle='#e0f8ff';ctx.beginPath();ctx.arc(0,0,4.5*sz,0,Math.PI*2);ctx.fill();
       }
       ctx.restore();
     });
@@ -6873,8 +6907,16 @@ function startSpace() {
       if(_eFrozen||e.deepFrozen>0){
         ctx.save();ctx.globalAlpha=0.45;ctx.strokeStyle='#88ddff';ctx.lineWidth=3;
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();ctx.restore();
-      } else if(_eSlowed){
-        // Draw snow/slow emote at 70% transparency above enemy
+      }
+      if(e.burnTimer>0){        // Draw fire emote above burning enemy at 70% transparency
+        if(_burnEmoteImg&&_burnEmoteImg.complete&&_burnEmoteImg.naturalWidth>0){
+          const _beSz=Math.min(e.size*0.8,36);
+          ctx.save();ctx.globalAlpha=0.30+0.15*Math.sin(frame*0.3+e.x*0.1); // flicker
+          ctx.drawImage(_burnEmoteImg,e.x-_beSz/2,e.y-e.size*0.6-_beSz,_beSz,_beSz);
+          ctx.restore();
+        }
+      }
+      if(_eSlowed){        // Draw snow/slow emote at 70% transparency above enemy
         if(_slowEmoteImg&&_slowEmoteImg.complete&&_slowEmoteImg.naturalWidth>0){
           const _seSz=Math.min(e.size*0.7,32);
           ctx.save();ctx.globalAlpha=0.30; // 70% transparent
@@ -6977,7 +7019,7 @@ function startSpace() {
     // Garlic aura visual
     if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
       const _gT2v=!!upgrades.tier2_garlic;
-      const _gRv = 3 * 36 * 1.5 * (_gT2v ? 1.40 : 1.0);
+      const _gRv = 3 * 36 * 1.5 * (_gT2v ? 1.40*0.85 : 1.0);
       const _gPulse=0.5+0.25*Math.sin(frame*0.08);
       ctx.save();ctx.globalAlpha=0.12+_gPulse*0.06;
       // Filled circle 70% transparent + outline
