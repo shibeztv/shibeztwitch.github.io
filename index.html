@@ -4133,7 +4133,7 @@ function startFlappy() {
   }
 
   function resetGame() {
-    if(_currentDeathSfxGlobal){try{_currentDeathSfxGlobal.pause();_currentDeathSfxGlobal.currentTime=0;}catch(e){}_currentDeathSfxGlobal=null;}
+    // Death sound keeps playing on restart — only stops on game close
     bird = { x: 80, y: H/2, vy: 0, rot: 0 };
     pipes = [];
     score = 0;
@@ -4394,8 +4394,9 @@ const _BG_TRACKS = [
   { id:'R0hfS1Qhhkw', title:'Cult of the Lamb - Start a Cult' },
 ];
 let _bgTrackIdx = Math.floor(Math.random() * _BG_TRACKS.length);
-let _songTitleTimer = 0; // frames to show title
+let _songTitleTimer = 0;
 let _songTitleText = '';
+let _songTitleAlpha = 0; // 0=hidden, 1=fully visible — used for fade
 
 function _nextBgTrack() {
   // Pick a different random track
@@ -4414,7 +4415,8 @@ function _loadBgTrack(track) {
     if (_spaceMusicMuted || _spaceAllMuted) _spaceMusicPlayer.mute();
     else _spaceMusicPlayer.unMute();
     _songTitleText = track.title;
-    _songTitleTimer = 1440; // ~24 seconds at 60fps (~20s visible)
+    _songTitleTimer = 1440;
+    _songTitleAlpha = 0; // trigger fade-in
   } catch(e) {}
 }
 
@@ -4434,6 +4436,7 @@ function initSpaceMusic() {
           if(!_spaceMusicMuted && !_spaceAllMuted) e.target.playVideo(); else e.target.mute();
           _songTitleText = startTrack.title;
           _songTitleTimer = 1440;
+          _songTitleAlpha = 0; // fade in on game start
         },
         onStateChange: e => {
           if(e.data === YT.PlayerState.ENDED && !_spaceInShop) {
@@ -5637,10 +5640,9 @@ function startSpace() {
         if(match) {
           const tags = match[1] || '';
           const user = match[2];
-          // Check if moderator or broadcaster via badge tags
-          const isMod = /badges=[^;]*moderator/.test(tags) && !isStreamer;
           const isStreamer = user.toLowerCase() === 'shlbez';
-          // Cooldown: streamer = none, mod = 5s (300 frames), normal = 25s (1500 frames)
+          const isMod = !isStreamer && /badges=[^;]*moderator/.test(tags);
+          // Cooldown: streamer = none, mod = 5s (300f), normal = 25s
           const cooldownFrames = isStreamer ? 0 : isMod ? 300 : _TWITCH_COOLDOWN_FRAMES;
           const cooldownUntil = _twitchUserCooldowns[user] || 0;
           if(frame < cooldownUntil) return; // still on cooldown
@@ -5648,9 +5650,8 @@ function startSpace() {
           if(state === 'playing' && !_spaceInShop) {
             spawnTwitchEnemy(user);
           } else {
-            if(!_twitchSpawnQueue.includes(user)) {
-              _twitchSpawnQueue.push(user);
-            }
+            // Queue — allow same user multiple times in queue (no dedup)
+            _twitchSpawnQueue.push(user);
           }
         }
       };
@@ -7455,7 +7456,7 @@ function startSpace() {
 
     // Mini-map (bottom-right, above powerup bar)
     {
-      const mm_w=126, mm_h=Math.floor(mm_w*(WH/WW));
+      const mm_w=160, mm_h=Math.floor(mm_w*(WH/WW));
       const mm_x=W-mm_w-6, mm_y=H-mm_h-28; // bigger, lower
       ctx.save();ctx.globalAlpha=0.55;
       ctx.fillStyle='rgba(5,5,25,0.85)';ctx.beginPath();ctx.roundRect(mm_x,mm_y,mm_w,mm_h,4);ctx.fill();
@@ -7567,19 +7568,33 @@ function startSpace() {
 
     // ── Song title notification (bottom right, fades in/out)
     // Song title — always visible, far right of powerup bar row (canvas overlay)
+    // Song title — always visible bottom-right with fade in/out
     if(_songTitleText){
-      ctx.save();ctx.globalAlpha=0.85;
-      const _stFontPx=10;
-      ctx.font=`${_stFontPx}px monospace`;
-      const _stW=ctx.measureText('♪ '+_songTitleText).width+16;
-      const _stH=_stFontPx+10;
-      const _stX=W-_stW-4, _stY=H-_stH-2; // bottom-right corner inside powerup bar area
-      ctx.fillStyle='rgba(10,10,25,0.0)'; // transparent bg (sits in powerup bar)
-      ctx.fillStyle='#c4b5fd';
-      ctx.textAlign='right';
-      ctx.fillText('♪ '+_songTitleText, W-8, H-8);
-      ctx.textAlign='left';
-      ctx.restore();
+      // Smooth fade: ramp alpha up on new track, hold, fade out after ~22s
+      const _SHOW=1440, _FADE=90;
+      if(_songTitleTimer > 0){
+        _songTitleTimer--;
+        if(_songTitleAlpha < 1) _songTitleAlpha = Math.min(1, _songTitleAlpha + 1/30); // fade in over 0.5s
+        else if(_songTitleTimer < _FADE) _songTitleAlpha = Math.max(0, _songTitleTimer / _FADE); // fade out
+      } else {
+        // Timer expired — stay fully visible (permanent)
+        _songTitleAlpha = Math.min(1, _songTitleAlpha + 1/30);
+      }
+      if(_songTitleAlpha > 0.01){
+        ctx.save();
+        const titleFontPx = Math.min(13, Math.floor(W*0.022));
+        ctx.font = `${titleFontPx}px monospace`;
+        const noteW = ctx.measureText('♪ '+_songTitleText).width + 18;
+        const noteH = titleFontPx + 14;
+        const nx = W - noteW - 10, ny = H - noteH - 6;
+        ctx.globalAlpha = _songTitleAlpha * 0.9;
+        ctx.fillStyle = 'rgba(10,10,25,0.8)';
+        ctx.beginPath(); ctx.roundRect(nx, ny, noteW, noteH, 5); ctx.fill();
+        ctx.strokeStyle = 'rgba(124,92,252,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#c4b5fd';
+        ctx.fillText('♪ '+_songTitleText, nx+9, ny+noteH*0.7);
+        ctx.restore();
+      }
     }
     positionEmoteOverlays();
     // Dim emote overlay when game is not actively playing
@@ -7608,6 +7623,8 @@ function startSpace() {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     try { _flappyMusicPlayer?.pauseVideo(); } catch(e) {}
+    // Stop flappy death sound when tab hidden
+    if (_currentDeathSfxGlobal) { try { _currentDeathSfxGlobal.pause(); } catch(e){} }
     // Tab hidden — pause music (it will resume from same position when returning)
     try { _spaceMusicPlayer?.pauseVideo(); } catch(e){}
     try { _spaceShopMusicPlayer?.pauseVideo(); } catch(e){}
