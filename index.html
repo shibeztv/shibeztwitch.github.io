@@ -4793,10 +4793,10 @@ function startSpace() {
   const _saved = window._spaceSavedRun;
   if(_saved && _saved.upgrades){ Object.assign(upgrades, _saved.upgrades); }
   window._spaceUpgrades = upgrades;
-  window._spaceUnlockedWeapons = unlockedWeapons;
   // Track which weapons are unlocked this run
   const unlockedWeapons = new Set(['default']);
   if(_saved && _saved.unlockedWeapons){ _saved.unlockedWeapons.forEach(w=>unlockedWeapons.add(w)); }
+  window._spaceUnlockedWeapons = unlockedWeapons;
   const UPGRADE_DEFS = [
     {key:'speed',       label:'🚀 Movement Speed',  desc:'+12% movement speed per lvl',    maxLvl:10, cost:l=>Math.floor(3+l*l*1.2+l*2)},
     {key:'atkSpeed',    label:'⚡ Attack Speed',     desc:'+8% attack speed per lvl',      maxLvl:20, cost:l=>Math.floor(2+l*l*0.9+l*2)},
