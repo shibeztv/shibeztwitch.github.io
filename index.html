@@ -1433,7 +1433,7 @@
 
     <!-- SHIB.LE MODAL -->
     <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:700px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:980px;overflow:hidden;position:relative;display:flex;flex-direction:column">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
@@ -1525,7 +1525,7 @@
 
     <!-- CLIP MODAL -->
     <div id="clipModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1000px;overflow:hidden;position:relative">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1300px;overflow:hidden;position:relative">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
           <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)" id="clipTitle">Loading clip…</div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -3845,13 +3845,10 @@ function initFlappyMusic() {
   });
 }
 
-async function openFlappyShibez() {
+function openFlappyShibez() {
   document.getElementById('flappyModal').style.display = 'flex';
   initFlappyMusic();
-  // If preload not done yet, trigger it and wait briefly
-  if (_flappyImgEls.length === 0) {
-    await preloadFlappyEmotes();
-  }
+  preloadFlappyEmotes(); // fire-and-forget — sets _flappyEmotesReady when done
   startFlappy();
 }
 
@@ -3871,13 +3868,27 @@ function startFlappy() {
   birdImg.crossOrigin = 'anonymous';
   birdImg.src = FLAPPY_BIRD_URL;
 
-  // Use pre-loaded emote images — already in DOM and animating
-  const emoteImgs = _flappyImgEls.length > 0 ? _flappyImgEls : (() => {
-    // Fallback: create on the fly if preload failed
+  // Build a fresh randomised set of emote imgs each game start for variety
+  // Re-shuffle the pool so player sees different emotes each run
+  let emoteImgs;
+  if (_flappyImgEls.length > 0) {
+    // Re-shuffle existing loaded images for variety each game
+    emoteImgs = [..._flappyImgEls].sort(() => Math.random() - 0.5);
+  } else if (_flappyEmotes.length > 0) {
+    // Preload still running — create fresh imgs from emote data (avif to avoid QUIC)
+    const picks = [..._flappyEmotes].sort(() => Math.random() - 0.5).slice(0, 20);
+    emoteImgs = picks.map(e => {
+      const img = new Image(52,52); img.crossOrigin='anonymous';
+      img.src = e.url;
+      if (_flappyImgPool) _flappyImgPool.appendChild(img);
+      return img;
+    });
+  } else {
+    // Last resort fallback
     const img = new Image(52,52); img.crossOrigin='anonymous';
-    img.src='https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.webp';
-    return [img];
-  })();
+    img.src='https://cdn.7tv.app/emote/01GB9W8JN80004CKF2H1TWA99H/2x.avif';
+    emoteImgs = [img];
+  }
 
 
   // Game state
@@ -3972,6 +3983,12 @@ function startFlappy() {
 
   function drawPipeSection(img, px, py, pw, ph) {
     if (ph <= 0) return;
+    // If assigned image failed to load, try a random loaded one from the pool
+    let drawImg = img;
+    if (!drawImg || !drawImg.complete || !drawImg.naturalWidth) {
+      const loaded = emoteImgs.filter(i => i && i.complete && i.naturalWidth > 0);
+      drawImg = loaded.length > 0 ? loaded[Math.floor(Math.random()*loaded.length)] : null;
+    }
     ctx.save();
     ctx.beginPath();
     ctx.rect(px, py, pw, ph);
@@ -3980,19 +3997,18 @@ function startFlappy() {
     const cols = Math.ceil(pw / EMOTE_SIZE);
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        if (img && img.complete && img.naturalWidth > 0) {
-          try { ctx.drawImage(img, px + col * EMOTE_SIZE, py + row * EMOTE_SIZE, EMOTE_SIZE, EMOTE_SIZE); } catch(e){}
+        if (drawImg && drawImg.complete && drawImg.naturalWidth > 0) {
+          try { ctx.drawImage(drawImg, px + col * EMOTE_SIZE, py + row * EMOTE_SIZE, EMOTE_SIZE, EMOTE_SIZE); } catch(e){}
         } else {
-          ctx.fillStyle = '#2a2a3a';
+          // Use a solid colour fallback while loading
+          ctx.fillStyle = '#3a2a5a';
           ctx.fillRect(px + col * EMOTE_SIZE, py + row * EMOTE_SIZE, EMOTE_SIZE, EMOTE_SIZE);
         }
       }
     }
-    // Tint
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(px, py, pw, ph);
     ctx.restore();
-    // Outline exactly on the clipped rect
     ctx.strokeStyle = 'rgba(0,0,0,0.85)';
     ctx.lineWidth = 2;
     ctx.strokeRect(px + 1, py + 1, pw - 2, ph - 2);
@@ -5855,7 +5871,7 @@ function startSpace() {
   function loop() {
     if(!_spaceRunning) return;
     frame++;
-    window._spaceGameActive = (state==='playing' && !_spaceInShop && !_paused);
+    window._spaceGameActive = (state==='playing' && !_spaceInShop);
     if(window._spaceGameActive) _processTwitchQueue();
 
     const shopOpen=document.getElementById('spaceShop').style.display==='flex';
