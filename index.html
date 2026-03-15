@@ -3799,7 +3799,9 @@ function startFlappy() {
     img.crossOrigin = 'anonymous';
     img.src = e.url;
     img.width = 52; img.height = 52;
-    if (e.animated) _gifContainer.appendChild(img); // keep alive in DOM for animation
+    // Always keep in DOM so WebP/GIF animation keeps running
+    img.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:52px;height:52px;pointer-events:none';
+    _gifContainer.appendChild(img);
     return img;
   });
 
@@ -3944,9 +3946,38 @@ function startFlappy() {
     return false;
   }
 
+  // Jump SFX
+  const _flapSfx = new Audio('https://www.myinstants.com/media/sounds/gwe-short.mp3');
+  _flapSfx.volume = 0.20;
+  _flapSfx.crossOrigin = 'anonymous';
+
+  // Death SFX pool (forsen unlucky sounds)
+  const _deathSfxUrls = [
+    'https://badoge.github.io/soundboard/forsen/unlucky/never%20am%20i%20ever%20fucking%20lucky.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/so%20fucking%20unlucky%20man.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/so%20fucking%20unlucky.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/that%20is%20so%20unlucky%20dude.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/thats%20so%20unlucky.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/why%20am%20i%20never%20lucky.mp3',
+    'https://badoge.github.io/soundboard/forsen/unlucky/why%20am%20i%20so%20unlucky.mp3',
+  ];
+  let _currentDeathSfx = null;
+
+  function playFlappyDeathSfx() {
+    if (_currentDeathSfx) { try { _currentDeathSfx.pause(); _currentDeathSfx.currentTime=0; } catch(e){} }
+    const url = _deathSfxUrls[Math.floor(Math.random()*_deathSfxUrls.length)];
+    _currentDeathSfx = new Audio(url);
+    _currentDeathSfx.volume = 0.6;
+    _currentDeathSfx.crossOrigin = 'anonymous';
+    _currentDeathSfx.play().catch(()=>{});
+  }
+
   function flap() {
     if (state === 'waiting') { state = 'playing'; }
-    if (state === 'playing') { bird.vy = FLAP; }
+    if (state === 'playing') {
+      bird.vy = FLAP;
+      try { _flapSfx.currentTime = 0; _flapSfx.play().catch(()=>{}); } catch(e) {}
+    }
     if (state === 'dead') { resetGame(); }
   }
 
@@ -4066,7 +4097,7 @@ function startFlappy() {
       }
       pipes = pipes.filter(p => p.x > -PIPE_W - 10);
 
-      if (checkCollision()) state = 'dead';
+      if (checkCollision()) { state = 'dead'; playFlappyDeathSfx(); }
     }
 
     // Draw
@@ -4559,7 +4590,7 @@ function startSpace() {
   function saveCoins(n){coins=n;window._spaceCoins=n;document.getElementById('spaceCoins').textContent=coins;document.getElementById('shopCoinsDisp').textContent=coins;}
 
   const WEAPON_DEFS = [
-    {key:'default',      label:'🔫 Default',       desc:'Auto-aims at nearest enemy to cursor. Scales with upgrades.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Rapid Double',      desc:'+22% attack speed & double shot',       cost:22}},
+    {key:'default',      label:'🔫 Pistol',         desc:'Auto-aims at nearest enemy to cursor. Scales with upgrades.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Triple Shot',       desc:'Fires 3 parallel projectiles at once',  cost:22}},
     {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, insane dmg, slow cooldown',                                    color:'#ff6644', cost:30,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces once off world edges',      cost:28}},
     {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each. Slows you 10% while firing.',            color:'#fbbf24', cost:38,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, wider spread, faster',        cost:28}},
     {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst in all directions',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots (2×) in a rotating circle',  cost:32}},
@@ -4628,7 +4659,7 @@ function startSpace() {
           <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#f0abfc':'#aaa'};min-width:56px;flex-shrink:0">ENHANCE</span>
           <span style="font-family:var(--mono);font-size:10px;color:#aaa;flex:1;min-width:0;line-height:1.4">+1 follower (${fl}/${maxFl})</span>
           ${fl>=maxFl?'<span style="font-family:var(--mono);font-size:9px;color:#4ade80;font-weight:900;white-space:nowrap">MAX</span>':
-            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">🔒 Unlock first</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">LOCKED</span>':
             `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:12px;font-weight:900;background:${fa?'rgba(255,215,0,0.25)':'rgba(255,255,255,0.05)'};border:1px solid ${fa?'rgba(255,215,0,0.7)':'rgba(255,255,255,0.15)'};color:${fa?'#ffd700':'#aaa'};padding:4px 10px;border-radius:4px;cursor:${fa?'pointer':'default'};white-space:nowrap">🪙${fc}</button>`}
         </div>`;
       } else if(def.tier2){
@@ -4640,13 +4671,13 @@ function startSpace() {
           <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t2owned?def.color:t1owned?'#aaa':'#aaa'};min-width:56px;flex-shrink:0">ENHANCE</span>
           <span style="font-family:var(--mono);font-size:10px;color:#aaa;flex:1;min-width:0;line-height:1.4">${t2desc}</span>
           ${t2owned?'<span style="font-family:var(--mono);font-size:9px;color:#4ade80;font-weight:900;white-space:nowrap">✓ ON</span>':
-            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">🔒 Unlock first</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:9px;color:#444;white-space:nowrap">LOCKED</span>':
             `<button onclick="spaceBuyTier2('${def.key}')" style="font-family:var(--mono);font-size:12px;font-weight:900;background:${t2CanAfford?'rgba(255,215,0,0.25)':'rgba(255,255,255,0.05)'};border:1px solid ${t2CanAfford?'rgba(255,215,0,0.7)':'rgba(255,255,255,0.15)'};color:${t2CanAfford?'#ffd700':'#aaa'};padding:4px 10px;border-radius:4px;cursor:${t2CanAfford?'pointer':'default'};white-space:nowrap">🪙${def.tier2.cost}</button>`}
         </div>`;
       }
 
       return `<div style="background:${isActive?'rgba(100,200,255,0.07)':'rgba(255,255,255,0.03)'};border:2px solid ${isActive?def.color:'rgba(255,255,255,0.08)'};border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;position:relative;min-width:0">
-        ${isActive?`<div style="position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7px;color:${def.color};font-weight:900;white-space:nowrap">${t2owned?'Enhanced':t1owned?'Unlocked':''} ${inSlots.map(si=>`[T${si+1}]`).join('')}</div>`:''}
+        ${isActive?`<div style="position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7px;color:${def.color};font-weight:900;white-space:nowrap">${t2owned?'Enhanced':t1owned?'Unlocked':''}</div>`:''}
         <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;padding-right:${isActive?'60px':'0'}">${def.label}</div>
         ${t1Row}
         ${t2Row}
@@ -4871,6 +4902,10 @@ function startSpace() {
     if(nav.includes(e.key))e.preventDefault();
     if(e.type==='keydown'){
       if(e.key==='p'||e.key==='P'){toggleSpacePause();return;}
+      if((e.key==='m'||e.key==='M')&&state==='playing'){
+        if(invincible>99999){invincible=0;}else{saveCoins(coins+10000);invincible=9999999;spawnParticles(ship.x,ship.y,'#ffd700',30);}
+        return;
+      }
       if((e.key==='c'||e.key==='C')&&state==='playing'){_autoShoot=!_autoShoot;sfxPowerup();return;}
       keys[e.key]=true;
       if((e.key==='e'||e.key==='E'||e.key==='Tab')&&(state==='playing'||state==='paused')){spaceShopToggle();return;}
@@ -5090,16 +5125,25 @@ function startSpace() {
       setCd(Math.floor(9*rapidMod));
 
     } else {
-      // Default — auto-aim; multishot upgrade adds bullets; tier2 = double forward shot
+      // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
       const cd=Math.floor(getShootCd()*rapidMod);
-      const count=getBulletCount(); // multishot bonus applies here
+      const count=getBulletCount();
       const offsets=count===1?[0]:count===2?[-0.12,0.12]:count===3?[-0.2,0,0.2]:[-0.25,-0.08,0.08,0.25];
       const p=upgrades.pierce||0;
       offsets.forEach(da=>{
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*11*rm,vy:Math.sin(baseAngle+da)*11*rm,dmg:dmg,size:sz,pierce:p});
       });
       if(upgrades.tier2_default){
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle)*11*rm,vy:Math.sin(baseAngle)*11*rm,dmg:dmg,size:sz,pierce:p});
+        // 3 parallel shots: center + offset perpendicular to aim direction
+        const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
+        const spread=10; // pixel offset between parallel shots
+        [-1,0,1].forEach(i=>{
+          bullets.push({
+            x:ship.x+perpX*spread*i, y:ship.y+perpY*spread*i,
+            vx:Math.cos(baseAngle)*11*rm, vy:Math.sin(baseAngle)*11*rm,
+            dmg:dmg, size:sz, pierce:p
+          });
+        });
       }
       if(pw==='double'&&count<2){bullets.push({x:ship.x,y:ship.y-8,vx:Math.cos(baseAngle)*11*rm,vy:Math.sin(baseAngle)*11*rm,dmg:dmg,size:sz,pierce:p});}
       if(pw==='triple'&&count<3){[-0.2,0.2].forEach(da=>bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+da)*11*rm,vy:Math.sin(baseAngle+da)*11*rm,dmg:dmg,size:sz,pierce:p}));}
@@ -5391,6 +5435,7 @@ function startSpace() {
       e.img.style.top    = sy + 'px';
       e.img.style.display = 'block';
       e.img.style.opacity = '1';
+      e.img.style.visibility = 'visible';
       e.img.style.borderRadius = '0';
       const isSlowed = e.slowTimer>0||e.deepFrozen>0;
       e.img.style.filter = (isFrozen||e.deepFrozen>0) ? 'hue-rotate(195deg) saturate(1.5) brightness(0.85)'
@@ -5475,6 +5520,15 @@ function startSpace() {
           const push=(minDist-dist)/dist;
           ship.x+=dx*push; ship.y+=dy*push;
         }
+      }
+
+      // Push ship out of boss/titan/big enemies (solid collision)
+      for(const e of enemies){
+        if(!e.isBoss&&!e.isTitan&&!e.isBig) continue;
+        const dx=ship.x-e.x, dy=ship.y-e.y;
+        const dist=Math.sqrt(dx*dx+dy*dy)||1;
+        const minDist=e.size*0.5+18;
+        if(dist<minDist){const push=(minDist-dist)/dist;ship.x+=dx*push;ship.y+=dy*push;}
       }
 
       // Abandoned ship respawn: dead ships come back every ~3 minutes at a random spot
@@ -5601,7 +5655,7 @@ function startSpace() {
         const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
         // Ease-in: doubled base values (half spawn rate)
         const secIn=survivalFrames/60;
-        const easeBase= secIn<30 ? 780 : secIn<60 ? 640 : secIn<120 ? 500 : secIn<240 ? 360 : 280;
+        const easeBase= secIn<30 ? 650 : secIn<60 ? 530 : secIn<120 ? 415 : secIn<240 ? 300 : 235;
         const scoreRamp=Math.max(0.65,1-score*0.003);
         const baseSpawn=Math.floor(easeBase*scoreRamp);
         enemyTimer=Math.max(22,Math.floor(baseSpawn*timeFactor*swarmMod));
@@ -5620,11 +5674,11 @@ function startSpace() {
         const bossTitle=_bossTitles[Math.floor(Math.random()*_bossTitles.length)];
         const bossName=`${bossEmoteName} — ${bossTitle}`;
         const baseSize=50, bossSize=baseSize*20;
-        const bossHp=Math.ceil(840*bossWave*(1+difficulty*0.4));
+        const bossHp=Math.ceil(840*bossWave*(1+difficulty*0.4)*0.60); // -40% HP
         enemies.push({
           x:cam.x+W+bossSize, y:cam.y+H/2+(Math.random()-0.5)*H*0.3,
           img:bossImg, size:bossSize, sizeScale:10, isBoss:true, isBig:false,
-          vx:-(0.18+bossWave*0.02)*0.72, vy:0,
+          vx:-(0.18+bossWave*0.02)*0.54, vy:0, // 25% slower than before
           hp:bossHp, maxHp:bossHp, age:0,
           wobble:false, wobbleAmp:0, wobbleFreq:0,
           minionSpawnCd: Math.floor(180+Math.random()*120),
@@ -5786,12 +5840,12 @@ function startSpace() {
               const coinCount=Math.random()<0.45?1:0; // ~1 coin per kill
               for(let ci=0;ci<coinCount;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
               const roll=Math.random();
-              if(roll<0.015)spawnDrop(e.x,e.y,'heart');
-              else if(roll<0.025)spawnDrop(e.x,e.y,'silverheart');
-              else if(roll<0.035)spawnDrop(e.x,e.y,'explosion');
-              else if(roll<0.045)spawnDrop(e.x,e.y,'freeze');
-              else if(roll<0.055)spawnDrop(e.x,e.y,'magnet');
-              else if(roll<0.075){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
+              if(roll<0.0173)spawnDrop(e.x,e.y,'heart');
+              else if(roll<0.0288)spawnDrop(e.x,e.y,'silverheart');
+              else if(roll<0.0403)spawnDrop(e.x,e.y,'explosion');
+              else if(roll<0.0518)spawnDrop(e.x,e.y,'freeze');
+              else if(roll<0.0633)spawnDrop(e.x,e.y,'magnet');
+              else if(roll<0.0863){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
               return null;
             }
           }
@@ -5837,12 +5891,12 @@ function startSpace() {
               const coinCount=swarmBonus+(Math.random()<(upgrades.riskReward||0)*0.04?1:0);
               for(let ci=0;ci<coinCount;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
               const roll=Math.random();
-              if(roll<0.015)spawnDrop(e.x,e.y,'heart');
-              else if(roll<0.025)spawnDrop(e.x,e.y,'silverheart');
-              else if(roll<0.035)spawnDrop(e.x,e.y,'explosion');
-              else if(roll<0.045)spawnDrop(e.x,e.y,'freeze');
-              else if(roll<0.055)spawnDrop(e.x,e.y,'magnet');
-              else if(roll<0.075){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
+              if(roll<0.0173)spawnDrop(e.x,e.y,'heart');
+              else if(roll<0.0288)spawnDrop(e.x,e.y,'silverheart');
+              else if(roll<0.0403)spawnDrop(e.x,e.y,'explosion');
+              else if(roll<0.0518)spawnDrop(e.x,e.y,'freeze');
+              else if(roll<0.0633)spawnDrop(e.x,e.y,'magnet');
+              else if(roll<0.0863){const rp=['double','triple','rapid','shield'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);}
               return null;
             }
           }
@@ -6240,7 +6294,7 @@ function startSpace() {
       const bob=Math.sin(frame*0.08+d.x*0.1)*2; // gentle bob
       ctx.save();
       ctx.globalAlpha=0.92;
-      ctx.font='18px serif';
+      ctx.font='30px serif';
       ctx.textAlign='center';
       ctx.textBaseline='middle';
       ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=4;
