@@ -1433,7 +1433,7 @@
 
     <!-- SHIB.LE MODAL -->
     <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1220px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1450px;overflow:hidden;position:relative;display:flex;flex-direction:column">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
@@ -4481,6 +4481,7 @@ function resumeSpaceMusic() { _spaceInShop=false; try { if(!_spaceMusicMuted) _s
 
 async function openSpacebez() {
   document.getElementById('spaceModal').style.display = 'flex';
+  updateHeartsDisplay(5,0,5); // show correct starting HP immediately
   // Full-screen canvas
   const canvas = document.getElementById('spaceCanvas');
   const W = Math.floor(window.innerWidth  * 0.92);
@@ -4947,6 +4948,7 @@ function startSpace() {
   let lastTitanMinute=0;
   let _titanWarning=0;
   let _chatEnemyWarning=0;
+  let _cheatPresses=0,_cheatLastTime=0;
   let _chatEnemyName='';
   let _nukeFlash=0, _freezeFlash=0;
   let _minigunShooting=false; // track if minigun fired this frame
@@ -5062,13 +5064,20 @@ function startSpace() {
       if(e.key==='p'||e.key==='P'){toggleSpacePause();return;}
       if((e.key==='m'||e.key==='M')&&state==='playing'){
         if(invincible>99999){
-          invincible=0;
+          invincible=0; _cheatPresses=0; // deactivate
         } else {
-          saveCoins(coins+10000);
-          invincible=9999999;
-          spawnParticles(ship.x,ship.y,'#ffd700',30);
-          // Play cheat activation sound
-          try{const _cs=new Audio('https://badoge.github.io/soundboard/forsen/10lines/slice%20em%20up%20doc.mp3');_cs.volume=0.5;_cs.play().catch(()=>{});}catch(e){}
+          // Require 3 presses within 5 seconds
+          const _now=Date.now();
+          if(!_cheatPresses||_now-_cheatLastTime>5000){ _cheatPresses=0; }
+          _cheatPresses++;
+          _cheatLastTime=_now;
+          if(_cheatPresses>=3){
+            _cheatPresses=0;
+            saveCoins(coins+10000);
+            invincible=9999999;
+            spawnParticles(ship.x,ship.y,'#ffd700',30);
+            try{const _cs=new Audio('https://badoge.github.io/soundboard/forsen/10lines/slice%20em%20up%20doc.mp3');_cs.volume=0.5;_cs.play().catch(()=>{});}catch(e){}
+          }
         }
         return;
       }
