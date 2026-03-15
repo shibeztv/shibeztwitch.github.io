@@ -1401,7 +1401,7 @@
           <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><img src="https://cdn.7tv.app/emote/01FC5B2AH00005D6HG0ANTP0H3/2x.webp" style="width:28px;height:28px;object-fit:contain;image-rendering:auto"> UPGRADE SHOP</div>
           <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; After Death = You keep half of current coins 🪙 + 1🪙 / every 10 score</div>
-          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;width:100%;max-width:900px;overflow-y:auto;max-height:68vh"></div>
+          <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;width:100%;max-width:960px;overflow-y:auto;overflow-x:hidden;max-height:68vh;box-sizing:border-box"></div>
           <div class="shopMusicLabel" style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#6a5a9a;letter-spacing:0.5px">♪ Shop music: Motoi Sakuraba — Majula</div>
           </div>
         </div>
@@ -4589,64 +4589,67 @@ function startSpace() {
     // ── Weapon selector
     const weaponHtml = WEAPON_DEFS.map(def=>{
       const isFriendsKey = def.key==='friends';
-      const t1owned = def.cost===0 || unlockedWeapons.has(def.key) || (def.key==='friends' && (upgrades.friends||0)>0);
-      const t2key = def.tier2?.key;
-      const t2owned = t2key ? upgrades[t2key]>0 : false;
       const maxSlots = getMaxWeaponSlots();
-
-      // Which slots this weapon is in (could be in T1 or T2 form)
       const inSlots = activeWeapons.map((w,si)=>w===def.key?si:-1).filter(si=>si>=0);
       const isActive = inSlots.length>0;
       const activeSlotLabel = inSlots.map(si=>`T${si+1}`).join(',');
 
-      // Build the T1 row
-      const t1CanAfford = coins>=def.cost && !t1owned;
-      const t1Row = isFriendsKey ? '' : `
-        <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t1owned?'rgba(100,200,255,0.08)':'rgba(255,255,255,0.03)'};border:1px solid ${t1owned?'rgba(100,200,255,0.3)':'rgba(255,255,255,0.08)'}">
-          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#60ddff':'#666'};min-width:52px">UNLOCK</span>
-          <span style="font-family:var(--mono);font-size:9px;color:${t1owned?'#bbb':'#555'};flex:1">${def.desc}</span>
-          ${t1owned
-            ? (isActive
-                ? `<button onclick="spaceDeequipWeapon('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.4);color:#ff8888;padding:2px 6px;border-radius:3px;cursor:pointer" title="Remove from slot">✕ ${activeSlotLabel}</button>`
-                : `<button onclick="spaceEquipWeaponAuto('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:2px 8px;border-radius:3px;cursor:pointer">EQUIP</button>`)
-            : `<button onclick="spaceBuyWeapon('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t1CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t1CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${t1CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t1CanAfford?'pointer':'default'}">🪙${def.cost}</button>`
-          }
+      // Friends uses upgrades.friends as level; others use unlockedWeapons
+      const t1owned = isFriendsKey ? (upgrades.friends||0)>=1 : (def.cost===0 || unlockedWeapons.has(def.key));
+      const t2key = def.tier2?.key;
+      const t2owned = t2key ? upgrades[t2key]>0 : false;
+
+      // T1 row
+      const t1CanAfford = isFriendsKey ? coins>=(def.costPerLvl?def.costPerLvl(0):def.cost) : coins>=def.cost && !t1owned;
+      const t1Desc = isFriendsKey ? 'Get 2 orbital followers that auto-shoot nearest enemy' : def.desc;
+      const t1Cost = isFriendsKey ? (def.costPerLvl?def.costPerLvl(0):def.cost) : def.cost;
+      const t1BuyFn = isFriendsKey ? `spaceBuyFriendsUnlock()` : `spaceBuyWeapon('${def.key}')`;
+      const t1Btn = t1owned
+        ? (isActive
+            ? `<button onclick="spaceDeequipWeapon('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.4);color:#ff8888;padding:2px 7px;border-radius:3px;cursor:pointer;white-space:nowrap">✕ ${activeSlotLabel}</button>`
+            : `<button onclick="spaceEquipWeaponAuto('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:2px 8px;border-radius:3px;cursor:pointer;white-space:nowrap">EQUIP</button>`)
+        : `<button onclick="${t1BuyFn}" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t1CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t1CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${t1CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t1CanAfford?'pointer':'default'};white-space:nowrap">🪙${t1Cost}</button>`;
+      const t1Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t1owned?'rgba(100,200,255,0.08)':'rgba(255,255,255,0.03)'};border:1px solid ${t1owned?'rgba(100,200,255,0.3)':'rgba(255,255,255,0.08)'}">
+        <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#60ddff':'#666'};min-width:52px;flex-shrink:0">UNLOCK</span>
+        <span style="font-family:var(--mono);font-size:9px;color:${t1owned?'#bbb':'#555'};flex:1;min-width:0">${t1Desc}</span>
+        ${t1Btn}
+      </div>`;
+
+      // T2 row — for friends this is +1 follower (repeatable), for others it's the tier2 upgrade
+      let t2Row = '';
+      if(isFriendsKey){
+        const fl = upgrades.friends||0;
+        const maxFl = def.maxLvl||12;
+        const fc = def.costPerLvl?def.costPerLvl(fl):def.cost;
+        const fa = coins>=fc && fl<maxFl && t1owned;
+        const t2bg = t1owned ? (fl>1?'rgba(240,171,252,0.08)':'rgba(255,255,255,0.03)') : 'rgba(20,20,30,0.5)';
+        const t2border = t1owned ? 'rgba(240,171,252,0.25)' : 'rgba(255,255,255,0.03)';
+        t2Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t1owned?'#f0abfc':'#333'};min-width:52px;flex-shrink:0">ENHANCE</span>
+          <span style="font-family:var(--mono);font-size:9px;color:${t1owned?'#bbb':'#333'};flex:1;min-width:0">+1 follower (${fl}/${maxFl})</span>
+          ${fl>=maxFl?'<span style="font-family:var(--mono);font-size:8px;color:#4ade80;font-weight:900;white-space:nowrap">MAX</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:8px;color:#333;white-space:nowrap">🔒 Unlock first</span>':
+            `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${fa?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${fa?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.08)'};color:${fa?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${fa?'pointer':'default'};white-space:nowrap">⬆ 🪙${fc}</button>`}
         </div>`;
+      } else if(def.tier2){
+        const t2CanAfford = coins>=def.tier2.cost && !t2owned && t1owned;
+        const t2bg = t2owned?'rgba(80,80,120,0.14)':t1owned?'rgba(255,255,255,0.03)':'rgba(20,20,30,0.5)';
+        const t2border = t2owned?def.color+'55':t1owned?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.03)';
+        const t2desc = def.tier2.desc;
+        t2Row = `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t2owned?def.color:t1owned?'#555':'#333'};min-width:52px;flex-shrink:0">ENHANCE</span>
+          <span style="font-family:var(--mono);font-size:9px;color:${t2owned?'#bbb':t1owned?'#555':'#333'};flex:1;min-width:0">${t2desc}</span>
+          ${t2owned?'<span style="font-family:var(--mono);font-size:8px;color:#4ade80;font-weight:900;white-space:nowrap">✓ ON</span>':
+            !t1owned?'<span style="font-family:var(--mono);font-size:8px;color:#333;white-space:nowrap">🔒 Unlock first</span>':
+            `<button onclick="spaceBuyTier2('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t2CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t2CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.08)'};color:${t2CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t2CanAfford?'pointer':'default'};white-space:nowrap">⬆ 🪙${def.tier2.cost}</button>`}
+        </div>`;
+      }
 
-      // Build the T2 row — locked until T1 owned
-      const t2Row = (!def.tier2||isFriendsKey) ? '' : (()=>{
-        const t2CanAfford = coins>=def.tier2.cost && !t2owned && t1owned; // requires T1
-        const t2bg = t2owned ? 'rgba(80,80,120,0.14)' : t1owned ? 'rgba(255,255,255,0.03)' : 'rgba(20,20,30,0.5)';
-        const t2border = t2owned ? def.color+'55' : t1owned ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
-        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:${t2bg};border:1px solid ${t2border}">` +
-          `<span style="font-family:var(--mono);font-size:9px;font-weight:900;color:${t2owned?def.color:t1owned?'#555':'#333'};min-width:52px">ENHANCE</span>` +
-          `<span style="font-family:var(--mono);font-size:9px;color:${t2owned?'#bbb':t1owned?'#555':'#333'};flex:1">${def.tier2.label.replace(/^[^ ]+ /,'').replace('+','').trim()} — ${def.tier2.desc}</span>` +
-          (t2owned ? '<span style="font-family:var(--mono);font-size:8px;color:#4ade80;font-weight:900;white-space:nowrap">✓ ON</span>' :
-            !t1owned ? '<span style="font-family:var(--mono);font-size:8px;color:#333;white-space:nowrap">🔒 Unlock first</span>' :
-            `<button onclick="spaceBuyTier2('${def.key}')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:${t2CanAfford?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${t2CanAfford?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.08)'};color:${t2CanAfford?'#ffd700':'#444'};padding:2px 8px;border-radius:3px;cursor:${t2CanAfford?'pointer':'default'}">⬆ 🪙${def.tier2.cost}</button>`) +
-          '</div>';
-      })();
-
-      // Friends special panel — only on the friends weapon card
-      const friendsPanel = isFriendsKey && t1owned ? `
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 8px;border-radius:5px;background:rgba(240,171,252,0.06);border:1px solid rgba(240,171,252,0.2)">
-          <span style="font-family:var(--mono);font-size:9px;color:#f0abfc;flex:1">${upgrades.friends||0}/${def.maxLvl||12} followers</span>
-          ${(upgrades.friends||0)>=(def.maxLvl||12)
-            ? '<span style="font-family:var(--mono);font-size:9px;color:#4ade80;font-weight:900">MAX</span>'
-            : (()=>{ const fc=def.costPerLvl?def.costPerLvl(upgrades.friends||0):def.cost; const fa=coins>=fc; return `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:9px;font-weight:700;background:${fa?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid ${fa?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.1)'};color:${fa?'#ffd700':'#555'};padding:2px 8px;border-radius:3px;cursor:${fa?'pointer':'default'}">+1 🪙${fc}</button>`; })()
-          }
-          ${isActive
-            ? `<button onclick="spaceDeequipWeapon('${def.key}')" style="font-family:var(--mono);font-size:8px;background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.4);color:#ff8888;padding:2px 6px;border-radius:3px;cursor:pointer">✕</button>`
-            : `<button onclick="spaceEquipWeaponAuto('friends')" style="font-family:var(--mono);font-size:8px;font-weight:700;background:rgba(100,200,255,0.15);border:1px solid rgba(100,200,255,0.4);color:#60ddff;padding:2px 8px;border-radius:3px;cursor:pointer">EQUIP</button>`
-          }
-        </div>` : (!t1owned && isFriendsKey ? `<button onclick="spaceBuyWeapon('friends')" style="font-family:var(--mono);font-size:9px;font-weight:700;background:${coins>=(def.costPerLvl?def.costPerLvl(0):def.cost)?'rgba(255,215,0,0.2)':'rgba(255,255,255,0.04)'};border:1px solid rgba(255,215,0,0.3);color:${coins>=(def.costPerLvl?def.costPerLvl(0):def.cost)?'#ffd700':'#555'};padding:3px 10px;border-radius:3px;cursor:pointer">🪙${def.costPerLvl?def.costPerLvl(0):def.cost} — Get First Follower</button>` : '');
-
-      return `<div style="background:${isActive?'rgba(100,200,255,0.07)':'rgba(255,255,255,0.03)'};border:2px solid ${isActive?def.color:'rgba(255,255,255,0.08)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;position:relative">
+      return `<div style="background:${isActive?'rgba(100,200,255,0.07)':'rgba(255,255,255,0.03)'};border:2px solid ${isActive?def.color:'rgba(255,255,255,0.08)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;position:relative;min-width:0">
         ${isActive?`<div style="position:absolute;top:5px;right:7px;font-family:var(--mono);font-size:8px;color:${def.color};font-weight:900">${activeSlotLabel}</div>`:''}
-        <div style="font-family:var(--mono);font-size:12px;font-weight:800;color:#fff">${def.label}</div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:800;color:#fff;padding-right:${isActive?'24px':'0'}">${def.label}</div>
         ${t1Row}
         ${t2Row}
-        ${friendsPanel}
       </div>`;
     }).join('');
 
@@ -4658,6 +4661,18 @@ function startSpace() {
     `;
   };
 
+  // Friends initial unlock: buy 2 followers at once, auto-equip
+  window.spaceBuyFriendsUnlock = function() {
+    const def = WEAPON_DEFS.find(d=>d.key==='friends'); if(!def) return;
+    if((upgrades.friends||0)>=1) return; // already unlocked
+    const cost = def.costPerLvl ? def.costPerLvl(0) : def.cost;
+    if(coins<cost) return;
+    saveCoins(coins-cost);
+    upgrades.friends = 2; // start with 2
+    unlockedWeapons.add('friends');
+    spaceEquipWeaponAuto('friends');
+    sfxPowerup(); renderShopGrid();
+  };
   window.spaceBuyWeapon = function(key) {
     const def = WEAPON_DEFS.find(d=>d.key===key); if(!def) return;
     if(key==='friends'){
@@ -4668,11 +4683,6 @@ function startSpace() {
       if(coins<cost) return;
       saveCoins(coins-cost);
       upgrades.friends = curLvl+1;
-      unlockedWeapons.add('friends');
-      activeWeapon='friends';
-      // sync slot 0
-      activeWeapons[0]='friends';
-      window._spaceWeapon='friends';
       sfxPowerup(); renderShopGrid(); return;
     }
     if(coins<def.cost) return;
