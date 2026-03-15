@@ -1433,7 +1433,7 @@
 
     <!-- SHIB.LE MODAL -->
     <div id="shibleModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(0,0,0,0.97);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1015px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:915px;overflow:hidden;position:relative;display:flex;flex-direction:column">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
@@ -1468,7 +1468,7 @@
         </div>
 
         <!-- Guess history -->
-        <div id="shibleHistory" style="padding:6px 16px;display:flex;flex-direction:column;gap:3px;max-height:140px;overflow-y:auto"></div>
+        <div id="shibleHistory" style="padding:6px 16px 2px;display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center;min-height:0"></div>
 
         <!-- Drum scroll input -->
         <div id="shibleInputArea" style="padding:12px 16px;border-top:1px solid var(--border)">
@@ -3704,17 +3704,15 @@ function submitShibleGuess() {
   const gFmt = gDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
 
   const historyEl = document.getElementById('shibleHistory');
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05)';
-
-  const dayBox = `<span style="background:${dc};color:#111;font-weight:700;padding:1px 6px;border-radius:2px;min-width:22px;text-align:center">${String(gd).padStart(2,'0')}</span>`;
-  const monBox = `<span style="background:${mc};color:#111;font-weight:700;padding:1px 6px;border-radius:2px;min-width:36px;text-align:center">${SHIBLE_MONTHS[gm-1]}</span>`;
-  const yrBox  = `<span style="background:${yc};color:#111;font-weight:700;padding:1px 6px;border-radius:2px;min-width:42px;text-align:center">${gy}</span>`;
-  const dirSpan = diffDays !== 0 ? `<span style="color:#bbb;font-size:14px;margin-left:4px">${dir}</span>` : '<span style="color:#4caf50;font-size:14px;margin-left:4px">✓</span>';
-
-  row.innerHTML = dayBox + monBox + yrBox + dirSpan;
-  historyEl.appendChild(row);
-  historyEl.scrollTop = historyEl.scrollHeight;
+  // Each guess is an inline badge group (all on one row)
+  const badge = document.createElement('span');
+  badge.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:2px 6px';
+  const dayBox = `<span style="background:${dc};color:#111;font-weight:700;padding:1px 5px;border-radius:2px">${String(gd).padStart(2,'0')}</span>`;
+  const monBox = `<span style="background:${mc};color:#111;font-weight:700;padding:1px 5px;border-radius:2px">${SHIBLE_MONTHS[gm-1]}</span>`;
+  const yrBox  = `<span style="background:${yc};color:#111;font-weight:700;padding:1px 5px;border-radius:2px">${gy}</span>`;
+  const dirSpan = diffDays !== 0 ? `<span style="color:#bbb;font-size:13px">${dir}</span>` : '<span style="color:#4caf50;font-size:13px">✓</span>';
+  badge.innerHTML = dayBox + monBox + yrBox + dirSpan;
+  historyEl.appendChild(badge);
 
   const correct = diffDays === 0;
   const outOfGuesses = _shibleGuesses >= SHIBLE_MAX_GUESSES;
@@ -3824,8 +3822,27 @@ if (document.readyState === 'loading') {
 
 
 let _flappyMusicPlayer = null;
-const FLAPPY_MUSIC_ID = 'YzdAI3kseTg';
-const FLAPPY_MUSIC_TITLE = '♪ Johann Strauss — Blue Danube';
+const FLAPPY_TRACKS = [
+  {id:'YzdAI3kseTg', title:'♪ Johann Strauss — Blue Danube'},
+  {id:'3bqLGebDRIY', title:'♪ Motoi Sakuraba — Gwyn, Lord of Cinder'},
+  {id:'3bqLGebDRIY', title:'♪ Andrew Prahlow — Outer Wilds'},
+  {id:'INyCBtb6tCw', title:'♪ Crypt of the Necrodancer — Crypteque'},
+  {id:'d9wx82K13QU', title:'♪ Stavros Markonis — I Should Build the Man a Statue'},
+  {id:'4o_Dses6c_k', title:'♪ S3RL — MTC'},
+  {id:'M-dr4viC_hY', title:'♪ Pizza Tower — Yeehaw DeliveryBoy'},
+  {id:'v8Tj15iSHbM', title:'♪ Pizza Tower — The Death That I Deservioli'},
+  {id:'xfoK-_Eh1fQ', title:'♪ DJFGT — (never) give up'},
+  {id:'UasTjym-GGs', title:'♪ Karabast — ♂ Gachi Tower ♂'},
+  {id:'B7gGacb8cO4', title:"♪ Pizza Tower — It's Pizza Time!"},
+  {id:'R0hfS1Qhhkw', title:'♪ Cult of the Lamb — Start a Cult'}
+];
+// Pick random track each session
+function _flappyPickTrack() {
+  return FLAPPY_TRACKS[Math.floor(Math.random()*FLAPPY_TRACKS.length)];
+}
+let _flappyCurrentTrack = _flappyPickTrack();
+const FLAPPY_MUSIC_ID = _flappyCurrentTrack.id;
+let FLAPPY_MUSIC_TITLE = _flappyCurrentTrack.title;
 let _flappyMuted = false;
 let _flappyVolLevel = 39; // 25% quieter
 
@@ -3838,21 +3855,28 @@ window.setFlappyVol = function(v) {
 
 function initFlappyMusic() {
   if (_flappyMusicPlayer) {
-    // Already created — just play
     try { if(!_flappyMuted){_flappyMusicPlayer.unMute();_flappyMusicPlayer.setVolume(_flappyVolLevel);} _flappyMusicPlayer.playVideo(); } catch(e) {}
     return;
   }
   if (!window.YT || !YT.Player) { setTimeout(initFlappyMusic, 500); return; }
+  // Pick a random track for this session
+  _flappyCurrentTrack = _flappyPickTrack();
+  FLAPPY_MUSIC_TITLE = _flappyCurrentTrack.title;
   _flappyMusicPlayer = new YT.Player('flappyMusicEl', {
-    videoId: FLAPPY_MUSIC_ID,
-    playerVars: { autoplay:1, controls:0, fs:0, loop:1, playlist:FLAPPY_MUSIC_ID },
+    videoId: _flappyCurrentTrack.id,
+    playerVars: { autoplay:1, controls:0, fs:0 },
     events: {
       onReady: e => {
         e.target.setVolume(_flappyVolLevel);
-        if(!_flappyMuted) { e.target.unMute(); e.target.seekTo(10, true); e.target.playVideo(); }
+        if(!_flappyMuted) { e.target.unMute(); e.target.seekTo(0, true); e.target.playVideo(); }
       },
       onStateChange: e => {
-        if(e.data === YT.PlayerState.ENDED) { e.target.seekTo(0,true); e.target.playVideo(); }
+        if(e.data === YT.PlayerState.ENDED) {
+          // Play a different random track next
+          _flappyCurrentTrack = _flappyPickTrack();
+          FLAPPY_MUSIC_TITLE = _flappyCurrentTrack.title;
+          try { _flappyMusicPlayer.loadVideoById(_flappyCurrentTrack.id); } catch(e2) {}
+        }
       }
     }
   });
@@ -4366,6 +4390,17 @@ const _BG_TRACKS = [
   { id:'1CGMk_roNaE', title:'The Toxic Avenger - Make this Right' },
   { id:'nf30qQzw7rk', title:'Subnautica - Abandon Ship' },
   { id:'ysPtBjY8o_A', title:'Chris Christodoulou - Coalescence' },
+  { id:'3bqLGebDRIY', title:'Motoi Sakuraba - Gwyn, Lord of Cinder' },
+  { id:'Xpkc-NU1KA0', title:'Andrew Prahlow - Outer Wilds' },
+  { id:'INyCBtb6tCw', title:'Crypt of the Necrodancer - Crypteque' },
+  { id:'d9wx82K13QU', title:'Stavros Markonis - I Should Build the Man a Statue' },
+  { id:'4o_Dses6c_k', title:'S3RL - MTC' },
+  { id:'M-dr4viC_hY', title:'Pizza Tower - Yeehaw DeliveryBoy' },
+  { id:'v8Tj15iSHbM', title:'Pizza Tower - The Death That I Deservioli' },
+  { id:'xfoK-_Eh1fQ', title:'DJFGT - (never) give up' },
+  { id:'UasTjym-GGs', title:'Karabast - ♂ Gachi Tower ♂' },
+  { id:'B7gGacb8cO4', title:"Pizza Tower - It's Pizza Time!" },
+  { id:'R0hfS1Qhhkw', title:'Cult of the Lamb - Start a Cult' },
 ];
 let _bgTrackIdx = Math.floor(Math.random() * _BG_TRACKS.length);
 let _songTitleTimer = 0; // frames to show title
