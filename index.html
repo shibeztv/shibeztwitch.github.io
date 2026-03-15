@@ -4753,9 +4753,10 @@ function startSpace() {
   let _nukeFlash=0, _freezeFlash=0;
   let _minigunShooting=false; // track if minigun fired this frame
   let _towerGunBurstCount=0;  // counts bursts for tier2 double-shot every 4th
-  let _gameStartTime=null; // real-time tracking for accurate timer
-  let _gamePausedMs=0;     // accumulated paused time
+  let _gameStartTime=null;
+  let _gamePausedMs=0;
   let _pauseStartTime=null;
+  let _lastShownSec=-1;
   let state='waiting', enemyTimer=90, difficulty=1, invincible=0, shootCooldown=0;
   // Multi-weapon slots: active weapons array (slot 0 = primary)
   let activeWeapon = 'default';
