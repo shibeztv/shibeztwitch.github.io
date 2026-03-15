@@ -1418,6 +1418,7 @@
             <span style="font-family:var(--mono);font-size:9px;color:#bbb">Click / Space / Tap to flap</span>
           </div>
           <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:var(--mono);font-size:13px;color:#bbb;font-weight:700">Score:</span>
             <span style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--text)" id="flappyScore">0</span>
             <button id="flappyMuteBtn" onclick="toggleFlappyMute()" title="Mute/Unmute sounds" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">🔊</button>
             <button onclick="closeFlappy()" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
@@ -3753,13 +3754,20 @@ const FLAPPY_MUSIC_TITLE = '♪ Johann Strauss — Blue Danube';
 const FLAPPY_MUSIC_VOL = 49; // ~70% of 70 (30% quieter)
 
 function initFlappyMusic() {
-  if (_flappyMusicPlayer) return;
+  if (_flappyMusicPlayer) {
+    // Already created — just play
+    try { if(!_flappyMuted){_flappyMusicPlayer.unMute();_flappyMusicPlayer.setVolume(FLAPPY_MUSIC_VOL);} _flappyMusicPlayer.playVideo(); } catch(e) {}
+    return;
+  }
   if (!window.YT || !YT.Player) { setTimeout(initFlappyMusic, 500); return; }
   _flappyMusicPlayer = new YT.Player('flappyMusicEl', {
     videoId: FLAPPY_MUSIC_ID,
-    playerVars: { autoplay:0, controls:0, fs:0, loop:1, playlist:FLAPPY_MUSIC_ID },
+    playerVars: { autoplay:1, controls:0, fs:0, loop:1, playlist:FLAPPY_MUSIC_ID },
     events: {
-      onReady: e => { e.target.setVolume(FLAPPY_MUSIC_VOL); },
+      onReady: e => {
+        e.target.setVolume(FLAPPY_MUSIC_VOL);
+        if(!_flappyMuted) { e.target.unMute(); e.target.playVideo(); }
+      },
       onStateChange: e => {
         if(e.data === YT.PlayerState.ENDED) { e.target.seekTo(0,true); e.target.playVideo(); }
       }
@@ -3770,7 +3778,7 @@ function initFlappyMusic() {
 async function openFlappyShibez() {
   document.getElementById('flappyModal').style.display = 'flex';
   initFlappyMusic();
-  try { if(_flappyMusicPlayer?.playVideo) { if(!_flappyMuted){_flappyMusicPlayer.unMute();_flappyMusicPlayer.setVolume(FLAPPY_MUSIC_VOL);} _flappyMusicPlayer.playVideo(); } } catch(e) {}
+  // Music will play via onReady callback (or immediately if already created)
   if (!_flappyEmotes.length) {
     try {
       const r = await fetch('https://7tv.io/v3/emote-sets/' + FLAPPY_EMOTE_SET);
@@ -3849,42 +3857,56 @@ function startFlappy() {
 
   // Ground tiles (simple gradient rect)
   // Ground emotes: spawn randomly, scroll left and despawn
-  let _gEmotes = []; // { x, size, eIdx }
-  let _gEmoteTimer = 0;
+  let _gEmotes = []; // DOM img elements on the ground
 
-  function spawnGroundEmote() {
-    const count = 1 + (Math.random() < 0.35 ? 1 : 0) + (Math.random() < 0.15 ? 1 : 0);
-    for (let i = 0; i < count; i++) {
-      _gEmotes.push({
-        x: W + 10 + i * (28 + Math.random() * 24),
-        size: 34 + Math.floor(Math.random() * 22),
-        eIdx: Math.floor(Math.random() * emoteImgs.length)
-      });
-    }
-    _gEmoteTimer = 180 + Math.floor(Math.random() * 220);
+  // Create a container div for ground emote overlays, positioned over the canvas
+  let _gEmoteContainer = document.getElementById('flappyGroundEmotes');
+  if (_gEmoteContainer) _gEmoteContainer.remove();
+  _gEmoteContainer = document.createElement('div');
+  _gEmoteContainer.id = 'flappyGroundEmotes';
+  _gEmoteContainer.style.cssText = 'position:absolute;pointer-events:none;overflow:hidden;';
+  canvas.parentElement.style.position = 'relative';
+  canvas.parentElement.appendChild(_gEmoteContainer);
+
+  function syncGroundContainer() {
+    const r = canvas.getBoundingClientRect();
+    const pr = canvas.parentElement.getBoundingClientRect();
+    _gEmoteContainer.style.left = (r.left - pr.left) + 'px';
+    _gEmoteContainer.style.top = (r.top - pr.top) + 'px';
+    _gEmoteContainer.style.width = r.width + 'px';
+    _gEmoteContainer.style.height = r.height + 'px';
   }
 
+  function spawnGroundEmote() {
+    const count = 3 + Math.floor(Math.random() * 3);
+    const scaleX = canvas.getBoundingClientRect().width / W;
+    const scaleY = canvas.getBoundingClientRect().height / H;
+    for (let i = 0; i < count; i++) {
+      const e = shuffled[Math.floor(Math.random() * shuffled.length)];
+      if (!e) continue;
+      const size = (34 + Math.floor(Math.random() * 22));
+      // Random x position spread across the ground area, stationary
+      const xPos = Math.random() * (W - size);
+      const yPos = H - 60 - size + 4;
+      const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';
+      img.src = e.url;
+      img.style.cssText = `position:absolute;left:${xPos*scaleX}px;top:${yPos*scaleY}px;width:${size*scaleX}px;height:${size*scaleY}px;object-fit:contain;pointer-events:none;image-rendering:auto;`;
+      _gEmoteContainer.appendChild(img);
+      _gEmotes.push(img);
+    }
+  }
+
+  // Spawn initial ground emotes
+  spawnGroundEmote();
+
   function drawGround() {
-    // Flat grass
+    // Flat grass on canvas
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(0, H - 60, W, 60);
     ctx.fillStyle = '#2e7d32';
     ctx.fillRect(0, H - 60, W, 5);
-
-    if (state === 'playing') {
-      _gEmoteTimer--;
-      if (_gEmoteTimer <= 0) spawnGroundEmote();
-      _gEmotes.forEach(g => { g.x -= PIPE_SPEED * 0.85; });
-      _gEmotes = _gEmotes.filter(g => g.x > -g.size - 10);
-    }
-
-    _gEmotes.forEach(g => {
-      const img = emoteImgs[g.eIdx % emoteImgs.length];
-      const gy = H - 60 - g.size + 4;
-      if (img && img.complete && img.naturalWidth > 0) {
-        try { ctx.drawImage(img, g.x, gy, g.size, g.size); } catch(e) {}
-      }
-    });
+    syncGroundContainer();
   }
 
   let _lastGapY = -1;
@@ -3995,6 +4017,11 @@ function startFlappy() {
     'https://badoge.github.io/soundboard/forsen/unlucky/thats%20so%20unlucky.mp3',
     'https://badoge.github.io/soundboard/forsen/unlucky/why%20am%20i%20never%20lucky.mp3',
     'https://badoge.github.io/soundboard/forsen/unlucky/why%20am%20i%20so%20unlucky.mp3',
+    'https://badoge.github.io/soundboard/forsen/rage/fix%20your%20game%20blue%20balls.mp3',
+    'https://badoge.github.io/soundboard/forsen/rage/fucking%20shit%20game.mp3',
+    'https://badoge.github.io/soundboard/forsen/rage/fucking%20this%20game%20is%20stupid.mp3',
+    'https://badoge.github.io/soundboard/forsen/rage/misclick.mp3',
+    'https://badoge.github.io/soundboard/forsen/rage/wtf%20are%20the%20devs%20doing.mp3',
   ];
   let _currentDeathSfx = null;
 
@@ -4025,6 +4052,7 @@ function startFlappy() {
     pipeEmoteIdx = Math.floor(Math.random() * emoteImgs.length);
     _lastGapY = -1;
     _gEmotes = []; _gEmoteTimer = 60;
+    if (_gEmoteContainer) _gEmoteContainer.innerHTML = '';
     state = 'waiting';
     document.getElementById('flappyScore').textContent = '0';
   }
@@ -4187,6 +4215,7 @@ function closeFlappy() {
   if (_flappyRAF) { cancelAnimationFrame(_flappyRAF); _flappyRAF = null; }
   const c = document.getElementById('flappyCanvas');
   if (c && c._flappyCleanup) { c._flappyCleanup(); c._flappyCleanup = null; }
+  document.getElementById('flappyGroundEmotes')?.remove();
   document.getElementById('flappyModal').style.display = 'none';
   try { _flappyMusicPlayer?.pauseVideo(); } catch(e) {}
 }
