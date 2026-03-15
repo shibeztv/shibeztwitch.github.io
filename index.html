@@ -4539,9 +4539,9 @@ function updateHeartsDisplay(livesOverride, silverOverride, maxHpOverride) {
   const el = document.getElementById('spaceHeartsDisplay');
   if (!el) return;
   // Use passed values or try window accessor (called from outside closure)
-  let lv = livesOverride !== undefined ? livesOverride : (window._spaceGetLives ? window._spaceGetLives().lives : 3);
+  let lv = livesOverride !== undefined ? livesOverride : (window._spaceGetLives ? window._spaceGetLives().lives : 5);
   let sv = silverOverride !== undefined ? silverOverride : (window._spaceGetLives ? window._spaceGetLives().silverLives : 0);
-  let mx = maxHpOverride !== undefined ? maxHpOverride : (window._spaceGetLives ? window._spaceGetLives().maxHp : 3);
+  let mx = maxHpOverride !== undefined ? maxHpOverride : (window._spaceGetLives ? window._spaceGetLives().maxHp : 5);
   let s = '';
   for (let i = 0; i < sv; i++) s += '💛';
   for (let i = 0; i < mx; i++) s += (i < lv) ? '❤️' : '🖤';
@@ -4705,18 +4705,18 @@ function startSpace() {
   const unlockedWeapons = new Set(['default']);
   const UPGRADE_DEFS = [
     {key:'speed',       label:'🚀 Movement Speed',  desc:'+12% movement speed per lvl',    maxLvl:10, cost:l=>Math.floor(3+l*l*1.2+l*2)},
-    {key:'atkSpeed',    label:'⚡ Attack Speed',     desc:'+8% attack speed per lvl',      maxLvl:20, cost:l=>Math.floor(3+l*l*0.9+l*2)},
-    {key:'multishot',   label:'💥 I Need More Boolets', desc:'+1 bullet',                 maxLvl:20, cost:l=>Math.floor(5+l*l*1.5+l*3)},
+    {key:'atkSpeed',    label:'⚡ Attack Speed',     desc:'+8% attack speed per lvl',      maxLvl:20, cost:l=>Math.floor(2+l*l*0.9+l*2)},
+    {key:'multishot',   label:'💥 I Need More Boolets', desc:'+1 bullet',                 maxLvl:20, cost:l=>Math.floor(4+l*l*1.5+l*3)},
     {key:'maxHp',       label:'❤️ Max HP',           desc:'+1 max HP',                     maxLvl:20, cost:l=>Math.floor(4+l*l*1.0+l*2)},
     {key:'hpRegen',     label:'💚 HP Regen',         desc:'+0.02 HP/s per lvl',            maxLvl:10, cost:l=>Math.floor(5+l*l*1.8+l*3)},
-    {key:'damage',      label:'🔥 Damage',           desc:'+1 DMG per lvl',                maxLvl:20, cost:l=>Math.floor(5+l*l*1.4+l*3)},
-    {key:'bulletSize',  label:'🔵 Size Upgrade',     desc:'+16% size per lvl',             maxLvl:20, cost:l=>Math.floor(6+l*l*1.5+l*3)},
-    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% bullet range/speed',        maxLvl:15, cost:l=>Math.floor(5+l*l*1.6+l*3)},
+    {key:'damage',      label:'🔥 Damage',           desc:'+15% dmg per lvl',              maxLvl:20, cost:l=>Math.floor(4+l*l*1.4+l*3)},
+    {key:'bulletSize',  label:'🔵 Size Upgrade',     desc:'+16% size per lvl',             maxLvl:20, cost:l=>Math.floor(5+l*l*1.5+l*3)},
+    {key:'attackRange', label:'📏 Attack Range',     desc:'+8% bullet range/speed',        maxLvl:15, cost:l=>Math.floor(4+l*l*1.6+l*3)},
     {key:'coinMagnet',  label:'🧲 Pickup Range',     desc:'+15% pickup radius',            maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
     {key:'armor',       label:'🛡 Armor',             desc:'Chance to negate incoming damage', maxLvl:20, cost:l=>Math.floor(7+l*l*2.0+l*4)},
     {key:'enemySwarm',  label:'👹 Enemy Swarm',      desc:'+15% more enemies & +10% coin', maxLvl:20, cost:l=>Math.floor(3+l*l*0.8+l*2)},
     {key:'riskReward',  label:'💰 Risk & Reward',    desc:'Enemies +20% hp, +20% coins',   maxLvl:20, cost:l=>Math.floor(6+l*l*1.6+l*4)},
-    {key:'pierce',      label:'🔫 Penetration',     desc:'+1 enemy pierced (laser/flame/ice always pierce)', maxLvl:5, cost:l=>Math.floor(10+l*l*4+l*6)},
+    {key:'pierce',      label:'🔫 Penetration',     desc:'+1 enemy pierced (laser/flame/ice always pierce)', maxLvl:5, cost:l=>Math.floor(9+l*l*4+l*6)},
     {key:'weaponSlots', label:'🗡️ I Need More Weapons', desc:'Unlock extra weapon slots', maxLvl:3, cost:l=>[120,200,1000][l]||999},
   ];
 
@@ -4724,16 +4724,16 @@ function startSpace() {
   function saveCoins(n){coins=n;window._spaceCoins=n;document.getElementById('spaceCoins').textContent=coins;document.getElementById('shopCoinsDisp').textContent=coins;}
 
   const WEAPON_DEFS = [
-    {key:'default',      label:'🔫 Pistol',         desc:'Auto-aims at nearest enemy to cursor.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Triple Shot',       desc:'Fires 3 parallel projectiles at once',  cost:45}},
-    {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, high dmg, slow attack speed',                                    color:'#ff6644', cost:30,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces off walls, increased width',      cost:60}},
-    {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each.',            color:'#fbbf24', cost:40,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, even wider spread, -10% attack speed',        cost:65}},
-    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst',                                             color:'#a855f7', cost:45,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots',  cost:70}},
-    {key:'flamethrower', label:'🔥 Flamethrower',   desc:'Short range cone, burn focus, low base dmg',                                            color:'#ff4400', cost:50,  tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',           desc:'Increased range + burn dmg',           cost:75}},
-    {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:65,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way spread',cost:90}},
-    {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Slows enemies hit.',  color:'#88ddff', cost:50,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3s of continuous hits, freezes enemy for 1.5s',cost:75}},
+    {key:'default',      label:'🔫 Pistol',         desc:'Auto-aims at nearest enemy to cursor.',                       color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Triple Shot',       desc:'Fires 3 parallel projectiles at once',  cost:40}},
+    {key:'sniper',       label:'🔴 Laser Gun',      desc:'Piercing laser beam, high dmg, slow attack speed',                                    color:'#ff6644', cost:25,  tier2:{key:'tier2_sniper',     label:'🔴+ Bouncing Laser',    desc:'Beam bounces off walls, increased width',      cost:55}},
+    {key:'minigun',      label:'⚙️ Minigun',        desc:'6 bullet spray, rapid fire, low dmg each.',            color:'#fbbf24', cost:35,  tier2:{key:'tier2_minigun',    label:'⚙️+ Heavy Minigun',     desc:'9 bullets, even wider spread, -10% attack speed',        cost:60}},
+    {key:'towerGun',     label:'🗼 Tower Gun',      desc:'8-shot radial burst',                                             color:'#a855f7', cost:40,  tier2:{key:'tier2_towerGun',   label:'🗼+ Double Burst',      desc:'Every 4th attack fires 16 shots',  cost:65}},
+    {key:'flamethrower', label:'🔥 Flamethrower',   desc:'Short range cone, burn focus, low base dmg',                                            color:'#ff4400', cost:45,  tier2:{key:'tier2_flamethrower',label:'🔥+ Inferno',           desc:'Increased range + burn dmg',           cost:70}},
+    {key:'multiGun',     label:'💥 Multi-Gun',      desc:'6-way spread, medium dmg',                                                          color:'#4ade80', cost:60,  tier2:{key:'tier2_multiGun',   label:'💥+ Wide Shotgun',      desc:'12-way spread',cost:80}},
+    {key:'frozenStaff',  label:'❄️ Frozen Staff',   desc:'Slows enemies hit.',  color:'#88ddff', cost:45,  tier2:{key:'tier2_frozenStaff',label:'❄️+ Deep Freeze',       desc:'After 3s of continuous hits, freezes enemy for 1.5s',cost:70}},
     {key:'friends',      label:'👾 Friends',        desc:'Orbital follower that auto-shoots nearest enemy',  color:'#f0abfc', cost:30,  maxLvl:12, costPerLvl:l=>Math.floor(30+l*22)},
-    {key:'garlic',       label:'🧄 Garlic',         desc:'Damages enemies around you.',    color:'#e8d5a3', cost:55,  tier2:{key:'tier2_garlic', label:'🧄+ Super Garlic', desc:'Increased range, dmg, and heals the player!', cost:85}},
-    {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'Chaining lightning bolts to closest enemy.', color:'#7df9ff', cost:70, tier2:{key:'tier2_lightning', label:'⚡🔴 Storm Bolt', desc:'Increased projectile count, damage and chaining!', cost:95}},
+    {key:'garlic',       label:'🧄 Garlic',         desc:'Damages enemies around you.',    color:'#e8d5a3', cost:50,  tier2:{key:'tier2_garlic', label:'🧄+ Super Garlic', desc:'Increased range, dmg, and heals the player!', cost:80}},
+    {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'Chaining lightning bolts to closest enemy.', color:'#7df9ff', cost:65, tier2:{key:'tier2_lightning', label:'⚡🔴 Storm Bolt', desc:'Increased projectile count, damage and chaining!', cost:90}},
   ];
 
   window.renderShopGrid = function renderShopGrid() {
@@ -4897,7 +4897,7 @@ function startSpace() {
     const lvl=upgrades[key]||0; if(lvl>=def.maxLvl) return;
     const cost=def.cost(lvl); if(coins<cost) return;
     saveCoins(coins-cost); upgrades[key]=lvl+1; renderShopGrid();
-    if(key==='maxHp'){lives=Math.min(6+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
+    if(key==='maxHp'){lives=Math.min(5+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
     if(key==='weaponSlots'){
       // Just expand capacity — don't auto-fill with 'default'
       sfxPowerup();
@@ -4907,15 +4907,17 @@ function startSpace() {
   function getShipSpeed()   { return 2.03*(1+upgrades.speed*0.12); } // 12% per level
   function getShootCd()     {
     const base=Math.max(5,Math.floor(88-upgrades.atkSpeed*2)); // base pistol cd
-    const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base; // -20% atk speed vs base
-    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.40) : t2Mod; // -40% attack speed when friends
+    const t2Mod = upgrades.tier2_default ? Math.max(4,Math.floor(base*0.936)) : base;
+    const friendsMod = (activeWeapon==='friends'||activeWeapons.includes('friends')) ? Math.ceil(t2Mod*1.40) : t2Mod;
     return friendsMod;
   }
+  // Universal attack speed multiplier — applies atkSpeed upgrade to ALL weapons
+  function getAtkSpeedMod() { return Math.max(0.25, 1 - upgrades.atkSpeed*0.04); } // -4% cd per level
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0); }
-  function getBulletDmg()   { return 1+upgrades.damage; }
+  function getBulletDmg()   { return 1*(1+upgrades.damage*0.15); } // +15% per level
   function getBulletSize()  { return Math.min(2.2, 1.15+upgrades.bulletSize*0.16); }
   function getCoinRange()   { return 32*(1+upgrades.coinMagnet*0.15); }
-  function getMaxHp()       { return 6+upgrades.maxHp; } // v2.1: 6 base lives
+  function getMaxHp()       { return 5+upgrades.maxHp; } // 5 base lives
   function getRangeMult()   { return 1+(upgrades.attackRange||0)*0.08; } // +8% per level
   function getMaxWeaponSlots() { return 1+(upgrades.weaponSlots||0); } // 1–4
 
@@ -5168,6 +5170,7 @@ function startSpace() {
     const slot = slotIdx||0;
     if(_slotCooldowns[slot]>0) return;
     const rapidMod=_hasPowerup('rapid')?(_hasPowerup('double')||_hasPowerup('triple')?0.35:0.4):1;
+    const atkMod=getAtkSpeedMod(); // universal attack speed from upgrades
     // Aim angle in world space — convert mouse from screen to world coords
     const mouseWorldX = mouseX + cam.x;
     const mouseWorldY = mouseY + cam.y;
@@ -5218,7 +5221,7 @@ function startSpace() {
         });
       }
       // T2 50% slower, T1 20% slower vs old (old was 128/56)
-      setCd(Math.floor((isT2s?84:154)*rapidMod));
+      setCd(Math.floor((isT2s?84:154)*rapidMod*atkMod));
       sfxShoot(); return;
 
     } else if(wKey==='minigun'){
@@ -5228,11 +5231,11 @@ function startSpace() {
         const spread=(Math.random()-0.5)*mgSpread;
         const _mgSpd=upgrades.tier2_minigun?7.2*0.75*1.25*1.5:7.2*0.75*1.25; // T2 +50% speed
         const _mgLife=Math.floor(144);
-        const _mgDmg=upgrades.tier2_minigun?0.09:0.08; // slightly less dmg
+        const _mgDmg=(upgrades.tier2_minigun?0.09:0.08)*getBulletDmg();
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(baseAngle+spread)*_mgSpd*rm,vy:Math.sin(baseAngle+spread)*_mgSpd*rm,dmg:_mgDmg,size:sz*0.616,color:'#fbbf24',weaponType:'minigun',pierce:upgrades.pierce||0,fracDmg:true,life:_mgLife,maxLife:_mgLife}); // -30% width from 0.88
       }
       _minigunShooting=true;
-      setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9*1.2:17.1*1.2)*rapidMod)); // -20% attack speed
+      setCd(Math.floor((upgrades.tier2_minigun?17.1*0.9*1.2:17.1*1.2)*rapidMod*atkMod));
 
     } else if(wKey==='towerGun'){
       const hasTier2=!!upgrades.tier2_towerGun;
@@ -5244,16 +5247,16 @@ function startSpace() {
       for(let i=0;i<shotCount;i++){
         const a=_rotOff+(i/shotCount)*Math.PI*2;
         const spd=isDoubleBurst?6*rm:5.2*rm; // -60% bullet speed
-        const bulletSz=isDoubleBurst?sz*1.35:sz*1.1;
+        const bulletSz=isDoubleBurst?sz*1.35:sz*1.1; // sz from getBulletSize — already universal
         const _shotHue=(_towerGunBurstCount*73)%360; // 73 gives good variety
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:1.5,size:bulletSz,color:col,weaponType:'dual',pierce:upgrades.pierce||0});
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg:1.5*getBulletDmg(),size:bulletSz,color:col,weaponType:'dual',pierce:upgrades.pierce||0});
       }
       if(isDoubleBurst){
         spawnParticles(ship.x,ship.y,'#e879f9',10);
-        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:2,hitEnemies:new Set()});
+        _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:2*getBulletDmg(),hitEnemies:new Set()});
       }
-      setCd(Math.floor(138*rapidMod)); // 15% slower
+      setCd(Math.floor(138*rapidMod*atkMod));
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
@@ -5264,7 +5267,7 @@ function startSpace() {
         const spd=(6+Math.random()*4.5)*rangeBonus*rm;
         const life=(30+Math.random()*18)*rangeBonus*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2?0.00415*0.3:0.00415,  // T1 -90%, T2 -70%
+          dmg: (isT2?0.00415*0.3:0.00415)*getBulletDmg(),  // scaled by dmg upgrade
           size:sz*1.6,color:'#ff4400',flame:true,life,maxLife:life,
           burns: true,               // BOTH tiers apply burn (fix)
           _burnDur: 180,              // burn lasts 3s (180f at 60fps)
@@ -5272,7 +5275,7 @@ function startSpace() {
           _burnExpire: true,          // burn expires if not re-hit for 3s
         });
       }
-      setCd(Math.floor((isT2?7*1.20:7)*rapidMod)); // T2 -20% attack speed
+      setCd(Math.floor((isT2?7*1.20:7)*rapidMod*atkMod));
 
     } else if(wKey==='multiGun'){
       const count=upgrades.tier2_multiGun?10:6; // tier2 is now 10-way
@@ -5282,7 +5285,7 @@ function startSpace() {
         const _mSpd=upgrades.tier2_multiGun?8.55*0.80*0.70:8.55*0.80; // T1 -20%, T2 -30%
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd*rm,vy:Math.sin(a)*_mSpd*rm,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#4ade80',weaponType:'multi',pierce:upgrades.pierce||0});
       }
-      setCd(Math.floor(upgrades.tier2_multiGun?141*1.20:141*1.15)*rapidMod); // T1 -15% T2 -20%
+      setCd(Math.floor((upgrades.tier2_multiGun?141*1.20:141*1.15)*rapidMod*atkMod));
 
     } else if(wKey==='frozenStaff'){
       const isT2f=!!upgrades.tier2_frozenStaff;
@@ -5294,9 +5297,9 @@ function startSpace() {
         const spd=(5+Math.random()*3.5)*rangeF*rm*0.35;
         const life=(28+Math.random()*16)*rangeF*rm;
         bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-          dmg: isT2f?0.05:0.0125,     // /5 dmg for 400% speed
+          dmg: (isT2f?0.05:0.0125)*getBulletDmg(),
           size:sz*1.2,color:'#88ddff',flame:true,life,maxLife:life,
-          freezing:true,
+          freezing:true, pierce:upgrades.pierce||0,
           _slowPct: isT2f?0.25:0.20,
           _slowExpire: true,
           deepFreeze: isT2f,
@@ -5321,12 +5324,12 @@ function startSpace() {
           o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.1);
         },i*12));
       }
-      setCd(Math.floor(12*rapidMod)); // 400% faster (like a snowblower)
+      setCd(Math.floor(12*rapidMod*atkMod));
 
     } else if(wKey==='lightning'){
       const isT2L=!!upgrades.tier2_lightning;
       const boltCount=isT2L?5:3;
-      const boltDmg=isT2L?0.36:0.30; // T2 +20% dmg
+      const boltDmg=(isT2L?0.36:0.30)*getBulletDmg();
       const chainCount=isT2L?2:1;    // how many enemies each bolt chains to
       const chainRange=isT2L?160:100; // chain range
       const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
@@ -5339,12 +5342,12 @@ function startSpace() {
           vx:Math.cos(baseAngle)*20*0.15*rm, vy:Math.sin(baseAngle)*20*0.15*rm, // -85% speed
           dmg:boltDmg, size:sz*1.0,
           color:_lcol, weaponType:'lightning',
-          isLightning:true, chainCount, chainRange, pierce:1,
+          isLightning:true, chainCount, chainRange, pierce:Math.max(1,upgrades.pierce||0),
           chained:false, chainHits:new Set(),
           snakePhase:bi*2.1, snakeAng:baseAngle, // unique phase per bolt
         });
       }
-      setCd(Math.floor(22*6.67*rapidMod)); // -85% attack speed
+      setCd(Math.floor(22*6.67*rapidMod*atkMod));
       // Lightning SFX
       const _lac=getACtx();if(_lac){
         const _lv=getSfxVol()*0.08;
@@ -5359,7 +5362,7 @@ function startSpace() {
       // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
       const cd=Math.floor(getShootCd()*rapidMod);
       const count=getBulletCount();
-      const offsets=count===1?[0]:count===2?[-0.12,0.12]:count===3?[-0.2,0,0.2]:[-0.25,-0.08,0.08,0.25];
+      const offsets=count===1?[0]:count===2?[-0.036,0.036]:count===3?[-0.06,0,0.06]:[-0.075,-0.024,0.024,0.075]; // -70% spread
       const p=upgrades.pierce||0;
       const _fActive=activeWeapons.includes('friends')||activeWeapon==='friends';
       const _fSz=_fActive?sz*6:sz;
@@ -5446,7 +5449,7 @@ function startSpace() {
     const titanEmoteIdx=Math.floor(Math.random()*enemyPool.length);
     const img=enemyImgs[titanEmoteIdx];
     const titanEmoteName=(enemyPool[titanEmoteIdx]?.name)||'Unknown';
-    const _titanSubtitles=['The Doubtful','The Questioner','Bringer of Doubt','The Skeptic','Lord of Disbelief','The Uncertain','Shadow of Doubt','Eternal Doubter','The Unconvinced','Harbinger of Sus'];
+    const _titanSubtitles=['Blade of the Fallen','The Unbroken','Dread of the Abyss','Eternal Exile','The Deathless','Lord of Ash','Slave of the Rot','The Accursed','Devourer of Light','Scion of Malice','The Undying','Vessel of Ruin','Ghost of the Elden Ring','The Unwithered','Harbinger of Ash','The Godless Sovereign','Champion of Rot','The Shattered','Ravager of Souls','The Inevitable'];
     const titanSubtitle=_titanSubtitles[Math.floor(Math.random()*_titanSubtitles.length)];
     const titanName=`${titanEmoteName}\n${titanSubtitle}`;
     const size=(90+Math.random()*40)*2.0; // double size
@@ -5842,7 +5845,7 @@ function startSpace() {
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
         const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85 : 1.0); // T2 -15% less
-        const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) / 60; // +12% dmg
+        const _gDmg = (_gT2 ? 0.5*1.12 : 0.3*1.12) * getBulletDmg() / 60;
         // Garlic damages abandoned ships in range
         for(let _gasi=0;_gasi<abandonedShips.length;_gasi++){
           const _gas=abandonedShips[_gasi];if(_gas.dead)continue;
@@ -5986,7 +5989,7 @@ function startSpace() {
         const bossImg=enemyImgs[bossEmoteIdx];
         const bossEmoteName=(enemyPool[bossEmoteIdx]?.name)||'Unknown';
         // Generate a random subtitle
-        const _bossTitles=['Destroyer of Worlds','The Unkillable','Chills','The Doubtful','Supreme Overlord','Harbinger of Lag','The Cringe','Eater of Coins','The Unstoppable','Lord of Suffering','The Inevitable','Bringer of Salt','The Overwhelming','Fear Me','Corrupted','The Relentless','Absolute Unit','End of Runs','The Merciless','God of Trolls'];
+        const _bossTitles=['The Blade Eternal','Dread of the Hollow','The Fell Omen','Scourge of the Rot','The Unsheathed','Lord of the Frenzied Flame','The Tarnished Sovereign','Devourer of Stars','The Accursed One','Shade of the Abyss','Champion of Ash','The Untouched','Godslayer of the Depths','The Undead Monarch','Ravager of the First Flame','The Godfrey Reborn','Slave Knight of Ruin','The Dark Eater','Bringer of the End','The Crucible Knight'];
         const bossTitle=_bossTitles[Math.floor(Math.random()*_bossTitles.length)];
         const bossName=`${bossEmoteName} — ${bossTitle}`;
         const baseSize=50, bossSize=baseSize*20;
