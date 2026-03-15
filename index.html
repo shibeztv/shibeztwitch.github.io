@@ -1992,28 +1992,17 @@ function formatDuration(secs) {
 // Handles: "Jan 15 2025", "January 15 2025", "15/01/2025", "2025-01-15", "01-15-2025"
 function extractDateFromTitle(title) {
   if (!title) return null;
-  const MONTHS = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,
-    january:0,february:1,march:2,april:3,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
-  // "Jan 15 2025" or "January 15, 2025" or "15 Jan 2025"
-  const m1 = title.match(/(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[.\s,]+(\d{1,2})[.\s,]+(\d{4})/i);
-  if (m1) {
-    const mo = MONTHS[m1[1].toLowerCase().slice(0,3)];
-    const d = new Date(Date.UTC(parseInt(m1[3]), mo, parseInt(m1[2])));
-    if (!isNaN(d)) return d.toISOString().slice(0,10);
+  const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const m = title.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s,.]+([0-9]{1,2})[\s,.]+([0-9]{4})\b/i);
+  if (m) {
+    const mo = MONTHS[m[1].toLowerCase().slice(0,3)];
+    if (mo !== undefined) {
+      const d = new Date(Date.UTC(+m[3], mo, +m[2]));
+      if (!isNaN(+d)) return d.toISOString().slice(0,10);
+    }
   }
-  // "15 Jan 2025"
-  const m2 = title.match(/(\d{1,2})[.\s,]+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[.\s,]+(\d{4})/i);
-  if (m2) {
-    const mo = MONTHS[m2[2].toLowerCase().slice(0,3)];
-    const d = new Date(Date.UTC(parseInt(m2[3]), mo, parseInt(m2[1])));
-    if (!isNaN(d)) return d.toISOString().slice(0,10);
-  }
-  // "2025-01-15" or "2025/01/15"
-  const m3 = title.match(/(20\d{2})[-/](0?\d|1[0-2])[-/](0?\d|[12]\d|3[01])/);
-  if (m3) return `${m3[1]}-${m3[2].padStart(2,'0')}-${m3[3].padStart(2,'0')}`;
-  // "01/15/2025" or "01-15-2025"
-  const m4 = title.match(/(0?\d|1[0-2])[-/](0?\d|[12]\d|3[01])[-/](20\d{2})/);
-  if (m4) return `${m4[3]}-${m4[1].padStart(2,'0')}-${m4[2].padStart(2,'0')}`;
+  const m2 = title.match(/\b(20[0-9]{2})-(0?[0-9]|1[0-2])-(0?[0-9]|[12][0-9]|3[01])\b/);
+  if (m2) return m2[1]+"-"+m2[2].padStart(2,"0")+"-"+m2[3].padStart(2,"0");
   return null;
 }
 
@@ -2073,7 +2062,7 @@ function stripDateFromTitle(title) {
 }
 
 function buildStreamTitle(vids, day) {
-  let t = stripDateFromTitle(vids[0].title)
+  let t = vids[0].title
     .replace(/\s*[\[\(]?part\s*\d+[\]\)]?/gi, '')
     .replace(/\s+VOD\s*/gi, ' ')
     .trim();
