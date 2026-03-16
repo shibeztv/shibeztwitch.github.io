@@ -5614,8 +5614,8 @@ function startSpace() {
     const speed=Math.min(_rawSpd, 4.06); // hard cap at 200% of player base speed
     const timeMins=survivalFrames/3600;
     const dmgScale=Math.max(1, getBulletDmg()*0.7);
-    const timeHp=Math.floor(timeMins*0.35);
-    const baseHp=Math.max(1,Math.ceil((1+timeHp+Math.floor(difficulty*0.09))*dmgScale*0.70));
+    const timeHp=Math.floor(timeMins*0.55); // ramps purely with time (was 0.35 + difficulty bonus)
+    const baseHp=Math.max(1,Math.ceil((1+timeHp)*dmgScale*0.70));
     const riskHpMult=upgrades.riskReward?1+upgrades.riskReward*0.2:1;
     const finalBaseHp=Math.ceil(baseHp*riskHpMult);
     const hp=finalBaseHp*sizeScale;
@@ -5798,12 +5798,8 @@ function startSpace() {
     else powerupDrops.push({x,y,vx:0,vy:0,type,life:99999999,collected:false,freezeFrames:180});
   }
 
-  function spawnParticles(x,y,color,n=10){
-    // Reduce n when already busy, and hard cap at 200
-    const _busy=particles.length;
-    if(_busy>200) return;
-    const _n=_busy>120?Math.ceil(n*0.5):n; // halve new particles when already crowded
-    for(let i=0;i<_n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*3,life:35+Math.random()*20,color});}
+  function spawnParticles(x,y,color,n=10){if(particles.length>300)return;
+    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*3,life:35+Math.random()*20,color});}
   }
 
   function resetSpace(){
@@ -6292,21 +6288,28 @@ function startSpace() {
       if(_titanWarning>0) _titanWarning--;
 
       enemyTimer--;
+      const secIn=survivalFrames/60; // seconds played — used for time-based scaling
       if(enemyTimer<=0){
         spawnEnemy();
-        // Occasionally double-spawn at high scores (halved thresholds vs before)
-        if(score>50&&Math.random()<0.12+score*0.002) spawnEnemy();
-        if(score>120&&Math.random()<0.08) spawnEnemy();
-        const timeFactor=Math.max(0.3,1-survivalFrames/36000);
+        // Extra spawns based purely on time — not score
+        // 3min+: occasional double, 6min+: more frequent, 10min+: can triple
+        if(secIn>180 && Math.random()<0.08+(secIn-180)*0.00015) spawnEnemy();
+        if(secIn>360 && Math.random()<0.06) spawnEnemy();
+        const timeFactor=Math.max(0.38,1-survivalFrames/54000);
         const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
-        // Ease-in: doubled base values (half spawn rate)
-        const secIn=survivalFrames/60;
-        const easeBase= secIn<30 ? 598 : secIn<60 ? 488 : secIn<120 ? 382 : secIn<240 ? 276 : 216;
-        const scoreRamp=Math.max(0.65,1-score*0.003);
-        const baseSpawn=Math.floor(easeBase*scoreRamp);
-        enemyTimer=Math.max(22,Math.floor(baseSpawn*timeFactor*swarmMod));
+        const easeBase= secIn<30  ? 620
+                      : secIn<60  ? 560
+                      : secIn<120 ? 510
+                      : secIn<180 ? 460
+                      : secIn<240 ? 410
+                      : secIn<360 ? 350
+                      : secIn<480 ? 300
+                      :             260;
+        const baseSpawn=Math.floor(easeBase); // pure time — no score multiplier
+        enemyTimer=Math.max(26,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
-      difficulty=1+score*0.003; // slower speed scaling (was 0.007)
+      // difficulty scales with time only — not score
+      difficulty=1+Math.min(2.0, secIn/240); // reaches max ~2.0 at 4 minutes, stays there
 
       // ── Mega-boss every 3 minutes (10800 frames = 180s)
       const bossInterval=10800;
@@ -6461,31 +6464,11 @@ function startSpace() {
 
       // (laser bolt processing removed — handled by normal bullet collision)
 
-      // ── Spatial grid for bullet-enemy collision — rebuilt each frame
-      // Cuts worst-case from O(bullets*enemies) down to O(bullets*nearby)
-      const _CELL = 120; // cell size in world units
-      const _grid = new Map();
-      const _gridKey = (gx,gy) => (gx&0xFFFF)|(gy<<16);
-      enemies.forEach(e=>{
-        const gx=Math.floor(e.x/_CELL), gy=Math.floor(e.y/_CELL);
-        for(let ox=-1;ox<=1;ox++) for(let oy=-1;oy<=1;oy++){
-          const k=_gridKey(gx+ox,gy+oy);
-          if(!_grid.has(k)) _grid.set(k,[]);
-          _grid.get(k).push(e);
-        }
-      });
-      const _nearbyEnemies = (bx,by,r)=>{
-        const gx=Math.floor(bx/_CELL), gy=Math.floor(by/_CELL);
-        return _grid.get(_gridKey(gx,gy)) || enemies; // fallback to all if not found
-      };
-
       // Bullet-enemy — pierce allows hitting 1+pierce enemies before bullet disappears
       bullets=bullets.filter(b=>{
         if(b.flame){
           // Flame/Frozen staff: circle collision like normal bullets but keeps flying
-          const _near=_nearbyEnemies(b.x,b.y,b.size*4+60);
           enemies=enemies.map(e=>{
-            if(_near.indexOf(e)===-1) return e; // skip enemies far from this bullet
             const dx=b.x-e.x,dy=b.y-e.y;
             if(Math.sqrt(dx*dx+dy*dy)<e.size*0.55+b.size*4){
               if(e.shieldHp>0){e.shieldHp--;spawnParticles(e.x,e.y,'#60ddff',4);}
@@ -6538,15 +6521,11 @@ function startSpace() {
           }
           return true; // flame bullets keep flying until life expires
         }
-        const _nearB=_nearbyEnemies(b.x,b.y,60);
         enemies=enemies.map(e=>{
-          if(_nearB.indexOf(e)===-1) return e; // skip distant enemies
-          if(!b._hitEnemies) b._hitEnemies=new Set();
-          if(b._hitEnemies.size>=(1+(b.pierce||0))) return e;
-          if(b._hitEnemies.has(e)) return e;
+          if((b._pierceHits||0)>=(1+(b.pierce||0))) return e; // exceeded pierce count
           const dx=b.x-e.x,dy=b.y-e.y;
           if(Math.sqrt(dx*dx+dy*dy)<e.size*0.5*getBulletSize()){
-            b._hitEnemies.add(e);
+            b._pierceHits=(b._pierceHits||0)+1;
             if(e.shieldHp>0){
               e.shieldHp--;
               spawnParticles(e.x,e.y,'#60ddff',8);playTone(800,'sine',0.05,0.1);
@@ -6638,7 +6617,7 @@ function startSpace() {
           }
           return e;
         }).filter(Boolean);
-        return (!b._hitEnemies || b._hitEnemies.size<(1+(b.pierce||0)));
+        return (b._pierceHits||0)<(1+(b.pierce||0));
       });
 
       // ── Abandoned ship bullet hits
@@ -6857,35 +6836,14 @@ function startSpace() {
     // ── DRAW ──
     ctx.fillStyle='#02020e';ctx.fillRect(0,0,W,H);
 
-    // Stars — batched by brightness bucket to cut canvas calls from 600 → ~10
-    {
-      // Pre-bucket stars into 3 alpha groups, draw each bucket in one path
-      const _sBuckets=[{a:0,stars:[]},{a:0,stars:[]},{a:0,stars:[]}];
-      stars.forEach(s=>{
-        const px=(s.x - cam.x*0.12 + W*20)%W;
-        const py=(s.y - cam.y*0.12 + H*20)%H;
-        const alpha=s.a*Math.abs(Math.sin(frame*s.rate+s.phase));
-        const bi=s.r>1.5?2:s.r>0.9?1:0; // bucket by size
-        _sBuckets[bi].stars.push({px,py,r:s.r,alpha});
-      });
-      ctx.fillStyle='#fff';
-      _sBuckets.forEach(bucket=>{
-        // Sub-bucket by alpha quantised to 0.1 steps so we still get some twinkle variety
-        const byAlpha={};
-        bucket.stars.forEach(s=>{
-          const ak=Math.round(s.alpha*10)/10;
-          if(!byAlpha[ak]) byAlpha[ak]=[];
-          byAlpha[ak].push(s);
-        });
-        Object.entries(byAlpha).forEach(([ak,ss])=>{
-          ctx.globalAlpha=+ak;
-          ctx.beginPath();
-          ss.forEach(s=>{ ctx.moveTo(s.px+s.r,s.py); ctx.arc(s.px,s.py,s.r,0,Math.PI*2); });
-          ctx.fill();
-        });
-      });
-      ctx.globalAlpha=1;
-    }
+    // Stars — screen space with subtle parallax
+    stars.forEach(s=>{
+      const px=(s.x - cam.x*0.12 + W*20)%W;
+      const py=(s.y - cam.y*0.12 + H*20)%H;
+      ctx.globalAlpha=s.a*Math.abs(Math.sin(frame*s.rate+s.phase));
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px,py,s.r,0,Math.PI*2);ctx.fill();
+    });
+    ctx.globalAlpha=1;
 
     // ── World-edge fade — gradient vignette that starts ~1 screen before the boundary
     {
@@ -7006,72 +6964,65 @@ function startSpace() {
 
 
 
-    // Coins — cached filter strings (rebuilt every 8 frames for gold hue spin, static otherwise)
-    // Pre-compute gold hue once per frame for all gold coins
-    const _rh = (frame*4)%360;
-    const _rhStr = `hue-rotate(${_rh}deg) saturate(3) brightness(1.8) drop-shadow(0 0 4px gold)`;
-    // Static filter strings — allocated once, not per-coin
-    const _greenFilter = 'hue-rotate(115deg) saturate(2.5) brightness(1.5) drop-shadow(0 0 3px #4ade80)';
-    const _silverFilter = 'grayscale(1) brightness(2.0) drop-shadow(0 0 2px #e2e8f0)';
-
+    // Coins — tiered sizes: base 7.8, silver 8.74 (+12%), green 9.79 (+12%), gold 10.96 (+12%)
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      // Skip entirely if off-screen (with generous margin for glow)
-      const _margin = 60;
-      if(d.x < cam.x-_margin || d.x > cam.x+W+_margin || d.y < cam.y-_margin || d.y > cam.y+H+_margin) return;
-
       const cr = d.gold ? 10.96 : d.green ? 9.79 : d.silver ? 8.74 : 7.8;
-      ctx.globalAlpha = 1.0;
+      // Higher tiers are fully opaque and bright
+      ctx.globalAlpha = d.gold ? 1.0 : d.green ? 0.97 : d.silver ? 0.95 : 0.96;
 
-      // Glow — only draw gradient for gold/green/silver, skip for plain coins
+      // Glow rings — bigger and more elaborate for higher tiers
       if(d.gold){
-        // Throttle gradient to every 2 frames (imperceptible difference, half the allocations)
-        if(frame%2===0){
-          const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*3.5);
-          cg.addColorStop(0,`hsla(${_rh},100%,70%,0.8)`);
-          cg.addColorStop(0.5,`hsla(${(_rh+180)%360},100%,55%,0.25)`);
-          cg.addColorStop(1,'rgba(0,0,0,0)');
-          ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*3.5,0,Math.PI*2);ctx.fill();
-        }
-        // Sparkle points — batched into one path per frame
-        ctx.beginPath();
+        // Gold: large spinning rainbow halo + inner shimmer
+        const rh=(frame*4)%360;
+        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*3.5);
+        cg.addColorStop(0,`hsla(${rh},100%,70%,0.8)`);
+        cg.addColorStop(0.4,`hsla(${(rh+120)%360},100%,60%,0.5)`);
+        cg.addColorStop(0.7,`hsla(${(rh+240)%360},100%,55%,0.2)`);
+        cg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*3.5,0,Math.PI*2);ctx.fill();
+        // Sparkle points
         for(let si=0;si<4;si++){
           const sa=(frame*0.06+si*Math.PI/2)%(Math.PI*2);
           const sr=cr*2.2+Math.sin(frame*0.12+si)*cr*0.4;
-          const spx=d.x+Math.cos(sa)*sr, spy=d.y+Math.sin(sa)*sr;
-          ctx.moveTo(spx+1.5,spy); ctx.arc(spx,spy,1.5,0,Math.PI*2);
+          ctx.globalAlpha=0.6+0.4*Math.sin(frame*0.15+si);
+          ctx.fillStyle=`hsl(${(rh+si*60)%360},100%,80%)`;
+          ctx.beginPath();ctx.arc(d.x+Math.cos(sa)*sr,d.y+Math.sin(sa)*sr,1.5,0,Math.PI*2);ctx.fill();
         }
-        ctx.globalAlpha=0.7; ctx.fillStyle=`hsl(${_rh},100%,80%)`; ctx.fill();
         ctx.globalAlpha=1.0;
       } else if(d.green){
+        // Green: pulsing emerald glow
         const pulse=0.5+0.3*Math.sin(frame*0.1+d.x*0.05);
         const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2.8);
         cg.addColorStop(0,'rgba(74,222,128,0.7)');
-        cg.addColorStop(1,`rgba(22,163,74,0)`);
-        ctx.globalAlpha=pulse;
+        cg.addColorStop(0.5,`rgba(22,163,74,${pulse*0.5})`);
+        cg.addColorStop(1,'rgba(22,163,74,0)');
         ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2.8,0,Math.PI*2);ctx.fill();
-        ctx.globalAlpha=1.0;
       } else if(d.silver){
-        // Silver: flat semi-transparent circle — no gradient needed, cheaper
-        ctx.globalAlpha=0.35;
-        ctx.fillStyle='#dde4f0';
-        ctx.beginPath();ctx.arc(d.x,d.y,cr*2.0,0,Math.PI*2);ctx.fill();
-        ctx.globalAlpha=1.0;
+        // Silver: subtle cool glow
+        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2.2);
+        cg.addColorStop(0,'rgba(220,225,240,0.55)');
+        cg.addColorStop(1,'rgba(148,163,184,0)');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2.2,0,Math.PI*2);ctx.fill();
       }
 
-      // Draw coin image
+      // Draw coin image with tier-appropriate filter
       const _cImg=_coinImg;
       ctx.globalAlpha = d.gold ? 1.0 : d.green ? 0.97 : d.silver ? 0.95 : 0.96;
       if(_cImg&&_cImg.complete&&_cImg.naturalWidth>0){
         const csize=cr*2;
         ctx.save();
-        if(d.gold)        ctx.filter=_rhStr;
-        else if(d.green)  ctx.filter=_greenFilter;
-        else if(d.silver) ctx.filter=_silverFilter;
+        if(d.gold){
+          ctx.filter=`hue-rotate(${(frame*4)%360}deg) saturate(3) brightness(1.8) drop-shadow(0 0 4px gold)`;
+        } else if(d.green){
+          ctx.filter='hue-rotate(115deg) saturate(2.5) brightness(1.5) drop-shadow(0 0 3px #4ade80)';
+        } else if(d.silver){
+          ctx.filter='grayscale(1) brightness(2.0) drop-shadow(0 0 2px #e2e8f0)';
+        }
         ctx.drawImage(_cImg,d.x-csize/2,d.y-csize/2,csize,csize);
         ctx.restore();
       } else {
-        ctx.fillStyle=d.gold?`hsl(${_rh},100%,60%)`:d.green?'#22c55e':d.silver?'#e2e8f0':'#ffd700';
+        ctx.fillStyle=d.gold?`hsl(${(frame*4)%360},100%,60%)`:d.green?'#22c55e':d.silver?'#e2e8f0':'#ffd700';
         ctx.beginPath();ctx.arc(d.x,d.y,cr,0,Math.PI*2);ctx.fill();
       }
       ctx.globalAlpha=1;
@@ -7774,7 +7725,7 @@ function startSpace() {
       ctx.beginPath(); ctx.arc(W*0.82, H*0.82, 45, 0, Math.PI*2); ctx.stroke();
       ctx.restore();
     }
-    if(frame%3===0) positionEmoteOverlays();
+    positionEmoteOverlays();
     // Dim emote overlay when game is not actively playing
     if(_emoteLayer){
       const _shopOpen = document.getElementById('spaceShop').style.display==='flex';
