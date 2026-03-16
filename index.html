@@ -4675,7 +4675,7 @@ function updateHeartsDisplay(livesOverride, silverOverride, maxHpOverride) {
   let sv = silverOverride !== undefined ? silverOverride : (window._spaceGetLives ? window._spaceGetLives().silverLives : 0);
   let mx = maxHpOverride !== undefined ? maxHpOverride : (window._spaceGetLives ? window._spaceGetLives().maxHp : 5);
   let s = '';
-  for (let i = 0; i < sv; i++) s += '💛';
+  for (let i = 0; i < sv; i++) s += '🩶';
   for (let i = 0; i < mx; i++) s += (i < lv) ? '❤️' : '🖤';
   el.textContent = s;
   const lvEl = document.getElementById('spaceLives');
@@ -5099,13 +5099,13 @@ function startSpace() {
   saveCoins(coins);
 
   const POWERUP_TYPES=[
-    {type:'double',     label:'2x SHOT',    color:'#60ddff', dur:480},
+    {type:'double',     label:'2x SHOT',    color:'#60ddff', dur:660},
     {type:'triple',     label:'3x SHOT',    color:'#a855f7', dur:420},
-    {type:'rapid',      label:'RAPID FIRE', color:'#fbbf24', dur:360},
+    {type:'rapid',      label:'RAPID FIRE', color:'#fbbf24', dur:540},
     {type:'shield',     label:'SHIELD',     color:'#4ade80', dur:960},
     {type:'magnet',     label:'🧲 MAGNET',  color:'#ffd700', dur:720},
     {type:'heart',      label:'❤ HEAL',     color:'#ff4488', dur:0},
-    {type:'silverheart',label:'💛 BONUS HP', color:'#ffe066', dur:0},
+    {type:'silverheart',label:'🩶 BONUS HP', color:'#c0c0c0', dur:0},
     {type:'explosion',  label:'💥 NUKE',    color:'#ff8800', dur:0},
     {type:'freeze',     label:'❄️ FREEZE',  color:'#88ddff', dur:420},
     {type:'aura',       label:'⚡ AURA',    color:'#facc15', dur:720},
@@ -5798,8 +5798,12 @@ function startSpace() {
     else powerupDrops.push({x,y,vx:0,vy:0,type,life:99999999,collected:false,freezeFrames:180});
   }
 
-  function spawnParticles(x,y,color,n=10){if(particles.length>300)return;
-    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*3,life:35+Math.random()*20,color});}
+  function spawnParticles(x,y,color,n=10){
+    // Reduce n when already busy, and hard cap at 200
+    const _busy=particles.length;
+    if(_busy>200) return;
+    const _n=_busy>120?Math.ceil(n*0.5):n; // halve new particles when already crowded
+    for(let i=0;i<_n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*3,life:35+Math.random()*20,color});}
   }
 
   function resetSpace(){
@@ -6457,11 +6461,31 @@ function startSpace() {
 
       // (laser bolt processing removed — handled by normal bullet collision)
 
+      // ── Spatial grid for bullet-enemy collision — rebuilt each frame
+      // Cuts worst-case from O(bullets*enemies) down to O(bullets*nearby)
+      const _CELL = 120; // cell size in world units
+      const _grid = new Map();
+      const _gridKey = (gx,gy) => (gx&0xFFFF)|(gy<<16);
+      enemies.forEach(e=>{
+        const gx=Math.floor(e.x/_CELL), gy=Math.floor(e.y/_CELL);
+        for(let ox=-1;ox<=1;ox++) for(let oy=-1;oy<=1;oy++){
+          const k=_gridKey(gx+ox,gy+oy);
+          if(!_grid.has(k)) _grid.set(k,[]);
+          _grid.get(k).push(e);
+        }
+      });
+      const _nearbyEnemies = (bx,by,r)=>{
+        const gx=Math.floor(bx/_CELL), gy=Math.floor(by/_CELL);
+        return _grid.get(_gridKey(gx,gy)) || enemies; // fallback to all if not found
+      };
+
       // Bullet-enemy — pierce allows hitting 1+pierce enemies before bullet disappears
       bullets=bullets.filter(b=>{
         if(b.flame){
           // Flame/Frozen staff: circle collision like normal bullets but keeps flying
+          const _near=_nearbyEnemies(b.x,b.y,b.size*4+60);
           enemies=enemies.map(e=>{
+            if(_near.indexOf(e)===-1) return e; // skip enemies far from this bullet
             const dx=b.x-e.x,dy=b.y-e.y;
             if(Math.sqrt(dx*dx+dy*dy)<e.size*0.55+b.size*4){
               if(e.shieldHp>0){e.shieldHp--;spawnParticles(e.x,e.y,'#60ddff',4);}
@@ -6514,11 +6538,15 @@ function startSpace() {
           }
           return true; // flame bullets keep flying until life expires
         }
+        const _nearB=_nearbyEnemies(b.x,b.y,60);
         enemies=enemies.map(e=>{
-          if((b._pierceHits||0)>=(1+(b.pierce||0))) return e; // exceeded pierce count
+          if(_nearB.indexOf(e)===-1) return e; // skip distant enemies
+          if(!b._hitEnemies) b._hitEnemies=new Set();
+          if(b._hitEnemies.size>=(1+(b.pierce||0))) return e;
+          if(b._hitEnemies.has(e)) return e;
           const dx=b.x-e.x,dy=b.y-e.y;
           if(Math.sqrt(dx*dx+dy*dy)<e.size*0.5*getBulletSize()){
-            b._pierceHits=(b._pierceHits||0)+1;
+            b._hitEnemies.add(e);
             if(e.shieldHp>0){
               e.shieldHp--;
               spawnParticles(e.x,e.y,'#60ddff',8);playTone(800,'sine',0.05,0.1);
@@ -6610,7 +6638,7 @@ function startSpace() {
           }
           return e;
         }).filter(Boolean);
-        return (b._pierceHits||0)<(1+(b.pierce||0));
+        return (!b._hitEnemies || b._hitEnemies.size<(1+(b.pierce||0)));
       });
 
       // ── Abandoned ship bullet hits
@@ -6685,49 +6713,7 @@ function startSpace() {
         }
         const collectR=(isMagnet||d._superMagnet>0)?52:getCoinRange();
         if(Math.sqrt((d.x-ship.x)**2+(d.y-ship.y)**2)<collectR&&!d.collected){
-          d.collected=true;const _cv=d.value||1;saveCoins(coins+_cv);
-          // Particles by tier
-          spawnParticles(d.x,d.y,d.rainbow?'#fff':d.gold?'#ffd700':d.green?'#4ade80':d.silver?'#aaa':'#ffd700',d.rainbow?24:d.gold?18:d.green?12:d.silver?8:4);
-          if(d.rainbow){
-            // Extra multicolour burst
-            for(let _ri=0;_ri<5;_ri++) spawnParticles(d.x+(Math.random()-0.5)*40,d.y+(Math.random()-0.5)*40,`hsl(${_ri*72},100%,70%)`,8);
-            const _rac=getACtx();if(_rac){const _rv=getSfxVol();
-              [523,659,784,1047,1319,1568,2093,2637].forEach((f,i)=>setTimeout(()=>{
-                const g=_rac.createGain();g.gain.setValueAtTime(_rv*0.30,_rac.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,_rac.currentTime+0.18);
-                const o=_rac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,_rac.currentTime);o.frequency.exponentialRampToValueAtTime(f*1.05,_rac.currentTime+0.15);
-                o.connect(g);g.connect(_rac.destination);o.start();o.stop(_rac.currentTime+0.19);
-              },i*28));
-              // Bass boom
-              const bg=_rac.createGain();bg.gain.setValueAtTime(_rv*0.4,_rac.currentTime);bg.gain.exponentialRampToValueAtTime(0.0001,_rac.currentTime+0.4);
-              const bo=_rac.createOscillator();bo.type='sine';bo.frequency.setValueAtTime(80,_rac.currentTime);bo.frequency.exponentialRampToValueAtTime(40,_rac.currentTime+0.4);
-              bo.connect(bg);bg.connect(_rac.destination);bo.start();bo.stop(_rac.currentTime+0.41);
-            }
-          } else if(_cv>=100){
-            const _gac=getACtx();if(_gac){const _gv=getSfxVol();
-              [1047,1319,1568,1976,2093,2637].forEach((f,i)=>setTimeout(()=>{
-                const g=_gac.createGain();g.gain.setValueAtTime(_gv*0.28,_gac.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,_gac.currentTime+0.14);
-                const o=_gac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,_gac.currentTime);o.frequency.exponentialRampToValueAtTime(f*1.05,_gac.currentTime+0.12);
-                o.connect(g);g.connect(_gac.destination);o.start();o.stop(_gac.currentTime+0.15);
-              },i*32));
-            }
-          } else if(_cv>=25){
-            const _eac=getACtx();if(_eac){const _ev=getSfxVol();
-              [784,988,1175,1568,1976].forEach((f,i)=>setTimeout(()=>{
-                const g=_eac.createGain();g.gain.setValueAtTime(_ev*0.24,_eac.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,_eac.currentTime+0.11);
-                const o=_eac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,_eac.currentTime);
-                o.connect(g);g.connect(_eac.destination);o.start();o.stop(_eac.currentTime+0.12);
-              },i*30));
-            }
-          } else if(_cv>=5){
-            const _sac=getACtx();if(_sac){const _sv=getSfxVol();
-              [880,1047,1319].forEach((f,i)=>setTimeout(()=>{
-                const g=_sac.createGain();g.gain.setValueAtTime(_sv*0.20,_sac.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,_sac.currentTime+0.10);
-                const o=_sac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,_sac.currentTime);
-                o.connect(g);g.connect(_sac.destination);o.start();o.stop(_sac.currentTime+0.11);
-              },i*28));
-            }
-          } else{sfxCoin();}
-          return false;
+          d.collected=true;const _cv=d.value||1;saveCoins(coins+_cv);spawnParticles(d.x,d.y,d.gold?'#ffd700':d.green?'#4ade80':d.silver?'#aaa':'#ffd700',d.gold?18:d.green?12:d.silver?8:4);if(_cv>=25){sfxPowerup();if(_cv>=100){playTone(1800,'sine',0.12,0.2);setTimeout(()=>playTone(2200,'sine',0.10,0.18),60);}}else if(_cv>1){sfxPowerup();}else{sfxCoin();}return false;
         }
         return true;
       });
@@ -6763,16 +6749,6 @@ function startSpace() {
             drops.push({x:greens[i].x,y:greens[i].y,vx:0,vy:0,life:99999,collected:false,settled:true,gold:true,value:100});
           }
         }
-        // Merge gold coins (100-value) × 5 → rainbow coin (500-value)
-        const golds=drops.filter(d=>d.settled&&!d.collected&&d.gold&&!d.rainbow);
-        for(let i=0;i<golds.length;i++){
-          const near=golds.filter((d2,j)=>j!==i&&Math.sqrt((d2.x-golds[i].x)**2+(d2.y-golds[i].y)**2)<80&&!d2._merging);
-          if(near.length>=4){
-            const group=[golds[i],...near.slice(0,4)];
-            group.forEach(d=>{d._merging=true;d.life=0;});
-            drops.push({x:golds[i].x,y:golds[i].y,vx:0,vy:0,life:99999,collected:false,settled:true,rainbow:true,value:500});
-          }
-        }
       }
 
             powerupDrops=powerupDrops.filter(d=>{
@@ -6788,7 +6764,7 @@ function startSpace() {
           } else if(d.type==='silverheart'){
             silverLives++;
             updateHeartsDisplay(lives,silverLives,getMaxHp());
-            spawnParticles(d.x,d.y,'#ffe066',10);
+            spawnParticles(d.x,d.y,'#c0c0c0',10);
             playTone(1200,'sine',0.08,0.3);setTimeout(()=>playTone(1600,'sine',0.06,0.25),80);
           } else if(d.type==='explosion'){
             const survivingEnemies=[];
@@ -6844,7 +6820,7 @@ function startSpace() {
             if(blocked){
               spawnParticles(ship.x,ship.y,'#60ddff',8);
             } else if(silverLives>0){
-              silverLives--;spawnParticles(ship.x,ship.y,'#ffe066',10);sfxPlayerHit();
+              silverLives--;spawnParticles(ship.x,ship.y,'#c0c0c0',10);sfxPlayerHit();
             } else {
               lives--;spawnParticles(ship.x,ship.y,'#ff4444',15);sfxPlayerHit();
             }
@@ -6881,14 +6857,35 @@ function startSpace() {
     // ── DRAW ──
     ctx.fillStyle='#02020e';ctx.fillRect(0,0,W,H);
 
-    // Stars — screen space with subtle parallax
-    stars.forEach(s=>{
-      const px=(s.x - cam.x*0.12 + W*20)%W;
-      const py=(s.y - cam.y*0.12 + H*20)%H;
-      ctx.globalAlpha=s.a*Math.abs(Math.sin(frame*s.rate+s.phase));
-      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px,py,s.r,0,Math.PI*2);ctx.fill();
-    });
-    ctx.globalAlpha=1;
+    // Stars — batched by brightness bucket to cut canvas calls from 600 → ~10
+    {
+      // Pre-bucket stars into 3 alpha groups, draw each bucket in one path
+      const _sBuckets=[{a:0,stars:[]},{a:0,stars:[]},{a:0,stars:[]}];
+      stars.forEach(s=>{
+        const px=(s.x - cam.x*0.12 + W*20)%W;
+        const py=(s.y - cam.y*0.12 + H*20)%H;
+        const alpha=s.a*Math.abs(Math.sin(frame*s.rate+s.phase));
+        const bi=s.r>1.5?2:s.r>0.9?1:0; // bucket by size
+        _sBuckets[bi].stars.push({px,py,r:s.r,alpha});
+      });
+      ctx.fillStyle='#fff';
+      _sBuckets.forEach(bucket=>{
+        // Sub-bucket by alpha quantised to 0.1 steps so we still get some twinkle variety
+        const byAlpha={};
+        bucket.stars.forEach(s=>{
+          const ak=Math.round(s.alpha*10)/10;
+          if(!byAlpha[ak]) byAlpha[ak]=[];
+          byAlpha[ak].push(s);
+        });
+        Object.entries(byAlpha).forEach(([ak,ss])=>{
+          ctx.globalAlpha=+ak;
+          ctx.beginPath();
+          ss.forEach(s=>{ ctx.moveTo(s.px+s.r,s.py); ctx.arc(s.px,s.py,s.r,0,Math.PI*2); });
+          ctx.fill();
+        });
+      });
+      ctx.globalAlpha=1;
+    }
 
     // ── World-edge fade — gradient vignette that starts ~1 screen before the boundary
     {
@@ -7009,91 +7006,72 @@ function startSpace() {
 
 
 
-    // Coins — tiers: base 7.8, silver 8.74, green 9.79, gold 10.96, rainbow 13.2
+    // Coins — cached filter strings (rebuilt every 8 frames for gold hue spin, static otherwise)
+    // Pre-compute gold hue once per frame for all gold coins
+    const _rh = (frame*4)%360;
+    const _rhStr = `hue-rotate(${_rh}deg) saturate(3) brightness(1.8) drop-shadow(0 0 4px gold)`;
+    // Static filter strings — allocated once, not per-coin
+    const _greenFilter = 'hue-rotate(115deg) saturate(2.5) brightness(1.5) drop-shadow(0 0 3px #4ade80)';
+    const _silverFilter = 'grayscale(1) brightness(2.0) drop-shadow(0 0 2px #e2e8f0)';
+
     drops.forEach(d=>{
       if(d._merging||d.life<=0) return;
-      const cr = d.rainbow ? 13.2 : d.gold ? 10.96 : d.green ? 9.79 : d.silver ? 8.74 : 7.8;
+      // Skip entirely if off-screen (with generous margin for glow)
+      const _margin = 60;
+      if(d.x < cam.x-_margin || d.x > cam.x+W+_margin || d.y < cam.y-_margin || d.y > cam.y+H+_margin) return;
+
+      const cr = d.gold ? 10.96 : d.green ? 9.79 : d.silver ? 8.74 : 7.8;
       ctx.globalAlpha = 1.0;
 
-      // Glow rings
-      if(d.rainbow){
-        // Rainbow: massive fast-cycling halo + 8 orbiting sparkles + outer stroke ring
-        const rh=(frame*9)%360;
-        // Outer stroke rings
-        ctx.save();
-        ctx.globalAlpha=0.4+0.2*Math.sin(frame*0.14);
-        ctx.strokeStyle=`hsl(${rh},100%,70%)`; ctx.lineWidth=2.5;
-        ctx.beginPath();ctx.arc(d.x,d.y,cr*3.8,0,Math.PI*2);ctx.stroke();
-        ctx.strokeStyle=`hsl(${(rh+180)%360},100%,70%)`; ctx.lineWidth=1.2;
-        ctx.beginPath();ctx.arc(d.x,d.y,cr*3.0,0,Math.PI*2);ctx.stroke();
-        ctx.restore();
-        // Core radial glow
-        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*4.2);
-        cg.addColorStop(0,`hsla(${rh},100%,90%,0.85)`);
-        cg.addColorStop(0.3,`hsla(${(rh+90)%360},100%,70%,0.5)`);
-        cg.addColorStop(0.6,`hsla(${(rh+200)%360},100%,55%,0.2)`);
-        cg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.globalAlpha=1.0;
-        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*4.2,0,Math.PI*2);ctx.fill();
-        // 8 orbiting sparkles
-        for(let si=0;si<8;si++){
-          const sa=(frame*0.10+si*Math.PI/4)%(Math.PI*2);
-          const sr=cr*2.6+Math.sin(frame*0.18+si*1.3)*cr*0.45;
-          ctx.globalAlpha=0.65+0.35*Math.sin(frame*0.22+si);
-          ctx.fillStyle=`hsl(${(rh+si*45)%360},100%,80%)`;
-          ctx.beginPath();ctx.arc(d.x+Math.cos(sa)*sr,d.y+Math.sin(sa)*sr,2.0,0,Math.PI*2);ctx.fill();
+      // Glow — only draw gradient for gold/green/silver, skip for plain coins
+      if(d.gold){
+        // Throttle gradient to every 2 frames (imperceptible difference, half the allocations)
+        if(frame%2===0){
+          const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*3.5);
+          cg.addColorStop(0,`hsla(${_rh},100%,70%,0.8)`);
+          cg.addColorStop(0.5,`hsla(${(_rh+180)%360},100%,55%,0.25)`);
+          cg.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*3.5,0,Math.PI*2);ctx.fill();
         }
-        ctx.globalAlpha=1.0;
-      } else if(d.gold){
-        // Gold: spinning hue halo + 4 sparkles
-        const rh=(frame*4)%360;
-        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*3.5);
-        cg.addColorStop(0,`hsla(${rh},100%,70%,0.8)`);
-        cg.addColorStop(0.4,`hsla(${(rh+120)%360},100%,60%,0.5)`);
-        cg.addColorStop(0.7,`hsla(${(rh+240)%360},100%,55%,0.2)`);
-        cg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*3.5,0,Math.PI*2);ctx.fill();
+        // Sparkle points — batched into one path per frame
+        ctx.beginPath();
         for(let si=0;si<4;si++){
           const sa=(frame*0.06+si*Math.PI/2)%(Math.PI*2);
           const sr=cr*2.2+Math.sin(frame*0.12+si)*cr*0.4;
-          ctx.globalAlpha=0.6+0.4*Math.sin(frame*0.15+si);
-          ctx.fillStyle=`hsl(${(rh+si*60)%360},100%,80%)`;
-          ctx.beginPath();ctx.arc(d.x+Math.cos(sa)*sr,d.y+Math.sin(sa)*sr,1.5,0,Math.PI*2);ctx.fill();
+          const spx=d.x+Math.cos(sa)*sr, spy=d.y+Math.sin(sa)*sr;
+          ctx.moveTo(spx+1.5,spy); ctx.arc(spx,spy,1.5,0,Math.PI*2);
         }
+        ctx.globalAlpha=0.7; ctx.fillStyle=`hsl(${_rh},100%,80%)`; ctx.fill();
         ctx.globalAlpha=1.0;
       } else if(d.green){
         const pulse=0.5+0.3*Math.sin(frame*0.1+d.x*0.05);
         const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2.8);
         cg.addColorStop(0,'rgba(74,222,128,0.7)');
-        cg.addColorStop(0.5,`rgba(22,163,74,${pulse*0.5})`);
-        cg.addColorStop(1,'rgba(22,163,74,0)');
+        cg.addColorStop(1,`rgba(22,163,74,0)`);
+        ctx.globalAlpha=pulse;
         ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2.8,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=1.0;
       } else if(d.silver){
-        const cg=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,cr*2.2);
-        cg.addColorStop(0,'rgba(220,225,240,0.55)');
-        cg.addColorStop(1,'rgba(148,163,184,0)');
-        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(d.x,d.y,cr*2.2,0,Math.PI*2);ctx.fill();
+        // Silver: flat semi-transparent circle — no gradient needed, cheaper
+        ctx.globalAlpha=0.35;
+        ctx.fillStyle='#dde4f0';
+        ctx.beginPath();ctx.arc(d.x,d.y,cr*2.0,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=1.0;
       }
 
-      // Draw coin image with tier filter
+      // Draw coin image
       const _cImg=_coinImg;
-      ctx.globalAlpha=1.0;
+      ctx.globalAlpha = d.gold ? 1.0 : d.green ? 0.97 : d.silver ? 0.95 : 0.96;
       if(_cImg&&_cImg.complete&&_cImg.naturalWidth>0){
         const csize=cr*2;
         ctx.save();
-        if(d.rainbow){
-          ctx.filter=`hue-rotate(${(frame*9)%360}deg) saturate(5) brightness(2.2) drop-shadow(0 0 6px white) drop-shadow(0 0 3px hsl(${(frame*9)%360},100%,70%))`;
-        } else if(d.gold){
-          ctx.filter=`hue-rotate(${(frame*4)%360}deg) saturate(3) brightness(1.8) drop-shadow(0 0 4px gold)`;
-        } else if(d.green){
-          ctx.filter='hue-rotate(115deg) saturate(2.5) brightness(1.5) drop-shadow(0 0 3px #4ade80)';
-        } else if(d.silver){
-          ctx.filter='grayscale(1) brightness(2.0) drop-shadow(0 0 2px #e2e8f0)';
-        }
+        if(d.gold)        ctx.filter=_rhStr;
+        else if(d.green)  ctx.filter=_greenFilter;
+        else if(d.silver) ctx.filter=_silverFilter;
         ctx.drawImage(_cImg,d.x-csize/2,d.y-csize/2,csize,csize);
         ctx.restore();
       } else {
-        ctx.fillStyle=d.rainbow?`hsl(${(frame*9)%360},100%,70%)`:d.gold?`hsl(${(frame*4)%360},100%,60%)`:d.green?'#22c55e':d.silver?'#e2e8f0':'#ffd700';
+        ctx.fillStyle=d.gold?`hsl(${_rh},100%,60%)`:d.green?'#22c55e':d.silver?'#e2e8f0':'#ffd700';
         ctx.beginPath();ctx.arc(d.x,d.y,cr,0,Math.PI*2);ctx.fill();
       }
       ctx.globalAlpha=1;
@@ -7101,7 +7079,7 @@ function startSpace() {
 
     // Powerup drops — emoji only, no circle
     powerupDrops.forEach(d=>{
-      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'🟰',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'💛',riskReward:'⚠️',aura:'⚡',explosion:'💣'};
+      const _emojiMap={shield:'🛡️',freeze:'❄️',double:'💥',triple:'🟰',rapid:'⚡',magnet:'🧲',heart:'❤️',silverheart:'🩶',riskReward:'⚠️',aura:'⚡',explosion:'💣'};
       const em=_emojiMap[d.type]||'✨';
       const bob=Math.sin(frame*0.08+d.x*0.1)*2; // gentle bob
       ctx.save();
@@ -7796,7 +7774,7 @@ function startSpace() {
       ctx.beginPath(); ctx.arc(W*0.82, H*0.82, 45, 0, Math.PI*2); ctx.stroke();
       ctx.restore();
     }
-    positionEmoteOverlays();
+    if(frame%3===0) positionEmoteOverlays();
     // Dim emote overlay when game is not actively playing
     if(_emoteLayer){
       const _shopOpen = document.getElementById('spaceShop').style.display==='flex';
@@ -8078,15 +8056,11 @@ function vqRenderSetupTab() {
 }
 
 function vqModRefresh() {
-  // Always update the now-playing label
+  const q = vqLoad();
   const current = vqLoadCurrent();
   const np = document.getElementById('vqNowPlaying');
   if(np) np.textContent = current ? `▶ Now: ${current.title.slice(0,30)}…` : '';
 
-  // Don't overwrite setup or history tab content on auto-refresh
-  if(_vqCurrentTab === 'setup' || _vqCurrentTab === 'history') return;
-
-  const q = vqLoad();
   const filtered = _vqCurrentTab === 'all' ? q : q.filter(v => v.status === _vqCurrentTab);
   const list = document.getElementById('vqList');
   if(!list) return;
