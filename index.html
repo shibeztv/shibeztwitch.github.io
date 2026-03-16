@@ -1427,7 +1427,7 @@
             <button onclick="closeFlappy()" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
           </div>
         </div>
-        <canvas id="flappyCanvas" width="680" height="880" style="display:block;cursor:pointer"></canvas>
+        <canvas id="flappyCanvas" width="680" height="880" style="display:block;cursor:pointer;max-width:100%;max-height:calc(100vh - 60px);width:auto;height:auto;touch-action:none"></canvas>
       </div>
     </div>
 
@@ -5239,16 +5239,70 @@ function startSpace() {
     }
     if(state==='waiting'){state='playing';return;}
     if(state==='dead'){resetSpace();return;}
-    const t=e.touches[0];const rect=canvas.getBoundingClientRect();
-    mouseX=(t.clientX-rect.left)*(W/rect.width);mouseY=(t.clientY-rect.top)*(H/rect.height);
-    if(e.type==='touchstart')fireBulletDir();
-    if(e.type==='touchmove'){
-      ship.x=Math.max(30,Math.min(WW-30,cam.x+mouseX));
-      ship.y=Math.max(30,Math.min(WH-30,cam.y+mouseY));
-    }
+    // handled by joystick below
   };
-  canvas.addEventListener('touchstart',onTouch,{passive:false});
-  canvas.addEventListener('touchmove',onTouch,{passive:false});
+  // ── Mobile dual joystick ─────────────────────────────────────────────────
+  const _isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.matchMedia('(pointer:coarse)').matches;
+  if(_isMobile){ _autoShoot = true; } // always auto-shoot on mobile
+  let _joyLeft = null;  // {id, startX, startY}
+  let _joyRight = null;
+  let _joyDX = 0, _joyDY = 0; // normalised movement direction
+
+  function _joyApply(e){
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width, scaleY = H / rect.height;
+    const mid = rect.width / 2;
+
+    // Process each touch
+    for(const t of e.changedTouches){
+      const cx = t.clientX - rect.left;
+      // Left half = move joystick, right half = aim/shoot
+      if(cx < mid){
+        if(e.type === 'touchstart' || e.type === 'touchmove'){
+          if(!_joyLeft || e.type === 'touchstart') _joyLeft = {id:t.identifier, startX:t.clientX, startY:t.clientY};
+          if(_joyLeft && t.identifier === _joyLeft.id){
+            const dx = t.clientX - _joyLeft.startX;
+            const dy = t.clientY - _joyLeft.startY;
+            const len = Math.sqrt(dx*dx+dy*dy)||1;
+            const clamped = Math.min(len, 60);
+            _joyDX = (dx/len)*(clamped/60);
+            _joyDY = (dy/len)*(clamped/60);
+          }
+        } else if(e.type === 'touchend' || e.type === 'touchcancel'){
+          if(_joyLeft && t.identifier === _joyLeft.id){ _joyLeft=null; _joyDX=0; _joyDY=0; }
+        }
+      } else {
+        // Right side: aim
+        if(e.type !== 'touchend' && e.type !== 'touchcancel'){
+          mouseX = (t.clientX - rect.left) * scaleX;
+          mouseY = (t.clientY - rect.top) * scaleY;
+          if(e.type === 'touchstart' && state === 'waiting'){ state='playing'; return; }
+          if(e.type === 'touchstart' && state === 'dead'){ resetSpace(); return; }
+        }
+      }
+    }
+    // Handle waiting/dead states on left side too
+    if(e.type === 'touchstart'){
+      for(const t of e.changedTouches){
+        const cx = t.clientX - rect.left;
+        if(cx < mid){
+          if(state === 'waiting'){ state='playing'; return; }
+          if(state === 'dead'){ resetSpace(); return; }
+        }
+      }
+    }
+  }
+
+  if(_isMobile){
+    canvas.addEventListener('touchstart', _joyApply, {passive:false});
+    canvas.addEventListener('touchmove',  _joyApply, {passive:false});
+    canvas.addEventListener('touchend',   _joyApply, {passive:false});
+    canvas.addEventListener('touchcancel',_joyApply, {passive:false});
+  } else {
+    canvas.addEventListener('touchstart',onTouch,{passive:false});
+    canvas.addEventListener('touchmove',onTouch,{passive:false});
+  }
 
   // Bullets fire toward cursor (or forward if keys)
   let _dualToggle=0;
@@ -5967,6 +6021,8 @@ function startSpace() {
       if(keys['ArrowDown']||keys['s']||keys['S'])  ship.y=Math.min(WH-30,ship.y+SPEED);
       if(keys['ArrowLeft']||keys['a']||keys['A'])  ship.x=Math.max(30,ship.x-SPEED);
       if(keys['ArrowRight']||keys['d']||keys['D']) ship.x=Math.min(WW-30,ship.x+SPEED);
+      // Mobile joystick movement
+      if(_joyDX||_joyDY){ ship.x=Math.max(30,Math.min(WW-30,ship.x+_joyDX*SPEED*1.4)); ship.y=Math.max(30,Math.min(WH-30,ship.y+_joyDY*SPEED*1.4)); }
       // Camera follows ship, clamped to world
       cam.x=Math.max(0,Math.min(WW-W, ship.x-W/2));
       cam.y=Math.max(0,Math.min(WH-H, ship.y-H/2));
@@ -7590,6 +7646,21 @@ function startSpace() {
         ctx.fillText('♪ '+_songTitleText, nx+9, ny+noteH*0.7);
         ctx.restore();
       }
+    }
+    // Mobile joystick visual
+    if(typeof _isMobile !== 'undefined' && _isMobile && state==='playing'){
+      const rect2 = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : {width:W};
+      const jBaseX = W*0.18, jBaseY = H*0.82, jR = 55;
+      ctx.save(); ctx.globalAlpha=0.25;
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(jBaseX, jBaseY, jR, 0, Math.PI*2); ctx.stroke();
+      // Dot showing direction
+      const dotX = jBaseX + (_joyDX||0)*jR, dotY = jBaseY + (_joyDY||0)*jR;
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(dotX, dotY, 18, 0, Math.PI*2); ctx.fill();
+      // Right side aim indicator hint
+      ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(W*0.82, H*0.82, 45, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
     }
     positionEmoteOverlays();
     // Dim emote overlay when game is not actively playing
