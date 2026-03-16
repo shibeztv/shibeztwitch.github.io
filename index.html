@@ -1077,9 +1077,18 @@
     #playerView > div { flex-direction: column; }
     .chat-panel { width: 100%; height: 300px; border-left: none; border-top: 1px solid var(--border); }
     .stream-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-header { flex-wrap: wrap; gap: 6px; }
     .grid-header-title { font-size: 9px; letter-spacing: 0.3px; }
     .grid-header-count { font-size: 9px; }
     .live-banner-embed { width: 80%; }
+    #mainBtnRow button { font-size: 10px !important; padding: 7px 12px !important; }
+    #dateFilterWrap { width: 100%; margin-left: 0 !important; }
+    /* SpaceBez: fill screen, compress HUD on mobile */
+    #spaceModal { padding: 0 !important; }
+    #spaceModal > div { border-radius: 0 !important; max-height: 100vh !important; width: 100% !important; }
+    #spaceMusicVol, #spaceSfxVol { width: 60px !important; }
+    #spaceScore, #spaceTimer, #spaceCoins { font-size: 12px !important; }
+    #spaceHeartsDisplay { font-size: 13px !important; }
   }
 
   /* Theater mode — mobile: video top, chat below */
@@ -1330,7 +1339,7 @@
       <div class="live-banner-embed" id="liveBannerEmbed"></div>
     </div>
     <!-- RANDOM CLIP + SHIB.LE BUTTONS -->
-    <div style="display:flex;justify-content:flex-start;gap:8px;padding:10px 0 4px">
+    <div id="mainBtnRow" style="display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px;padding:10px 0 4px">
       <button onclick="openRandomClip()" id="randomClipBtn"
         style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
         onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
@@ -1368,6 +1377,8 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid #1a1a3a;width:100%;box-sizing:border-box;gap:8px;flex-wrap:nowrap;overflow:hidden;flex-shrink:0">
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <button id="spacePauseBtn" onclick="toggleSpacePause()" title="Pause [P]" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:4px 9px;border-radius:4px;font-family:var(--mono)">⏸</button>
+            <button id="spaceFullscreenBtn" onclick="spaceToggleFullscreen()" title="Fullscreen (landscape)" style="display:none;background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:4px 9px;border-radius:4px">⛶</button>
+            <button id="spaceAutoShootBtn" onclick="spaceToggleAutoShoot()" title="Toggle auto-shoot" style="display:none;background:rgba(255,200,0,0.15);border:1px solid rgba(255,200,0,0.4);color:#ffd700;cursor:pointer;font-size:11px;font-weight:700;font-family:var(--mono);line-height:1;padding:4px 9px;border-radius:4px">AUTO 🔫</button>
             <div style="display:flex;flex-direction:column;gap:1px">
               <span style="font-family:var(--mono);font-size:13px;font-weight:900;color:#fff;letter-spacing:1px">SPACEBEZ</span>
               <span style="font-family:var(--mono);font-size:9px;color:#444">WASD · Space/Click · C auto-fire · E shop · P pause</span>
@@ -1398,7 +1409,7 @@
           <div id="spacePowerup" style="height:26px;padding:2px 16px;font-family:var(--mono);font-size:10px;color:#ffd700;background:#050510;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px"></div>
 
           <!-- SHOP OVERLAY — only over canvas, topbar stays visible -->
-          <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10">
+          <div id="spaceShop" style="display:none;position:absolute;inset:0;background:rgba(2,2,18,0.96);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;box-sizing:border-box;z-index:10;touch-action:auto;pointer-events:auto">
           <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#ffd700;letter-spacing:2px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><img src="https://cdn.7tv.app/emote/01FC5B2AH00005D6HG0ANTP0H3/2x.webp" style="width:28px;height:28px;object-fit:contain;image-rendering:auto"> UPGRADE SHOP</div>
           <div style="font-family:var(--mono);font-size:11px;color:#aaa;margin-bottom:8px">🪙 <span id="shopCoinsDisp" style="color:#ffd700;font-weight:900">0</span> coins &nbsp;·&nbsp; E/Tab to close &nbsp;·&nbsp; After Death = You keep half of current coins 🪙 + 1🪙 / every 10 score</div>
           <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:1200px;overflow-y:auto;overflow-x:hidden;max-height:72vh;box-sizing:border-box;padding:2px 4px"></div>
@@ -3921,11 +3932,13 @@ function startFlappy() {
 
 
   // Game state
-  const GRAVITY = 0.10;
-  const FLAP = -4.2;
+  const _fMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||window.matchMedia('(pointer:coarse)').matches;
+  const GRAVITY = _fMobile ? 0.15 : 0.10;
+  const FLAP    = _fMobile ? -5.2 : -4.2;
+  const PIPE_SPEED_BASE = _fMobile ? 2.2 : 1.6;
   const PIPE_W = 52;
   const PIPE_GAP = 245;
-  const PIPE_SPEED = 1.6;
+  const PIPE_SPEED = PIPE_SPEED_BASE;
   const EMOTE_SIZE = 52;
   const BIRD_SIZE = 48;
 
@@ -4557,6 +4570,37 @@ async function openSpacebez() {
   startSpace();
 }
 
+window.spaceToggleFullscreen = function() {
+  const modal = document.getElementById('spaceModal');
+  if(!modal) return;
+  // Request landscape fullscreen on mobile
+  const req = modal.requestFullscreen || modal.webkitRequestFullscreen || modal.mozRequestFullScreen;
+  const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+  if(document.fullscreenElement || document.webkitFullscreenElement){
+    try{ exitFs.call(document); } catch(e){}
+  } else {
+    try{
+      if(req) req.call(modal);
+      // Request landscape orientation
+      if(screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(()=>{});
+      }
+    } catch(e){}
+  }
+};
+window.spaceToggleAutoShoot = function() {
+  if(window._spaceSetAutoShoot) window._spaceSetAutoShoot();
+};
+function _updateAutoShootBtn(){
+  const btn = document.getElementById('spaceAutoShootBtn');
+  if(!btn) return;
+  // _autoShoot is inside closure — read via window._spaceAutoShoot
+  const on = window._spaceAutoShootState !== false;
+  btn.style.background = on ? 'rgba(255,200,0,0.25)' : 'rgba(80,80,80,0.2)';
+  btn.style.borderColor = on ? 'rgba(255,200,0,0.6)' : '#333';
+  btn.style.color = on ? '#ffd700' : '#888';
+  btn.textContent = on ? 'AUTO 🔫' : 'AUTO ○';
+}
 function closeSpace() {
   // Save current run state so it can be resumed on reopen
   if (window._spaceGetState && window._spaceGetState() !== 'dead') {
@@ -5158,7 +5202,7 @@ function startSpace() {
         }
         return;
       }
-      if((e.key==='c'||e.key==='C')&&state==='playing'){_autoShoot=!_autoShoot;sfxPowerup();return;}
+      if((e.key==='c'||e.key==='C')&&state==='playing'){_autoShoot=!_autoShoot;sfxPowerup();window._spaceAutoShootState=_autoShoot;_updateAutoShootBtn();return;}
       keys[e.key]=true;
       if((e.key==='e'||e.key==='E'||e.key==='Tab')&&(state==='playing'||state==='paused')){spaceShopToggle();return;}
       if((e.key===' '||e.key==='Space')&&state==='waiting'){state='playing';return;}
@@ -5249,6 +5293,9 @@ function startSpace() {
   let _joyDX = 0, _joyDY = 0; // normalised movement direction
 
   function _joyApply(e){
+    // Don't intercept touches when shop is open — let shop buttons work
+    const shopEl = document.getElementById('spaceShop');
+    if(shopEl && shopEl.style.display !== 'none') return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const scaleX = W / rect.width, scaleY = H / rect.height;
@@ -5736,6 +5783,14 @@ function startSpace() {
   }
   // Connect to Twitch chat when game starts
   connectTwitchChat();
+
+  // Show mobile buttons if on touch device
+  if(typeof _isMobile !== 'undefined' && _isMobile){
+    const fsBtn = document.getElementById('spaceFullscreenBtn');
+    const asBtn = document.getElementById('spaceAutoShootBtn');
+    if(fsBtn) fsBtn.style.display = 'inline-block';
+    if(asBtn){ asBtn.style.display = 'inline-block'; _updateAutoShootBtn(); }
+  }
   // ───────────────────────────────────────────────────────────────────────────
 
 
@@ -5997,6 +6052,8 @@ function startSpace() {
     if(!_spaceRunning) return;
     frame++;
     window._spaceGameActive = (state==='playing' && !_spaceInShop);
+  window._spaceAutoShootState = _autoShoot;
+  window._spaceSetAutoShoot = function(){ _autoShoot=!_autoShoot; window._spaceAutoShootState=_autoShoot; _updateAutoShootBtn(); sfxPowerup(); };
     window._spaceScoreVal=score; window._spaceSurvivalFrames=survivalFrames; window._spaceFrameVal=frame; window._spaceActiveWeapons=activeWeapons;
     if(window._spaceGameActive) _processTwitchQueue();
 
@@ -7715,6 +7772,325 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+</script>
+<!-- VIDEO QUEUE SYSTEM ─────────────────────────────────────────────────── -->
+<div id="videoQueueApp" style="display:none;position:fixed;inset:0;z-index:99999;background:#0a0a0f;color:#eee;font-family:var(--mono, monospace);overflow:auto"></div>
+
+<script>
+// ── Video Queue System ──────────────────────────────────────────────────────
+// Routes: ?queue = mod panel, ?obs = OBS overlay, ?submit = viewer submit form
+// Storage: localStorage (works when OBS + mod panel on same machine, typical setup)
+
+const VQ_KEY = 'shibez_video_queue';
+const VQ_HISTORY_KEY = 'shibez_video_history';
+const VQ_CURRENT_KEY = 'shibez_video_current';
+
+function vqLoad() { try { return JSON.parse(localStorage.getItem(VQ_KEY)||'[]'); } catch(e){ return []; } }
+function vqSave(q) { localStorage.setItem(VQ_KEY, JSON.stringify(q)); window.dispatchEvent(new Event('storage')); }
+function vqLoadCurrent() { try { return JSON.parse(localStorage.getItem(VQ_CURRENT_KEY)||'null'); } catch(e){ return null; } }
+function vqSaveCurrent(v) { localStorage.setItem(VQ_CURRENT_KEY, JSON.stringify(v)); window.dispatchEvent(new Event('storage')); }
+
+// Basic content safety filter — block obvious bad keywords in titles/descriptions
+const VQ_BLOCK_WORDS = ['porn','sex','nude','naked','gore','nsfw','hentai','xxx','onlyfans','18+','adult content','explicit','uncensored','rape','murder tutorial','how to kill','terrorist','isis','al-qaeda'];
+function vqIsSafe(title, url) {
+  const check = (title||'').toLowerCase() + ' ' + (url||'').toLowerCase();
+  return !VQ_BLOCK_WORDS.some(w => check.includes(w));
+}
+
+// Extract YouTube/TikTok video ID
+function vqParseUrl(url) {
+  url = (url||'').trim();
+  // YouTube Shorts
+  let m = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if(m) return {platform:'youtube', id:m[1], url};
+  // YouTube standard
+  m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if(m) return {platform:'youtube', id:m[1], url};
+  // TikTok
+  m = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+  if(m) return {platform:'tiktok', id:m[1], url};
+  return null;
+}
+
+async function vqFetchTitle(parsed) {
+  if(parsed.platform === 'youtube') {
+    try {
+      const r = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${parsed.id}&format=json`);
+      const d = await r.json();
+      return d.title || 'YouTube Video';
+    } catch(e) { return 'YouTube Video'; }
+  }
+  return 'TikTok Video';
+}
+
+// Route detection
+const _vqParam = new URLSearchParams(location.search).get('queue') !== null ? 'queue'
+  : new URLSearchParams(location.search).get('obs') !== null ? 'obs'
+  : new URLSearchParams(location.search).get('submit') !== null ? 'submit'
+  : null;
+
+if(_vqParam) {
+  document.getElementById('videoQueueApp').style.display = 'block';
+  // Hide main site content
+  document.querySelectorAll('body > *:not(#videoQueueApp)').forEach(el => el.style.display='none');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => _vqInitPage(_vqParam), 100);
+}
+
+function _vqInitPage(page) {
+  const app = document.getElementById('videoQueueApp');
+  if(page === 'submit') _vqRenderSubmit(app);
+  else if(page === 'queue') _vqRenderMod(app);
+  else if(page === 'obs') _vqRenderObs(app);
+}
+
+// ── SUBMIT PAGE ─────────────────────────────────────────────────────────────
+function _vqRenderSubmit(app) {
+  app.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:480px">
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="font-size:28px;margin-bottom:8px">🎬</div>
+          <div style="font-size:18px;font-weight:900;letter-spacing:1px;color:#fff">Submit a Video</div>
+          <div style="font-size:11px;color:#777;margin-top:6px">YouTube Shorts &amp; TikTok links only · Mods review before it plays</div>
+        </div>
+        <div style="background:#111;border:1px solid #222;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:10px;color:#aaa;letter-spacing:1px;display:block;margin-bottom:5px">YOUR USERNAME</label>
+            <input id="vqUser" placeholder="Twitch username (optional)" maxlength="40"
+              style="width:100%;background:#0a0a12;border:1px solid #333;color:#eee;font-family:var(--mono,monospace);font-size:13px;padding:9px 12px;border-radius:5px;box-sizing:border-box;outline:none">
+          </div>
+          <div>
+            <label style="font-size:10px;color:#aaa;letter-spacing:1px;display:block;margin-bottom:5px">VIDEO URL <span style="color:#fc5c7d">*</span></label>
+            <input id="vqUrl" placeholder="https://youtube.com/shorts/... or https://tiktok.com/..." maxlength="300"
+              style="width:100%;background:#0a0a12;border:1px solid #333;color:#eee;font-family:var(--mono,monospace);font-size:13px;padding:9px 12px;border-radius:5px;box-sizing:border-box;outline:none">
+          </div>
+          <div id="vqPreview" style="display:none;border:1px solid #333;border-radius:5px;overflow:hidden;aspect-ratio:9/16;background:#000;max-height:280px"></div>
+          <div id="vqSubmitMsg" style="font-size:12px;min-height:18px"></div>
+          <button id="vqSubmitBtn" onclick="vqSubmit()"
+            style="background:#7c5cfc;border:none;color:#fff;font-family:var(--mono,monospace);font-size:13px;font-weight:700;padding:12px;border-radius:5px;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.15s"
+            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+            SUBMIT FOR REVIEW
+          </button>
+        </div>
+        <div style="text-align:center;margin-top:20px;font-size:10px;color:#444">
+          Videos are reviewed by mods before playing on stream.
+        </div>
+      </div>
+    </div>`;
+
+  // Live preview on URL input
+  document.getElementById('vqUrl').addEventListener('input', async function() {
+    const parsed = vqParseUrl(this.value);
+    const preview = document.getElementById('vqPreview');
+    if(parsed && parsed.platform === 'youtube') {
+      preview.style.display = 'block';
+      preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${parsed.id}?autoplay=0" style="width:100%;height:100%;border:none" allowfullscreen></iframe>`;
+    } else { preview.style.display = 'none'; preview.innerHTML = ''; }
+  });
+}
+
+window.vqSubmit = async function() {
+  const url = document.getElementById('vqUrl').value.trim();
+  const user = document.getElementById('vqUser').value.trim() || 'anonymous';
+  const msg = document.getElementById('vqSubmitMsg');
+  const btn = document.getElementById('vqSubmitBtn');
+  msg.style.color = '#aaa'; msg.textContent = '';
+
+  const parsed = vqParseUrl(url);
+  if(!parsed){ msg.style.color='#fc5c7d'; msg.textContent='❌ Not a valid YouTube Shorts or TikTok URL.'; return; }
+
+  // Safety check
+  if(!vqIsSafe('', url)){ msg.style.color='#fc5c7d'; msg.textContent='❌ This URL was blocked by content filters.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Checking…';
+  const title = await vqFetchTitle(parsed);
+
+  if(!vqIsSafe(title, url)){ msg.style.color='#fc5c7d'; msg.textContent='❌ Video blocked by content filters.'; btn.disabled=false; btn.textContent='SUBMIT FOR REVIEW'; return; }
+
+  // Check duplicate
+  const q = vqLoad();
+  if(q.some(v => v.id === parsed.id)){ msg.style.color='#ffd700'; msg.textContent='⚠ This video is already in the queue.'; btn.disabled=false; btn.textContent='SUBMIT FOR REVIEW'; return; }
+
+  q.push({ id:parsed.id, platform:parsed.platform, url:parsed.url, title, submittedBy:user, submittedAt:Date.now(), status:'pending' });
+  vqSave(q);
+  msg.style.color='#4ade80'; msg.textContent='✓ Submitted! Mods will review it shortly.';
+  document.getElementById('vqUrl').value='';
+  document.getElementById('vqPreview').style.display='none';
+  btn.disabled=false; btn.textContent='SUBMIT FOR REVIEW';
+};
+
+// ── MOD PANEL ───────────────────────────────────────────────────────────────
+function _vqRenderMod(app) {
+  app.innerHTML = `
+    <div style="max-width:900px;margin:0 auto;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #222">
+        <div>
+          <div style="font-size:16px;font-weight:900;letter-spacing:1px">🎬 MOD QUEUE</div>
+          <div style="font-size:10px;color:#666;margin-top:2px">Review and manage video submissions</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span id="vqNowPlaying" style="font-size:10px;color:#7c5cfc;align-self:center"></span>
+          <button onclick="vqSkipCurrent()" style="background:#333;border:1px solid #444;color:#eee;font-family:var(--mono,monospace);font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer">⏭ Skip Current</button>
+          <button onclick="vqClearAll()" style="background:#300;border:1px solid #500;color:#fc5c7d;font-family:var(--mono,monospace);font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer">🗑 Clear All</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <button onclick="vqModTab('pending')" id="vqTabPending" style="background:#7c5cfc;border:none;color:#fff;font-family:var(--mono,monospace);font-size:11px;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer">PENDING</button>
+        <button onclick="vqModTab('approved')" id="vqTabApproved" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">APPROVED</button>
+        <button onclick="vqModTab('all')" id="vqTabAll" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">ALL</button>
+        <button onclick="vqModTab('setup')" id="vqTabSetup" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">⚙ SETUP</button>
+      </div>
+      <div id="vqList" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>`;
+
+  vqModTab('pending');
+  setInterval(vqModRefresh, 3000);
+
+  window.addEventListener('storage', vqModRefresh);
+}
+
+let _vqCurrentTab = 'pending';
+window.vqModTab = function(tab) {
+  _vqCurrentTab = tab;
+  ['pending','approved','all','setup'].forEach(t => {
+    const el = document.getElementById('vqTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el){ el.style.background = t===tab?'#7c5cfc':'#222'; el.style.color = t===tab?'#fff':'#aaa'; el.style.border = t===tab?'none':'1px solid #333'; }
+  });
+  if(tab === 'setup') { vqRenderSetupTab(); return; }
+  vqModRefresh();
+};
+function vqRenderSetupTab() {
+  const submitUrl = location.origin + location.pathname + '?submit';
+  const obsUrl    = location.origin + location.pathname + '?obs';
+  const list = document.getElementById('vqList');
+  if(!list) return;
+  list.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="background:#111;border:1px solid #7c5cfc55;border-radius:8px;padding:20px">
+        <div style="font-size:13px;font-weight:900;color:#a78bfa;margin-bottom:12px">🎬 OBS Browser Source</div>
+        <div style="font-size:11px;color:#aaa;line-height:1.8;margin-bottom:10px">Add this as a <b style="color:#fff">Browser Source</b> in OBS at your stream canvas size (e.g. 1920×1080). Videos will auto-play here when approved.</div>
+        <div style="background:#0a0a18;border:1px solid #333;border-radius:4px;padding:10px;font-size:11px;color:#60ddff;word-break:break-all;cursor:pointer" onclick="navigator.clipboard.writeText('${obsUrl}').then(()=>this.textContent='✓ Copied!').catch(()=>{})">${obsUrl} <span style="color:#555">— click to copy</span></div>
+      </div>
+      <div style="background:#111;border:1px solid #9146ff55;border-radius:8px;padding:20px">
+        <div style="font-size:13px;font-weight:900;color:#9146ff;margin-bottom:12px">🟣 Twitch Channel Point Reward Setup</div>
+        <div style="font-size:11px;color:#aaa;line-height:2;margin-bottom:14px">
+          <b style="color:#fff">Step 1</b> — Go to your <a href="https://dashboard.twitch.tv/u/shlbez/viewer-rewards/channel-points/rewards" target="_blank" style="color:#9146ff">Twitch Channel Points dashboard</a><br>
+          <b style="color:#fff">Step 2</b> — Click <b style="color:#fff">Add New Custom Reward</b><br>
+          <b style="color:#fff">Step 3</b> — Set the title to something like <b style="color:#ffd700">🎬 Play a Short/TikTok</b><br>
+          <b style="color:#fff">Step 4</b> — Enable <b style="color:#fff">"Require Viewer to Enter Text"</b> and set the prompt to:<br>
+        </div>
+        <div style="background:#0a0a18;border:1px solid #333;border-radius:4px;padding:10px;font-size:11px;color:#ffd700;margin-bottom:14px;cursor:pointer" onclick="navigator.clipboard.writeText('Paste a YouTube Shorts or TikTok link — it will be reviewed by mods before playing on stream!').then(()=>this.textContent='✓ Copied!').catch(()=>{})">Paste a YouTube Shorts or TikTok link — it will be reviewed by mods before playing on stream! <span style="color:#555">— click to copy</span></div>
+        <div style="font-size:11px;color:#aaa;line-height:2;margin-bottom:14px">
+          <b style="color:#fff">Step 5</b> — In <b style="color:#fff">Streamlabs / StreamElements</b> (or a chatbot), add a redemption event that posts the redeemed text as a message or to a webhook.<br>
+          <b style="color:#fff">Step 6 (easiest alt)</b> — Use the direct submit URL below — viewers can open it and paste their link, OR your chatbot can redirect redemptions there automatically:
+        </div>
+        <div style="background:#0a0a18;border:1px solid #333;border-radius:4px;padding:10px;font-size:11px;color:#60ddff;word-break:break-all;cursor:pointer" onclick="navigator.clipboard.writeText('${submitUrl}').then(()=>this.textContent='✓ Copied!').catch(()=>{})">${submitUrl} <span style="color:#555">— click to copy</span></div>
+      </div>
+      <div style="background:#111;border:1px solid #4ade8055;border-radius:8px;padding:20px">
+        <div style="font-size:13px;font-weight:900;color:#4ade80;margin-bottom:10px">✓ Mod Workflow</div>
+        <div style="font-size:11px;color:#aaa;line-height:2">
+          1. Viewer redeems channel point reward and pastes a link<br>
+          2. Link gets auto-filtered (NSFW keyword check)<br>
+          3. Mod sees it in <b style="color:#fff">PENDING</b> tab — preview thumbnail shows immediately<br>
+          4. Mod clicks <b style="color:#4ade80">Approve</b> → video joins the queue and plays in OBS<br>
+          5. <b style="color:#fff">Skip Current</b> moves to next approved video in queue
+        </div>
+      </div>
+    </div>`;
+}
+
+function vqModRefresh() {
+  const q = vqLoad();
+  const current = vqLoadCurrent();
+  const np = document.getElementById('vqNowPlaying');
+  if(np) np.textContent = current ? `▶ Now: ${current.title.slice(0,30)}…` : '';
+
+  const filtered = _vqCurrentTab === 'all' ? q : q.filter(v => v.status === _vqCurrentTab);
+  const list = document.getElementById('vqList');
+  if(!list) return;
+
+  if(!filtered.length){ list.innerHTML = `<div style="text-align:center;padding:40px;color:#444;font-size:12px">${_vqCurrentTab==='pending'?'No pending submissions':'Queue is empty'}</div>`; return; }
+
+  list.innerHTML = filtered.map((v,i) => {
+    const thumb = v.platform==='youtube' ? `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg` : '';
+    const age = Math.floor((Date.now()-v.submittedAt)/60000);
+    const ageStr = age < 1 ? 'just now' : age < 60 ? `${age}m ago` : `${Math.floor(age/60)}h ago`;
+    return `<div style="background:#111;border:1px solid ${v.status==='approved'?'#3a5':'#222'};border-radius:6px;padding:12px;display:flex;gap:12px;align-items:flex-start">
+      ${thumb?`<img src="${thumb}" style="width:120px;height:68px;object-fit:cover;border-radius:4px;flex-shrink:0" onerror="this.style.display='none'">` : '<div style="width:120px;height:68px;background:#0a0a18;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎵</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml?escHtml(v.title):v.title}</div>
+        <div style="font-size:10px;color:#666;margin-bottom:8px">by <span style="color:#9146ff">${v.submittedBy}</span> · ${ageStr} · <span style="color:${v.status==='approved'?'#4ade80':'#ffd700'}">${v.status}</span></div>
+        <div style="font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px">${v.url}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${v.status==='pending'?`<button onclick="vqApprove('${v.id}')" style="background:#1a3a1a;border:1px solid #3a5;color:#4ade80;font-family:var(--mono,monospace);font-size:10px;padding:5px 12px;border-radius:3px;cursor:pointer">✓ Approve</button>`:''}
+          <button onclick="vqPlayNow('${v.id}')" style="background:#1a1a3a;border:1px solid #7c5cfc;color:#a78bfa;font-family:var(--mono,monospace);font-size:10px;padding:5px 12px;border-radius:3px;cursor:pointer">▶ Play Now</button>
+          <button onclick="vqRemove('${v.id}')" style="background:#2a0a0a;border:1px solid #500;color:#fc5c7d;font-family:var(--mono,monospace);font-size:10px;padding:5px 12px;border-radius:3px;cursor:pointer">✕ Remove</button>
+          <a href="${v.url}" target="_blank" style="background:#1a1a1a;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:10px;padding:5px 12px;border-radius:3px;text-decoration:none">🔗 Open</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.vqApprove = function(id) {
+  const q = vqLoad();
+  const v = q.find(x=>x.id===id);
+  if(v){ v.status='approved'; vqSave(q); }
+  // Auto-play if nothing currently playing
+  if(!vqLoadCurrent()) vqPlayNext();
+  vqModRefresh();
+};
+window.vqRemove = function(id) {
+  vqSave(vqLoad().filter(x=>x.id!==id));
+  vqModRefresh();
+};
+window.vqPlayNow = function(id) {
+  const q = vqLoad();
+  const v = q.find(x=>x.id===id);
+  if(v){ v.status='approved'; vqSave(q); vqSaveCurrent(v); vqModRefresh(); }
+};
+window.vqSkipCurrent = function() {
+  vqSaveCurrent(null);
+  setTimeout(vqPlayNext, 500);
+  vqModRefresh();
+};
+window.vqClearAll = function() {
+  if(confirm('Clear entire queue?')){ vqSave([]); vqSaveCurrent(null); vqModRefresh(); }
+};
+function vqPlayNext() {
+  const q = vqLoad();
+  const next = q.find(v=>v.status==='approved');
+  if(next){ vqSaveCurrent(next); }
+}
+
+// ── OBS PAGE ────────────────────────────────────────────────────────────────
+function _vqRenderObs(app) {
+  app.style.background = 'transparent';
+  app.innerHTML = `<div id="vqObsWrap" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:transparent"></div>`;
+  vqObsRefresh();
+  window.addEventListener('storage', vqObsRefresh);
+  setInterval(vqObsRefresh, 2000);
+}
+
+let _vqObsCurrentId = null;
+function vqObsRefresh() {
+  const current = vqLoadCurrent();
+  const wrap = document.getElementById('vqObsWrap');
+  if(!wrap) return;
+  if(!current){
+    if(_vqObsCurrentId){ wrap.innerHTML = ''; _vqObsCurrentId = null; }
+    return;
+  }
+  if(current.id === _vqObsCurrentId) return;
+  _vqObsCurrentId = current.id;
+  if(current.platform === 'youtube'){
+    wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${current.id}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${current.id}" style="width:100vw;height:100vh;border:none" allow="autoplay;encrypted-media" allowfullscreen></iframe>`;
+  } else if(current.platform === 'tiktok'){
+    wrap.innerHTML = `<iframe src="https://www.tiktok.com/embed/v2/${current.id}" style="width:100vw;height:100vh;border:none" allow="autoplay" allowfullscreen></iframe>`;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
