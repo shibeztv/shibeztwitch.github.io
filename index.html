@@ -1391,12 +1391,12 @@
             <span id="spaceHeartsDisplay" style="font-size:16px;letter-spacing:1px">❤️❤️❤️</span><span id="spaceLives" style="display:none">3</span>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">MUSIC</span>
-              <input id="spaceMusicVol" type="range" min="0" max="100" value="12" oninput="setSpaceMusicVol(this.value)" style="width:108px;accent-color:#7c5cfc;cursor:pointer">
+              <input id="spaceMusicVol" type="range" min="0" max="100" value="20" oninput="setSpaceMusicVol(this.value)" style="width:108px;accent-color:#7c5cfc;cursor:pointer">
             </div>
             <button id="spaceSkipBtn" onclick="if(!_spaceInShop)_loadBgTrack(_nextBgTrack())" title="Skip to next song (disabled in shop)" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:15px;line-height:1;padding:3px 8px;border-radius:4px" onmouseover="if(!_spaceInShop)this.style.color='#fff'" onmouseout="this.style.color='#aaa'">⏭</button>
             <div style="display:flex;align-items:center;gap:5px;border-left:1px solid #1a1a3a;padding-left:10px">
               <span style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">SFX</span>
-              <input id="spaceSfxVol" type="range" min="0" max="100" value="18" style="width:100px;accent-color:#fc5c7d;cursor:pointer">
+              <input id="spaceSfxVol" type="range" min="0" max="100" value="20" style="width:100px;accent-color:#fc5c7d;cursor:pointer">
             </div>
             <button onclick="spaceShopToggle()" style="font-family:var(--mono);font-size:10px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:#ffd700;padding:3px 10px;border-radius:3px;cursor:pointer" title="Press E or Tab">🛒 SHOP [E]</button>
             <button id="spaceMuteBtn" onclick="toggleMuteAll()" title="Mute all sound" style="background:rgba(255,255,255,0.07);border:1px solid #2a2a4a;color:#aaa;cursor:pointer;font-size:16px;line-height:1;padding:3px 8px;border-radius:4px">🔊</button>
@@ -1715,6 +1715,31 @@
 
 </div>
 <script>
+// ── Shared Leaderboard Helpers (defined first — used by both games) ─────────
+const LB_FLAPPY_KEY = 'shibez_lb_flappy';
+const LB_SPACE_KEY  = 'shibez_lb_space';
+function lbLoad(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+function lbSave(key,arr){ localStorage.setItem(key,JSON.stringify(arr)); }
+function lbSubmit(key,name,score,extra){
+  const entries=lbLoad(key);
+  entries.push({name:(name||'Anonymous').slice(0,20).trim()||'Anonymous',score,extra:extra||'',date:Date.now()});
+  entries.sort((a,b)=>b.score-a.score);
+  lbSave(key,entries.slice(0,100));
+}
+function lbRenderRows(key,highlightScore,limit){
+  const entries=lbLoad(key);
+  if(!entries.length) return '<div style="color:#555;font-size:11px;padding:8px 4px;text-align:center">No scores yet!</div>';
+  return entries.slice(0,limit||10).map((e,i)=>{
+    const isHL=highlightScore!==undefined&&e.score===highlightScore;
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`<span style="color:#666">${i+1}.</span>`;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:3px;background:${isHL?'rgba(124,92,252,0.22)':'transparent'};font-family:var(--mono,monospace);font-size:11px">
+      <span style="width:22px;text-align:center;flex-shrink:0">${medal}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isHL?'#a78bfa':'#ccc'}">${e.name}</span>
+      <span style="color:${isHL?'#ffd700':'#fff'};font-weight:700;flex-shrink:0">${e.score}</span>
+      ${e.extra?`<span style="color:#666;font-size:9px;flex-shrink:0;margin-left:2px">${e.extra}</span>`:''}
+    </div>`;
+  }).join('');
+}
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const DEFAULTS = {
   ytChannel: 'ShibezVods',
@@ -3937,9 +3962,10 @@ function startFlappy() {
   const PIPE_SPEED_BASE = _fMobile ? 2.2 : 1.6;
   const PIPE_W = 52;
   const PIPE_GAP = 245;
-  const PIPE_SPEED = PIPE_SPEED_BASE;
   const EMOTE_SIZE = 52;
   const BIRD_SIZE = 48;
+  // Speed ramps after score 10, caps at 2.4× base
+  function getPipeSpeed(){ return Math.min(PIPE_SPEED_BASE*2.4, PIPE_SPEED_BASE + Math.max(0,score-10)*0.035); }
 
   let bird = { x: 80, y: H/2, vy: 0, rot: 0 };
   let pipes = [];
@@ -3971,7 +3997,7 @@ function startFlappy() {
 
     if (state === 'playing') {
       // Scroll all ground emotes left
-      _gEmotes.forEach(g => { g.x -= PIPE_SPEED; });
+      _gEmotes.forEach(g => { g.x -= getPipeSpeed(); });
       // Remove ones that scrolled off screen
       _gEmotes = _gEmotes.filter(g => g.x > -g.size - 10);
 
@@ -4141,7 +4167,10 @@ function startFlappy() {
       bird.vy = FLAP;
       try { if(!_flappyMuted){_flapSfx.currentTime = 0; _flapSfx.play().catch(()=>{});} } catch(e) {}
     }
-    if (state === 'dead') { resetGame(); }
+    if (state === 'dead') {
+      // Only restart on click if leaderboard overlay is not visible
+      if (!document.getElementById('flappyLbOverlay')) { resetGame(); }
+    }
   }
 
   function resetGame() {
@@ -4156,6 +4185,50 @@ function startFlappy() {
     if (document.getElementById('flappyGroundEmotes')) document.getElementById('flappyGroundEmotes').remove();
     state = 'waiting';
     document.getElementById('flappyScore').textContent = '0';
+    canvas._lbShown = false;
+    document.getElementById('flappyLbOverlay')?.remove();
+  }
+
+  function _showFlappyLb(finalScore) {
+    const modal = document.getElementById('flappyModal');
+    if(!modal) return;
+    document.getElementById('flappyLbOverlay')?.remove();
+    const div = document.createElement('div');
+    div.id = 'flappyLbOverlay';
+    // Full-screen backdrop — clicking it dismisses overlay and lets you play again
+    div.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;pointer-events:auto;z-index:20;cursor:pointer';
+    div.onclick = function(e){ if(e.target===div){ div.remove(); resetGame(); } };
+    div.innerHTML = `
+      <div onclick="event.stopPropagation()" style="background:rgba(8,8,20,0.97);border:1px solid #2a2a4a;border-radius:10px;padding:16px;width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;cursor:default">
+        <div style="font-family:var(--mono,monospace);font-size:13px;font-weight:900;color:#fff;text-align:center;letter-spacing:1px">🏆 LEADERBOARD</div>
+        <div style="font-family:var(--mono,monospace);font-size:10px;color:#666;text-align:center">Score: <span style="color:#ffd700;font-weight:700">${finalScore}</span> · Submit optional · Click outside to play again</div>
+        <div style="display:flex;gap:6px">
+          <input id="flappyLbName" placeholder="Your name (optional)" maxlength="20"
+            style="flex:1;background:#0a0a18;border:1px solid #333;color:#eee;font-family:var(--mono,monospace);font-size:12px;padding:6px 10px;border-radius:4px;outline:none;min-width:0"
+            value="${localStorage.getItem('shibez_lb_name')||''}" />
+          <button id="flappyLbSubmitBtn" onclick="(()=>{
+            const n=document.getElementById('flappyLbName').value.trim()||'Anonymous';
+            localStorage.setItem('shibez_lb_name',n);
+            lbSubmit(LB_FLAPPY_KEY,n,${finalScore},'');
+            document.getElementById('flappyLbRows').innerHTML=lbRenderRows(LB_FLAPPY_KEY,${finalScore});
+            const btn=document.getElementById('flappyLbSubmitBtn');
+            if(btn){btn.textContent='✓';btn.disabled=true;btn.style.background='#1a3a1a';}
+          })()"
+            style="background:#7c5cfc;border:none;color:#fff;font-family:var(--mono,monospace);font-size:11px;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;white-space:nowrap">
+            Submit
+          </button>
+        </div>
+        <div id="flappyLbRows" style="display:flex;flex-direction:column;gap:1px;max-height:160px;overflow-y:auto">
+          ${lbRenderRows(LB_FLAPPY_KEY, finalScore)}
+        </div>
+        <button onclick="document.getElementById('flappyLbOverlay')?.remove(); resetGame();"
+          style="background:rgba(255,255,255,0.06);border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:5px;border-radius:4px;cursor:pointer">
+          ▶ Play Again
+        </button>
+      </div>`;
+    const canvasParent = canvas.parentElement;
+    canvasParent.style.position = 'relative';
+    canvasParent.appendChild(div);
   }
 
   function drawOverlay() {
@@ -4176,31 +4249,17 @@ function startFlappy() {
       }
     }
     if (state === 'dead') {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
-      ctx.font = 'bold 26px monospace';
-      ctx.fillStyle = '#fc5c7d';
-      ctx.fillText('GAME OVER', W/2, H/2 - 40);
-      ctx.font = 'bold 20px monospace';
-      ctx.fillStyle = '#fff';
-      ctx.fillText('Score: ' + score, W/2, H/2);
-      if (score >= best) {
-        ctx.font = '13px monospace';
-        ctx.fillStyle = '#4ade80';
-        ctx.fillText('🏆 NEW BEST!', W/2, H/2 + 26);
-      } else {
-        ctx.font = '13px monospace';
-        ctx.fillStyle = '#bbb';
-        ctx.fillText('Best: ' + best, W/2, H/2 + 26);
-      }
-      ctx.font = '12px monospace';
-      ctx.fillStyle = '#bbb';
-      ctx.fillText('Click to play again', W/2, H/2 + 52);
-      // Song credit
-      ctx.font = '10px monospace';
-      ctx.fillStyle = '#bbb';
-      ctx.fillText(FLAPPY_MUSIC_TITLE, W/2, H - 18);
+      ctx.font = 'bold 24px monospace'; ctx.fillStyle = '#fc5c7d';
+      ctx.fillText('GAME OVER', W/2, 52);
+      ctx.font = 'bold 18px monospace'; ctx.fillStyle = '#fff';
+      ctx.fillText('Score: ' + score + (score>=best?' 🏆':''), W/2, 80);
+      ctx.font = '11px monospace'; ctx.fillStyle = '#777';
+      ctx.fillText('Click anywhere to play again', W/2, H - 16);
+      ctx.textAlign = 'left';
+      if(!canvas._lbShown){ canvas._lbShown=true; _showFlappyLb(score); }
     }
     // Always show song title — same color as "Click / Space / Tap to flap"
     ctx.save();
@@ -4251,7 +4310,7 @@ function startFlappy() {
 
     if (state === 'playing') {
       frameCount++;
-      groundX = (groundX + PIPE_SPEED) % W;
+      groundX = (groundX + getPipeSpeed()) % W;
 
       // Spawn pipes
       if (frameCount % 210 === 0 || (frameCount === 1)) spawnPipe();
@@ -4263,7 +4322,7 @@ function startFlappy() {
 
       // Update pipes
       for (const p of pipes) {
-        p.x -= PIPE_SPEED;
+        p.x -= getPipeSpeed();
         if (!p.scored && p.x + PIPE_W < bird.x) {
           p.scored = true;
           score++;
@@ -4326,6 +4385,7 @@ function closeFlappy() {
   const c = document.getElementById('flappyCanvas');
   if (c && c._flappyCleanup) { c._flappyCleanup(); c._flappyCleanup = null; }
   document.getElementById('flappyGroundEmotes')?.remove();
+  document.getElementById('flappyLbOverlay')?.remove();
   document.getElementById('flappyModal').style.display = 'none';
   try { _flappyMusicPlayer?.pauseVideo(); } catch(e) {}
 }
@@ -4382,7 +4442,8 @@ function setSpaceMusicVol(v) {
   const btn = document.getElementById('spaceMuteBtn');
   if (btn) { btn.textContent = '🔊'; btn.style.color = '#aaa'; }
   const active = _getActiveMusic();
-  if (active && active.setVolume) { active.unMute(); active.setVolume(parseInt(v)); }
+  // Apply 25% reduction to all in-game music
+  if (active && active.setVolume) { active.unMute(); active.setVolume(Math.floor(parseInt(v)*0.75)); }
 }
 
 // ── Background music playlist (random order, equal weight)
@@ -4404,22 +4465,6 @@ const _BG_TRACKS = [
   { id:'UasTjym-GGs', title:'Karabast - ♂ Gachi Tower ♂' },
   { id:'B7gGacb8cO4', title:"Pizza Tower - It's Pizza Time!" },
   { id:'R0hfS1Qhhkw', title:'Cult of the Lamb - Start a Cult' },
-  // New tracks
-  { id:'icw9_XehNWo', title:'DJ FGT - ♂ The Time Wizard Returns ♂' },
-  { id:'21_YJ2uZBL0', title:'gachiGASM - ♂ Stereo Love ♂' },
-  { id:'wv3eBkIyGEs', title:'NymN - ♂ Gachi Doctor ♂' },
-  { id:'M0sflDPa9zY', title:'The Witcher 3 - Drink Up, There\'s More!' },
-  { id:'prvAdHXUvbs', title:'The Witcher 3 - Hunt or Be Hunted' },
-  { id:'jRG0gyVFP60', title:'The Witcher 3 - Silver for Monsters' },
-  { id:'8LOR9JXK1Og', title:'Bloodborne - Cleric Beast' },
-  { id:'NjzF3XWrDdA', title:'Bloodborne - Ludwig, The Holy Blade Phase 2' },
-  { id:'EnDXGQmCz3U', title:'Mittsies - Vitality' },
-  { id:'SeAAi7jWOl8', title:'The Toxic Avenger - My Only Chance' },
-  { id:'U-3kJcBfQ9w', title:'DOOM - Rip & Tear' },
-  { id:'LvwtuRUM5oU', title:'Payday 2 - Alesso: Payday' },
-  { id:'EGXPAoyP_cg', title:'Chris Christodoulou - The Rain Formerly Known as Purple' },
-  { id:'SqFaCDvHxU4', title:'Hades - Out of Tartarus' },
-  { id:'s5sTI_zBg40', title:'TES V Skyrim - From Past to Present' },
 ];
 let _bgTrackIdx = Math.floor(Math.random() * _BG_TRACKS.length);
 let _songTitleTimer = 0;
@@ -4438,7 +4483,7 @@ function _loadBgTrack(track) {
   if (!_spaceMusicPlayer) return;
   try {
     _spaceMusicPlayer.loadVideoById(track.id);
-    const vol = parseInt(document.getElementById('spaceMusicVol')?.value||12);
+    const vol = Math.floor(parseInt(document.getElementById('spaceMusicVol')?.value||20)*0.75);
     _spaceMusicPlayer.setVolume(vol);
     if (_spaceMusicMuted || _spaceAllMuted) _spaceMusicPlayer.mute();
     else _spaceMusicPlayer.unMute();
@@ -4449,7 +4494,7 @@ function _loadBgTrack(track) {
 }
 
 function initSpaceMusic() {
-  const vol = parseInt(document.getElementById('spaceMusicVol')?.value||12);
+  const vol = Math.floor(parseInt(document.getElementById('spaceMusicVol')?.value||20)*0.75);
   _bgTrackIdx = Math.floor(Math.random() * _BG_TRACKS.length); // random on each game open
   const startTrack = _BG_TRACKS[_bgTrackIdx];
   // Main music
@@ -4515,14 +4560,14 @@ function initSpaceMusic() {
 
 function switchToShopMusic() {
   _spaceInShop = true;
-  const vol = Math.floor(parseInt(document.getElementById('spaceMusicVol')?.value||12) * 0.75);
+  const vol = Math.floor(parseInt(document.getElementById('spaceMusicVol')?.value||20) * 0.75);
   try { _spaceMusicPlayer?.pauseVideo(); } catch(e){}
   try { if(_spaceShopMusicPlayer?.setVolume) { if(!_spaceMusicMuted){_spaceShopMusicPlayer.unMute();_spaceShopMusicPlayer.setVolume(vol);} _spaceShopMusicPlayer.playVideo(); } } catch(e){}
 }
 
 function switchToMainMusic() {
   _spaceInShop = false;
-  const vol = parseInt(document.getElementById('spaceMusicVol')?.value||12);
+  const vol = Math.floor(parseInt(document.getElementById('spaceMusicVol')?.value||20) * 0.75);
   try { _spaceShopMusicPlayer?.pauseVideo(); } catch(e){}
   try { if(_spaceMusicPlayer?.setVolume) { if(!_spaceMusicMuted){_spaceMusicPlayer.unMute();_spaceMusicPlayer.setVolume(vol);} _spaceMusicPlayer.playVideo(); } } catch(e){}
 }
@@ -4616,6 +4661,62 @@ function _updateAutoShootBtn(){
   btn.style.color = on ? '#ffd700' : '#888';
   btn.textContent = on ? 'AUTO 🔫' : 'AUTO ○';
 }
+function _renderSpaceLbPanel(canvas) {
+  canvas._spaceLbEl = true;
+  const existing = document.getElementById('spaceLbPanel');
+  if(existing) return; // already rendered
+  const modal = document.getElementById('spaceModal');
+  if(!modal) return;
+  // Find the canvas wrapper to position relative to canvas
+  const wrap = canvas.parentElement;
+  if(!wrap) return;
+  wrap.style.position = 'relative';
+  const div = document.createElement('div');
+  div.id = 'spaceLbPanel';
+  div.style.cssText = 'position:absolute;left:8px;top:8px;width:200px;background:rgba(5,5,18,0.92);border:1px solid #2a2a4a;border-radius:8px;padding:10px;pointer-events:auto;z-index:15';
+  div.innerHTML = `
+    <div style="font-family:var(--mono,monospace);font-size:11px;font-weight:900;color:#a78bfa;margin-bottom:6px;letter-spacing:1px">🏆 TOP SCORES</div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      ${lbRenderRows(LB_SPACE_KEY, undefined, 8)}
+    </div>`;
+  wrap.appendChild(div);
+}
+
+function _showSpaceLbDeath(finalScore, finalFrames, canvas) {
+  const wrap = canvas.parentElement;
+  if(!wrap) return;
+  wrap.style.position = 'relative';
+  document.getElementById('spaceLbDeathOverlay')?.remove();
+  const finalSecs = Math.floor(finalFrames/60);
+  const timeStr = Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);
+  const div = document.createElement('div');
+  div.id = 'spaceLbDeathOverlay';
+  div.style.cssText = 'position:absolute;right:8px;bottom:36px;width:220px;background:rgba(5,5,18,0.95);border:1px solid #3a2a6a;border-radius:8px;padding:12px;pointer-events:auto;z-index:20';
+  div.innerHTML = `
+    <div style="font-family:var(--mono,monospace);font-size:11px;font-weight:900;color:#a78bfa;margin-bottom:8px;letter-spacing:1px">🏆 LEADERBOARD</div>
+    <div style="font-family:var(--mono,monospace);font-size:10px;color:#888;margin-bottom:8px">Your score: <span style="color:#ffd700;font-weight:700">${finalScore}</span> · ⏱ ${timeStr}</div>
+    <div style="display:flex;gap:5px;margin-bottom:8px">
+      <input id="spaceLbName" placeholder="Your name" maxlength="20"
+        style="flex:1;background:#0a0a18;border:1px solid #333;color:#eee;font-family:var(--mono,monospace);font-size:11px;padding:5px 8px;border-radius:4px;outline:none;min-width:0"
+        value="${localStorage.getItem('shibez_lb_name')||''}" />
+      <button id="spaceLbSubmitBtn" onclick="(()=>{
+        const n=document.getElementById('spaceLbName')?.value.trim()||'Anonymous';
+        localStorage.setItem('shibez_lb_name',n);
+        lbSubmit(LB_SPACE_KEY,n,${finalScore},'⏱${timeStr}');
+        document.getElementById('spaceLbDeathRows').innerHTML=lbRenderRows(LB_SPACE_KEY,${finalScore});
+        const btn=document.getElementById('spaceLbSubmitBtn');
+        if(btn){btn.textContent='✓';btn.disabled=true;btn.style.background='#1a3a1a';}
+      })()"
+        style="background:#7c5cfc;border:none;color:#fff;font-family:var(--mono,monospace);font-size:11px;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">
+        Submit
+      </button>
+    </div>
+    <div id="spaceLbDeathRows" style="display:flex;flex-direction:column;gap:1px;max-height:160px;overflow-y:auto">
+      ${lbRenderRows(LB_SPACE_KEY, finalScore)}
+    </div>`;
+  wrap.appendChild(div);
+}
+
 function closeSpace() {
   // Save current run state so it can be resumed on reopen
   if (window._spaceGetState && window._spaceGetState() !== 'dead') {
@@ -4636,6 +4737,8 @@ function closeSpace() {
   }
   _spaceRunning = false;
   if (_spaceRAF) { cancelAnimationFrame(_spaceRAF); _spaceRAF = null; }
+  document.getElementById('spaceLbPanel')?.remove();
+  document.getElementById('spaceLbDeathOverlay')?.remove();
   const shop = document.getElementById('spaceShop');
   if (shop) shop.style.display = 'none';
   _spaceInShop = false;
@@ -5855,6 +5958,10 @@ function startSpace() {
     updateHeartsDisplay(lives,silverLives,getMaxHp());
     document.getElementById('spaceShop').style.display='none';
     document.getElementById('spacePowerup').innerHTML='';
+    canvas._spaceLbDeathShown = false;
+    canvas._spaceLbEl = false;
+    document.getElementById('spaceLbDeathOverlay')?.remove();
+    document.getElementById('spaceLbPanel')?.remove();
   }
 
   // ── Draw realistic planet
@@ -6812,10 +6919,10 @@ function startSpace() {
             } else {
               lives--;spawnParticles(ship.x,ship.y,'#ff4444',15);sfxPlayerHit();
             }
-            invincible=90;
+            invincible=180; // 3 seconds of iframes (doubled)
             updateHeartsDisplay(lives,silverLives,getMaxHp());
             if(lives<=0){state='dead';_deathFrame=frame;stopAllSpaceMusic();playDeathSfx();}
-            return false;
+            return true; // enemy stays alive after bumping player
           }
           return true;
         });
@@ -7645,6 +7752,11 @@ function startSpace() {
       ctx.fillStyle='#60ddff';ctx.fillText('Enemies come from all directions!',W/2,H/2+42);
       ctx.fillStyle='#aaa';ctx.fillText('Press Space or tap to start',W/2,H/2+66);
       ctx.textAlign='left';
+      // Leaderboard panel — left side
+      if(!canvas._spaceLbEl) _renderSpaceLbPanel(canvas);
+    } else {
+      const el=document.getElementById('spaceLbPanel');
+      if(el) el.remove(); canvas._spaceLbEl=false;
     }
     if(state==='dead'){
       // Fade in dark overlay
@@ -7688,6 +7800,11 @@ function startSpace() {
           const earnedCoins=Math.floor(score/10);const keptCoins=Math.floor(coins/2)+earnedCoins;const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+keptCoins+' coins next run  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
           const best2=parseInt(localStorage.getItem('spaceBest')||'0');
           if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
+          // Leaderboard submit hint
+          ctx.globalAlpha=sf*0.7;
+          ctx.font=`${Math.floor(W*0.016)}px monospace`;ctx.fillStyle='#a78bfa';
+          ctx.fillText('📋 Leaderboard  →  bottom right',W/2,H/2+W*0.16);
+          if(!canvas._spaceLbDeathShown){ canvas._spaceLbDeathShown=true; _showSpaceLbDeath(score,survivalFrames,canvas); }
         }
         ctx.globalAlpha=1;ctx.textAlign='left';
       }
