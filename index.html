@@ -8104,7 +8104,7 @@ function startSpace() {
       _emoteLayer.style.opacity = (state==='playing' && !_shopOpen) ? '1' : '0.15';
     }
     _spaceRAF=requestAnimationFrame(loop);
-  }
+  } // end loop()
 
   canvas._spaceCleanup=()=>{
     document.removeEventListener('keydown',onKey);
@@ -8117,10 +8117,10 @@ function startSpace() {
   };
   _spaceRunning=true;
   loop();
-}
-
-
 } // end startSpace
+
+
+} // closes startSpace
 
 // Pause music when browser tab is hidden
 document.addEventListener('visibilitychange', () => {
