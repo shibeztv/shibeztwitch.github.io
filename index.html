@@ -4329,7 +4329,7 @@ function startFlappy() {
       // Spawn interval shrinks as speed increases — keeps pipe gap consistent
       // Spawn interval shrinks as speed increases — keeps physical gap between pipes constant
       _pipeSpawnTimer++;
-      const _pipeInterval = Math.round(210 * (PIPE_SPEED_BASE / getPipeSpeed()));
+      const _pipeInterval = Math.round(245 * (PIPE_SPEED_BASE / getPipeSpeed()));
       if (_pipeSpawnTimer >= _pipeInterval || frameCount === 1) {
         spawnPipe();
         _pipeSpawnTimer = 0;
@@ -4873,6 +4873,11 @@ function toggleSpacePause() {
 function startSpace() {
   const canvas = document.getElementById('spaceCanvas');
   const ctx = canvas.getContext('2d');
+  // If canvas has no size yet (e.g. called before layout), abort and retry
+  if(!canvas.width || !canvas.height) {
+    setTimeout(startSpace, 50);
+    return;
+  }
   const W = canvas.width, H = canvas.height;
   // ── Open world camera (Vampire Survivors style)
   // Width = W*3.75 (prev 2.5 * 1.5 more), Height = 80% of width
@@ -7177,7 +7182,6 @@ function startSpace() {
 
     // ── DRAW ──
     ctx.fillStyle='#02020e';ctx.fillRect(0,0,W,H);
-
     // Stars — screen space with subtle parallax
     stars.forEach(s=>{
       const px=(s.x - cam.x*0.12 + W*20)%W;
