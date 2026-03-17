@@ -3976,6 +3976,7 @@ function startFlappy() {
   let state = 'waiting'; // waiting | playing | dead
   let frameCount = 0;
   let pipeEmoteIdx = 0;
+  let _pipeSpawnTimer = 0; // counts up; spawns pipe when it hits the interval
   let groundX = 0;
 
   // Ground tiles (simple gradient rect)
@@ -4181,6 +4182,7 @@ function startFlappy() {
     pipes = [];
     score = 0;
     frameCount = 0;
+    _pipeSpawnTimer = 0;
     pipeEmoteIdx = Math.floor(Math.random() * emoteImgs.length);
     _lastGapY = -1;
     _gEmotes = []; _gEmoteSpawnX = W + 40;
@@ -4325,8 +4327,13 @@ function startFlappy() {
 
       // Spawn pipes
       // Spawn interval shrinks as speed increases — keeps pipe gap consistent
-      const _pipeInterval = Math.floor(210 * (PIPE_SPEED_BASE / getPipeSpeed()));
-      if (frameCount % _pipeInterval === 0 || (frameCount === 1)) spawnPipe();
+      // Spawn interval shrinks as speed increases — keeps physical gap between pipes constant
+      _pipeSpawnTimer++;
+      const _pipeInterval = Math.round(210 * (PIPE_SPEED_BASE / getPipeSpeed()));
+      if (_pipeSpawnTimer >= _pipeInterval || frameCount === 1) {
+        spawnPipe();
+        _pipeSpawnTimer = 0;
+      }
 
       // Update bird
       bird.vy += GRAVITY;
