@@ -5397,6 +5397,7 @@ function startSpace() {
   };
   document.addEventListener('keydown',onKey);
   document.addEventListener('keyup',onKey);
+  console.log('SpaceBez checkpoint D: event listeners added');
 
   // Mouse aim + click to shoot
   let mouseX=W/2, mouseY=H/2;
@@ -5548,6 +5549,7 @@ function startSpace() {
   const _slotCooldowns=[0,0,0,0];
 
   function fireBulletDir(weaponOverride, slotIdx) {
+    if(typeof window._spaceCpD==='undefined'){window._spaceCpD=true;console.log('SpaceBez checkpoint D: fireBulletDir defined');}
     const slot = slotIdx||0;
     if(_slotCooldowns[slot]>0) return;
     const rapidMod=_hasPowerup('rapid')?(_hasPowerup('double')||_hasPowerup('triple')?0.35:0.4):1;
@@ -6152,6 +6154,7 @@ function startSpace() {
 
   // ── Draw UFO ship (emote sits IN cockpit dome — emote visible above hull)
   function drawUFO(x, y, emoteImg, angle, alpha=1) {
+    if(typeof window._spaceCpE==='undefined'){window._spaceCpE=true;console.log('SpaceBez checkpoint E: drawUFO defined');}
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(x, y);
@@ -6295,6 +6298,7 @@ function startSpace() {
     });
   } // end positionEmoteOverlays
 
+  console.log('SpaceBez checkpoint E: about to define loop()');
   function loop() {
     if(!_spaceRunning) return;
     if(frame<=2) console.log('SpaceBez loop() frame', frame, '- state:', state, 'W:', W, 'H:', H);
