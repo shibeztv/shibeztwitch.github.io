@@ -6867,7 +6867,11 @@ function startSpace() {
                 if(_rNearest){
                   const rax=_rNearest.x-e.x, ray=_rNearest.y-e.y, ral=Math.sqrt(rax*rax+ray*ray)||1;
                   const spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy)||5;
-                  bullets.push({...b, x:e.x, y:e.y, vx:rax/ral*spd, vy:ray/ral*spd, _ricocheted:true});
+                  // Don't spread _hitEnemies Set — bounced bullet needs a fresh one
+                  const _rb = Object.assign({}, b);
+                  _rb.x=e.x; _rb.y=e.y; _rb.vx=rax/ral*spd; _rb.vy=ray/ral*spd;
+                  _rb._ricocheted=true; _rb._hitEnemies=new Set([e]); // only block current enemy
+                  bullets.push(_rb);
                 }
               }
             }
@@ -8137,6 +8141,8 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+} // closes startSpace()
 
 </script>
 <!-- VIDEO QUEUE SYSTEM ─────────────────────────────────────────────────── -->
