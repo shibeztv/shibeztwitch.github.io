@@ -8095,6 +8095,7 @@ function startSpace() {
     _spaceRAF=requestAnimationFrame(loop);
     } catch(err) {
       console.error('SpaceBez loop error:', err);
+      try { ctx.restore(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; } catch(e2){}
       _spaceRAF=requestAnimationFrame(loop); // always keep loop alive
     }
   }
