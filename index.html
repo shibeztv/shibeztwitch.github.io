@@ -5536,6 +5536,7 @@ function startSpace() {
     canvas.addEventListener('touchstart',onTouch,{passive:false});
     canvas.addEventListener('touchmove',onTouch,{passive:false});
   }
+  console.log('SpaceBez checkpoint D2: touch listeners set');
 
   // Bullets fire toward cursor (or forward if keys)
   let _dualToggle=0;
@@ -8124,6 +8125,7 @@ function startSpace() {
     canvas.removeEventListener('touchstart',onTouch);
     canvas.removeEventListener('touchmove',onTouch);
   };
+  console.log('SpaceBez checkpoint C2: cleanup set, about to call loop');
   console.log('SpaceBez checkpoint C: about to start loop');
   _spaceRunning=true;
   loop();
