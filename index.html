@@ -5047,8 +5047,8 @@ function startSpace() {
     {key:'friends',      label:'👽 Friends',        desc:'Orbital follower that auto-shoots nearest enemy.',               color:'#f0abfc', cost:30,  maxLvl:12, costPerLvl:l=>Math.floor(30+l*22)},
     {key:'garlic',       label:'🧄 Garlic',         desc:'Damages enemies around you. *stinks*',                          color:'#e8d5a3', cost:50,  tier2:{key:'tier2_garlic',     label:'🧄+ Super Garlic',      desc:'+7% range, +25% dmg, slows nearby enemies by 7%!',        cost:80}},
     {key:'lightning',    label:'⚡ Lightning Bolt!', desc:'3 bolts that chains into another enemy!',                       color:'#7df9ff', cost:65,  tier2:{key:'tier2_lightning',   label:'⚡🔴 Storm Bolt',       desc:'5 evil bolts, +38% dmg, chains to 2 enemies now!',        cost:90}},
-    {key:'milkGun',      label:'🥛 Milk Gun',       desc:'3 sad milk projectiles, slows hit enemies by 8%.',              color:'#f0f4ff', cost:45,  tier2:{key:'tier2_milkGun',     label:'🥛 Sad Milk',           desc:'Bigger balls, increased slow, first hit stuns enemy for 0.7s!', cost:70}},
-    {key:'narcissism',   label:'🤡 Narcissism',     desc:'140IQ aura that knocks back and damages enemies every 3s.',     color:'#aaaaaa', cost:50,  tier2:{key:'tier2_narcissism',  label:'🎩 I am never wrong.', desc:'+20% range, +30% dmg. Hit enemies gets debuffed, they take +20% dmg for 3s.', cost:80}},
+    {key:'milkGun',      label:'🥛 Milk Gun',       desc:'3 "sad" milk projectiles slows enemies movement by 8%.',        color:'#f0f4ff', cost:45,  tier2:{key:'tier2_milkGun',     label:'🥛 Sad Milk',           desc:'BIGGER BALLS! Increased slow, first hit on enemy stuns for 0.7s!', cost:70}},
+    {key:'narcissism',   label:'🤡 Narcissism',     desc:'Your 140IQ aura knocks back and damages the doubters every 3s.', color:'#aaaaaa', cost:50,  tier2:{key:'tier2_narcissism',  label:'🎩 I am never wrong.', desc:'Your god gamer skills grow! +20% range, +30% dmg. Hit enemies gets weaker.', cost:80}},
   ];
 
   window.renderShopGrid = function renderShopGrid() {
@@ -5738,46 +5738,35 @@ function startSpace() {
 
     } else if(wKey==='milkGun'){
       const isT2milk=!!upgrades.tier2_milkGun;
-      const milkCount=3; // always 3 balls
-      const milkSpd=5.5*0.85; // pistol speed -15%
-      const milkSpread=isT2milk?0.28:0.14; // T2 double spacing
-      const milkSz=isT2milk?sz*1.5:sz*0.9; // T2 bigger balls
-      const milkDmg=dmg*0.6; // lower dmg — the slow is the power
-      for(let mi=0;mi<milkCount;mi++){
-        const offset=(mi-(milkCount-1)/2)*milkSpread;
-        const a=baseAngle+offset;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*milkSpd,vy:Math.sin(a)*milkSpd,
+      // T1: 70% slower than pistol (5.5*0.30), T2: same base but 10% faster
+      const milkSpd=(5.5*0.30)*(isT2milk?1.10:1.0);
+      // T1: 20% bigger than sz*0.9 base = sz*1.08, T2: +60% on top = sz*1.72
+      const milkSz=isT2milk?sz*1.72:sz*1.08;
+      const milkDmg=dmg*0.6;
+      // Triangle formation: lead ball forward, two behind-left and behind-right
+      const spread=0.42; // angle spread for back two balls
+      const backOffset=milkSz*1.2; // offset back balls slightly behind
+      const positions=[
+        {da:0,   bx:0,          by:0},           // front ball
+        {da:-spread, bx:-Math.cos(baseAngle+Math.PI/2)*backOffset*0.6, by:-Math.sin(baseAngle+Math.PI/2)*backOffset*0.6}, // back-left
+        {da: spread, bx: Math.cos(baseAngle+Math.PI/2)*backOffset*0.6, by: Math.sin(baseAngle+Math.PI/2)*backOffset*0.6}, // back-right
+      ];
+      positions.forEach(({da,bx,by})=>{
+        const a=baseAngle+da;
+        bullets.push({x:ship.x+bx,y:ship.y+by,vx:Math.cos(a)*milkSpd,vy:Math.sin(a)*milkSpd,
           dmg:milkDmg,size:milkSz,color:'#f0f8ff',weaponType:'milkGun',
           pierce:upgrades.pierce||0,
           isMilk:true, milkT2:isT2milk,
           milkSlowPct:isT2milk?0.14:0.08,
-          milkStun:isT2milk, // T2: first hit stuns 0.7s (42 frames)
+          milkStun:isT2milk,
         });
-      }
-      setCd(Math.floor((isT2milk?100:160)*rapidMod*atkMod));
+      });
+      // T1: 15% slower fire than 160 base = ~184, T2: same as T1 but 7% faster = ~171
+      const milkCd=isT2milk?Math.floor(184*0.93):184;
+      setCd(Math.floor(milkCd*rapidMod*atkMod));
 
     } else if(wKey==='narcissism'){
-      const isT2narc=!!upgrades.tier2_narcissism;
-      // Shockwave ring expanding outward from player — visual wave like dropping a stone in water
-      const narcRadius=3*36*1.5*getRangeMult()*(isT2narc?1.20:1.0)*getBulletSize();
-      const narcDmg=(0.3*1.12)*0.80*getBulletDmg()/(60)*(isT2narc?1.30:1.0); // same as garlic base * T2 bonus
-      const narcBulletSpeed=(5.5*0.30)*(isT2narc?1.08:1.0); // 30% of pistol speed, T2 slightly faster
-      // Fire ring of bullets outward at narcRadius distance as a shockwave
-      const narcCount=16+Math.floor(upgrades.multishot*0.5);
-      for(let ni=0;ni<narcCount;ni++){
-        const na=(ni/narcCount)*Math.PI*2;
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(na)*narcBulletSpeed,vy:Math.sin(na)*narcBulletSpeed,
-          dmg:narcDmg*60, // per-hit (not per-frame like garlic)
-          size:getBulletSize()*8,color:'#aaa',weaponType:'narcissism',
-          pierce:0,
-          isNarc:true, narcT2:isT2narc,
-          maxDist:narcRadius, distTraveled:0,
-          life:999, maxLife:999, // managed by distTraveled check
-        });
-      }
-      spawnParticles(ship.x,ship.y,'#888',12);
-      setCd(Math.floor(180*rapidMod*atkMod)); // ~3s
-      // Garlic is passive — no pistol shot
+      // Narcissism is now a passive aura like garlic — no bullets fired
       return;
     } else {
       // Pistol — auto-aim; multishot upgrade adds bullets; tier2 = 3 parallel shots
@@ -6057,6 +6046,7 @@ function startSpace() {
     if(_spaceEmotes.length>1){let n;do{n=Math.floor(Math.random()*_spaceEmotes.length);}while(n===_pilotIdx);_pilotIdx=n;}
     const ne=_spaceEmotes[_pilotIdx];shipImg.src=ne.url;shipImg.crossOrigin='anonymous';
     bullets=[];enemies=[];particles=[];drops=[];powerupDrops=[];_burstRings=[];
+    window._narcSymbols=null; window._narcClowns=null;
     // Reset abandoned ships
     abandonedShips.forEach((as,si)=>{ as.hp=as.maxHp; as.dead=false; as.deathFrame=-999; });
     score=0;lives=getMaxHp();frame=0;survivalFrames=0;
@@ -6460,7 +6450,45 @@ function startSpace() {
         }
       }
 
-      for(let _ci=0;_ci<4;_ci++){ if(_slotCooldowns[_ci]>0)_slotCooldowns[_ci]--; }
+      // Narcissism: passive aura — knockback + damage every 3s (180 frames)
+      if((activeWeapons.includes('narcissism')||activeWeapon==='narcissism') && unlockedWeapons.has('narcissism')){
+        const _nT2=!!upgrades.tier2_narcissism;
+        const _nRadius = 3*36*1.5*getRangeMult()*getBulletSize()*(_nT2?1.20:1.0);
+        const _nDmg = 0.3*1.12*0.80*getBulletDmg()*(_nT2?1.30:1.0);
+        if(frame%180===0){ // every 3 seconds
+          enemies=enemies.map(e=>{
+            const dx=e.x-ship.x, dy=e.y-ship.y;
+            const dist=Math.sqrt(dx*dx+dy*dy);
+            if(dist<_nRadius+e.size*0.5){
+              e.hp-=_nDmg;
+              // Knockback
+              const kbForce=6;
+              if(dist>0){e.x+=dx/dist*kbForce;e.y+=dy/dist*kbForce;}
+              // T2 debuff: +20% dmg taken for 3s
+              if(_nT2) e._narcDebuff=(e._narcDebuff||0)+180;
+              spawnParticles(e.x,e.y,'#aaaaaa',5);
+              if(e.hp<=0){
+                score++;document.getElementById('spaceScore').textContent=score;
+                spawnParticles(e.x,e.y,'#ffd700',14);sfxExplode();
+                const r2=Math.random();let du=false;
+                if(r2<0.00865){spawnDrop(e.x,e.y,'heart');du=true;}
+                else if(r2<0.01443){spawnDrop(e.x,e.y,'silverheart');du=true;}
+                else if(r2<0.02593){spawnDrop(e.x,e.y,'freeze');du=true;}
+                else if(r2<0.02881){spawnDrop(e.x,e.y,'magnet');du=true;}
+                else if(r2<0.05881){spawnDrop(e.x,e.y,'gem');du=true;}
+                else if(r2<0.07031){const rp=['triple','rapid','shield','aura','multishot','ricochet','dash','overcharge'];spawnDrop(e.x,e.y,rp[Math.floor(Math.random()*rp.length)]);du=true;}
+                const bc=du?0:(Math.random()<0.05?3:Math.random()<0.20?2:1);
+                for(let ci=0;ci<bc;ci++)spawnDrop(e.x+(Math.random()-0.5)*20,e.y+(Math.random()-0.5)*20,'coin');
+                return null;
+              }
+            }
+            return e;
+          }).filter(Boolean);
+          sfxPowerup();
+        }
+        // Tick down narcissism debuffs
+        enemies.forEach(e=>{ if(e._narcDebuff>0) e._narcDebuff--; });
+      }
       shootCooldown=_slotCooldowns[0]; // keep legacy compat
       if(invincible>0) invincible--;
 
@@ -7886,16 +7914,71 @@ function startSpace() {
       if(invincible>0&&!isCheatInv) ctx.globalAlpha = Math.floor(frame/4)%2===0 ? 1 : 0;
       drawUFO(ship.x, ship.y, null, 0, 1);
       ctx.restore();
-      // Narcissism: draw gray wizard hat on top of ship
+      // Narcissism: passive aura circle with floating math equations
       if(activeWeapons.includes('narcissism')||activeWeapon==='narcissism'){
+        const _nT2v=!!upgrades.tier2_narcissism;
+        const _nRv = 3*36*1.5*getRangeMult()*getBulletSize()*(_nT2v?1.20:1.0);
+        const _nPulse=0.5+0.25*Math.sin(frame*0.025);
+        // Pulse brightens every 3s
+        const _nBurst=((frame%180)<12)?(1-(frame%180)/12):0;
         ctx.save();
-        const _hx=ship.x, _hy=ship.y-28;
-        ctx.fillStyle='#888'; ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
-        // Brim
-        ctx.beginPath(); ctx.ellipse(_hx,_hy+10,16,5,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        // Cone
-        ctx.beginPath(); ctx.moveTo(_hx-11,_hy+10); ctx.lineTo(_hx,_hy-18); ctx.lineTo(_hx+11,_hy+10); ctx.closePath();
-        ctx.fillStyle='#777'; ctx.fill(); ctx.stroke();
+        // Filled circle
+        ctx.globalAlpha=0.10+_nPulse*0.05+_nBurst*0.15;
+        ctx.fillStyle=_nT2v?'rgba(160,60,220,0.25)':'rgba(150,150,150,0.18)';
+        ctx.beginPath();ctx.arc(ship.x,ship.y,_nRv,0,Math.PI*2);ctx.fill();
+        // Wavy outline
+        ctx.globalAlpha=0.5+_nPulse*0.3+_nBurst*0.4;
+        ctx.strokeStyle=_nT2v?'rgba(200,100,255,0.8)':'rgba(180,180,180,0.7)';
+        ctx.lineWidth=2;
+        const _nSegs=48, _nWaveAmp=2.5+_nBurst*6;
+        ctx.beginPath();
+        for(let _ni=0;_ni<=_nSegs;_ni++){
+          const _na=(_ni/_nSegs)*Math.PI*2;
+          const _nw=_nRv+_nWaveAmp*Math.sin(_na*5+frame*0.04);
+          const _nx=ship.x+Math.cos(_na)*_nw;
+          const _ny=ship.y+Math.sin(_na)*_nw;
+          _ni===0?ctx.moveTo(_nx,_ny):ctx.lineTo(_nx,_ny);
+        }
+        ctx.closePath();ctx.stroke();
+        // Floating math symbols inside the aura
+        if(!window._narcSymbols){
+          const _syms=['∑','π','∞','√','∫','≠','≈','Δ','α','β','42','IQ','3.14','e²','x²','±'];
+          window._narcSymbols=Array.from({length:10},(_,i)=>({
+            sym:_syms[Math.floor(Math.random()*_syms.length)],
+            angle:Math.random()*Math.PI*2,
+            r:(_nRv*0.3)+Math.random()*(_nRv*0.55),
+            speed:(Math.random()-0.5)*0.012,
+            opacity:0.3+Math.random()*0.5,
+          }));
+        }
+        ctx.font=`bold ${Math.floor(11+_nBurst*4)}px monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        window._narcSymbols.forEach(s=>{
+          s.angle+=s.speed;
+          const sx=ship.x+Math.cos(s.angle)*s.r;
+          const sy=ship.y+Math.sin(s.angle)*s.r;
+          ctx.globalAlpha=(s.opacity*0.7+_nPulse*0.2)*(1+_nBurst);
+          ctx.fillStyle=_nT2v?'#d8a0ff':'#cccccc';
+          ctx.fillText(s.sym,sx,sy);
+        });
+        // T2: clown emojis too
+        if(_nT2v){
+          if(!window._narcClowns){
+            window._narcClowns=Array.from({length:5},(_,i)=>({
+              angle:(i/5)*Math.PI*2+Math.random(),
+              r:_nRv*0.5+Math.random()*_nRv*0.35,
+              speed:(Math.random()-0.5)*0.018,
+            }));
+          }
+          ctx.font=`${Math.floor(14+_nBurst*5)}px serif`;
+          window._narcClowns.forEach(c=>{
+            c.angle+=c.speed;
+            const cx=ship.x+Math.cos(c.angle)*c.r;
+            const cy=ship.y+Math.sin(c.angle)*c.r;
+            ctx.globalAlpha=0.7+_nPulse*0.2+_nBurst*0.3;
+            ctx.fillText('🤡',cx,cy);
+          });
+        }
         ctx.restore();
       }
 
