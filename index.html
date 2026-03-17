@@ -4648,7 +4648,9 @@ function resumeSpaceMusic() { _spaceInShop=false; try { if(!_spaceMusicMuted) _s
 
 async function openSpacebez() {
   document.getElementById('spaceModal').style.display = 'flex';
-  if(!window._spaceSavedRun) updateHeartsDisplay(5,0,5); // show starting HP only for new runs
+  // Clear any stale saved run from a previous session (page reload = fresh start)
+  if(!window._spaceHasOpened) { window._spaceSavedRun = null; window._spaceHasOpened = true; }
+  if(!window._spaceSavedRun) updateHeartsDisplay(5,0,5);
   // Full-screen canvas
   const canvas = document.getElementById('spaceCanvas');
   const W = Math.floor(window.innerWidth  * 0.92);
@@ -6293,7 +6295,7 @@ function startSpace() {
 
   function loop() {
     if(!_spaceRunning) return;
-    if(frame===0) console.log('SpaceBez loop() frame 0 - state:', state, 'W:', W, 'H:', H);
+    if(frame<=2) console.log('SpaceBez loop() frame', frame, '- state:', state, 'W:', W, 'H:', H);
     frame++;
     window._spaceGameActive = (state==='playing' && !_spaceInShop);
   window._spaceAutoShootState = _autoShoot;
