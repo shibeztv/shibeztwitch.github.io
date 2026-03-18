@@ -1442,7 +1442,7 @@
 
     <!-- EMOTE GUESSER MODAL -->
     <div id="egModal" style="display:none;position:fixed;inset:0;z-index:9005;background:rgba(0,0,0,0.93);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:680px;max-height:calc(100vh - 40px)">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:800px;max-height:calc(100vh - 40px)">
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box;flex-shrink:0">
           <div style="display:flex;flex-direction:column;gap:2px">
@@ -1457,8 +1457,8 @@
         <!-- Game area -->
         <div style="width:100%;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:16px">
           <!-- Pixelated emote display -->
-          <div style="position:relative;width:280px;height:280px;border-radius:8px;overflow:hidden;background:#111;border:1px solid var(--border);flex-shrink:0">
-            <canvas id="egCanvas" width="280" height="280" style="display:block;width:280px;height:280px;image-rendering:pixelated"></canvas>
+          <div style="position:relative;width:360px;height:360px;border-radius:8px;overflow:hidden;background:#111;border:1px solid var(--border);flex-shrink:0">
+            <canvas id="egCanvas" width="360" height="360" style="display:block;width:360px;height:360px;image-rendering:pixelated"></canvas>
           </div>
           <!-- Guess history -->
           <div id="egGuessHistory" style="width:100%;display:flex;flex-direction:column;gap:4px;min-height:28px"></div>
@@ -1490,7 +1490,7 @@
 
     <!-- HIGHER OR LOWER MODAL -->
     <div id="holModal" style="display:none;position:fixed;inset:0;z-index:9004;background:rgba(0,0,0,0.93);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:700px;max-height:calc(100vh - 40px)">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:900px;max-height:calc(100vh - 40px)">
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box">
           <div style="display:flex;flex-direction:column;gap:2px">
@@ -4612,7 +4612,7 @@ function _egDrawPixelated(img, pixelSize) {
   const canvas = document.getElementById('egCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = 280, H = 280;
+  const W = 360, H = 360;
   ctx.clearRect(0, 0, W, H);
   if (pixelSize <= 1) {
     ctx.drawImage(img, 0, 0, W, H);
@@ -4637,7 +4637,7 @@ function _egRender() {
   img.onload = () => _egDrawPixelated(img, pixelSize);
   img.onerror = () => {
     const canvas = document.getElementById('egCanvas');
-    if (canvas) { const ctx = canvas.getContext('2d'); ctx.fillStyle = '#222'; ctx.fillRect(0,0,280,280); ctx.fillStyle='#555'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',140,145); }
+    if (canvas) { const ctx = canvas.getContext('2d'); ctx.fillStyle = '#222'; ctx.fillRect(0,0,360,360); ctx.fillStyle='#555'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',180,185); }
   };
   img.src = _egCurrentEmote.url;
   // Update attempts badge
@@ -4787,11 +4787,11 @@ async function openEmoteGuesser() {
   if (canvas) {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, 280, 280);
+    ctx.fillRect(0, 0, 360, 360);
     ctx.fillStyle = '#444';
     ctx.font = '13px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Loading…', 140, 145);
+    ctx.fillText('Loading…', 180, 185);
   }
   await _egLoadEmotes();
   document.getElementById('egResult').textContent = '';
@@ -4933,19 +4933,37 @@ function holGuessCard(side) {
   holGuess(pickedIsHigher ? 'higher' : 'lower');
 }
 
-function holGuess(dir) {
-  window._holAnimating = true;
+// Clicking a card means "I think THIS card has higher usage"
+function holGuessCard(side) {
   if (_holAnimating || _holEmotes.length < 2) return;
   const left = _holEmotes[_holLeftIdx];
   const right = _holEmotes[_holRightIdx];
   if (!left || !right) return;
+  // Correct if the card they clicked actually has more (or equal) usage
+  const correct = side === 'left'
+    ? left.channels >= right.channels
+    : right.channels >= left.channels;
+  _holHandleGuess(correct);
+}
 
-  _holAnimating = true;
+function holGuess(dir) {
+  if (_holAnimating || _holEmotes.length < 2) return;
+  const left = _holEmotes[_holLeftIdx];
+  const right = _holEmotes[_holRightIdx];
+  if (!left || !right) return;
   const isHigher = right.channels >= left.channels;
   const correct = (dir === 'higher' && isHigher) || (dir === 'lower' && !isHigher);
+  _holHandleGuess(correct);
+}
 
-  // Reveal the right card count
-  document.getElementById('holRightCount').textContent = right.channels.toLocaleString() + ' times typed';
+function _holHandleGuess(correct) {
+  _holAnimating = true;
+  window._holAnimating = true;
+  const left = _holEmotes[_holLeftIdx];
+  const right = _holEmotes[_holRightIdx];
+  // Reveal both counts
+  if (left) document.getElementById('holLeftCount').textContent = left.channels.toLocaleString() + ' times typed';
+  if (right) document.getElementById('holRightCount').textContent = right.channels.toLocaleString() + ' times typed';
 
   const resultEl = document.getElementById('holResult');
   const rightCard = document.getElementById('holRightCard');
