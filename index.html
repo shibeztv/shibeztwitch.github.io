@@ -5703,7 +5703,7 @@ function startSpace() {
   window._spaceUnlockedWeapons = unlockedWeapons;
   const UPGRADE_DEFS = [
     {key:'speed',       label:'👟 Movement Speed',  desc:'+12% movement speed per lvl',    maxLvl:10, cost:l=>Math.floor(3+l*l*1.2+l*2)},
-    {key:'atkSpeed',    label:'♨️ Attack Speed',     desc:'+8% attack speed per lvl',      maxLvl:20, cost:l=>Math.floor(2+l*l*0.9+l*2)},
+    {key:'atkSpeed',    label:'♨️ Attack Speed',     desc:'+2% attack speed per lvl, max 50% faster',      maxLvl:20, cost:l=>Math.floor(2+l*l*0.9+l*2)},
     {key:'multishot',   label:'➕ I Need More Boolets', desc:'+1 bullet per level',          maxLvl:20, cost:l=>Math.floor(4+l*l*1.5+l*3)},
     {key:'maxHp',       label:'❤️ Max HP',           desc:'+1 max HP',                     maxLvl:20, cost:l=>Math.floor(4+l*l*1.0+l*2)},
     {key:'hpRegen',     label:'💚 HP Regen',         desc:'+0.02 HP/s per lvl',            maxLvl:10, cost:l=>Math.floor(5+l*l*1.8+l*3)},
@@ -5911,7 +5911,7 @@ function startSpace() {
     return friendsMod;
   }
   // Universal attack speed multiplier — applies atkSpeed upgrade to ALL weapons
-  function getAtkSpeedMod() { return Math.max(0.25, 1 - upgrades.atkSpeed*0.04); } // -4% cd per level
+  function getAtkSpeedMod() { return Math.max(0.50, 1 - upgrades.atkSpeed*0.02); } // -2% cd per level, min 50%
   function getBulletCount() { return 1+upgrades.multishot+(_hasPowerup('triple')?2:0)+(_hasPowerup('double')?1:0)+(_hasPowerup('multishot')?4:0); }
   function getBulletDmg()   { return 1*(1+upgrades.damage*0.15)*(_hasPowerup('overcharge')?1.40:1.0); }
   function getBulletSize()  { return Math.min(2.2, 1.15+upgrades.bulletSize*0.16); }
@@ -6424,11 +6424,11 @@ function startSpace() {
       // T1: 70% slower than pistol (5.5*0.30), T2: same base but 10% faster
       const milkSpd=(5.5*0.30)*(isT2milk?1.10:1.0);
       // T1: 20% bigger than sz*0.9 base = sz*1.08, T2: +60% on top = sz*1.72
-      const milkSz=isT2milk?sz*1.72:sz*1.08;
+      const milkSz=isT2milk?sz*3.44:sz*1.08; // T2 doubled (was sz*1.72)
       const milkDmg=dmg*0.6;
       // Triangle formation: lead ball forward, two behind-left and behind-right
       const spread=0.42; // angle spread for back two balls
-      const backOffset=milkSz*1.2; // offset back balls slightly behind
+      const backOffset=milkSz*0.6; // half the previous distance between bullets
       const positions=[
         {da:0,   bx:0,          by:0},           // front ball
         {da:-spread, bx:-Math.cos(baseAngle+Math.PI/2)*backOffset*0.6, by:-Math.sin(baseAngle+Math.PI/2)*backOffset*0.6}, // back-left
@@ -8688,7 +8688,7 @@ function startSpace() {
         const _nPulse=0.5+0.25*Math.sin(frame*0.025);
         const _nBurst=((frame%150)<12)?(1-(frame%150)/12):0;
         const _nSides=10; // decagon for both T1 and T2
-        const _nSpinOffset=frame*0.018; // spinning rotation speed
+        const _nSpinOffset=frame*0.004; // much slower spin (was 0.018)
         ctx.save();
 
         // Draw a 10-sided polygon path (no wave, clean solid shape)
