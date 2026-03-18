@@ -1539,8 +1539,8 @@
         </div>
         <!-- Leaderboard panel -->
         <div id="holLbPanel" style="display:none;position:absolute;inset:0;background:rgba(5,5,20,0.97);z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
-          <div style="font-family:var(--mono);font-size:36px;font-weight:900;color:#f59e0b;margin-bottom:10px;letter-spacing:2px">GAME OVER</div>
-          <div id="holLbFinalScore" style="font-family:var(--mono);font-size:48px;font-weight:900;color:#fff;margin-bottom:20px"></div>
+          <div style="font-family:var(--mono);font-size:52px;font-weight:900;color:#f59e0b;margin-bottom:8px;letter-spacing:3px">GAME OVER</div>
+          <div id="holLbFinalScore" style="font-family:var(--mono);font-size:28px;font-weight:700;color:#aaa;margin-bottom:20px"></div>
           <div style="display:flex;gap:8px;margin-bottom:14px;width:100%;max-width:340px">
             <input id="holLbName" placeholder="Your name" maxlength="20" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;padding:8px 12px;color:#fff;font-family:var(--mono);font-size:12px;outline:none">
             <button id="holLbSubmitBtn" onclick="holSubmitScore()" style="font-family:var(--mono);font-size:11px;font-weight:700;background:#f59e0b;border:none;color:#000;padding:8px 16px;border-radius:4px;cursor:pointer">SUBMIT</button>
@@ -4982,14 +4982,26 @@ function _holHandleGuess(correct) {
 
   if (correct) {
     _holScore++;
-    resultEl.textContent = '✅ Correct!';
+    resultEl.textContent = '✅ CORRECT!';
     resultEl.style.color = '#4ade80';
+    resultEl.style.fontSize = '24px';
+    resultEl.style.textShadow = '0 0 12px #4ade8066';
+    // Highlight the winning card with bright glow + background flash
+    const winCard = (left && right && left.channels >= right.channels) ? leftCard : rightCard;
+    winCard.style.boxShadow = '0 0 0 2px #4ade80, 0 0 14px #4ade8055';
+    winCard.style.background = 'rgba(74,222,128,0.08)';
     if (_holScore > holGetBest()) localStorage.setItem('holBest', _holScore);
     document.getElementById('holBest').textContent = holGetBest();
     document.getElementById('holScore').textContent = _holScore;
     setTimeout(() => {
       leftCard.style.borderColor = 'var(--border)';
       rightCard.style.borderColor = 'var(--border)';
+      leftCard.style.boxShadow = '';
+      rightCard.style.boxShadow = '';
+      leftCard.style.background = 'var(--surface2)';
+      rightCard.style.background = 'var(--surface2)';
+      resultEl.style.fontSize = '';
+      resultEl.style.textShadow = '';
       _holPickTwo();
       _holRender(false);
       _holAnimating = false;
@@ -4998,6 +5010,8 @@ function _holHandleGuess(correct) {
   } else {
     resultEl.textContent = '❌ Wrong!';
     resultEl.style.color = '#fc5c7d';
+    resultEl.style.fontSize = '';
+    resultEl.style.textShadow = '';
     setTimeout(() => {
       _holShowGameOver();
       _holAnimating = false;
