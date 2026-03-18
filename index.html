@@ -1534,7 +1534,7 @@
               onmouseover="this.style.background='rgba(252,92,125,0.28)'" onmouseout="this.style.background='rgba(252,92,125,0.15)'">▼ LOWER</button>
           </div>
           <!-- Result feedback -->
-          <div id="holResult" style="font-family:var(--mono);font-size:15px;font-weight:900;min-height:22px;text-align:center"></div>
+          <div id="holResult" style="font-family:var(--mono);font-size:20px;font-weight:900;min-height:28px;text-align:center"></div>
           <div style="font-family:var(--mono);font-size:10px;color:#aaa;text-align:center;margin-top:4px">Click on which emote you think has been typed more on Twitch!</div>
         </div>
         <!-- Leaderboard panel -->
@@ -4669,13 +4669,17 @@ function egOnInput() {
   const suggestEl = document.getElementById('egSuggest');
   _egSuggestIdx = -1;
   if (!val || val.length < 1) { suggestEl.style.display = 'none'; return; }
-  const matches = _egEmotes.filter(e => e.name.toLowerCase().includes(val)).slice(0, 5);
+  // Starts-with matches first, then contains
+  const startsWith = _egEmotes.filter(e => e.name.toLowerCase().startsWith(val));
+  const contains = _egEmotes.filter(e => !e.name.toLowerCase().startsWith(val) && e.name.toLowerCase().includes(val));
+  const matches = [...startsWith, ...contains].slice(0, 5);
   if (!matches.length) { suggestEl.style.display = 'none'; return; }
-  suggestEl.innerHTML = matches.map((e, i) =>
+  suggestEl.innerHTML = matches.map((e) =>
     `<div onclick="egSelectSuggest('${e.name.replace(/'/g,"\\'")}')"`+
-    ` style="padding:7px 12px;cursor:pointer;font-family:var(--mono);font-size:12px;color:#ddd;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;gap:8px"`+
+    ` data-name="${e.name.replace(/"/g,'&quot;')}"`+
+    ` style="height:41px;padding:0 12px;cursor:pointer;font-family:var(--mono);font-size:12px;color:#ddd;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;box-sizing:border-box;flex-shrink:0"`+
     ` onmouseover="this.style.background='rgba(232,121,249,0.12)'" onmouseout="this.style.background=''">`+
-    `<img src="https://cdn.7tv.app/emote/${e.id}/1x.webp" style="width:20px;height:20px;object-fit:contain"> ${e.name}</div>`
+    `<img src="https://cdn.7tv.app/emote/${e.id}/1x.webp" style="width:24px;height:24px;object-fit:contain;flex-shrink:0"> <span>${e.name}</span></div>`
   ).join('');
   suggestEl.style.display = 'block';
 }
@@ -4688,7 +4692,7 @@ function egNavSuggest(e) {
   if (e.key === 'ArrowUp')   { e.preventDefault(); _egSuggestIdx = Math.max(_egSuggestIdx - 1, 0); }
   items.forEach((d, i) => d.style.background = i === _egSuggestIdx ? 'rgba(232,121,249,0.2)' : '');
   if (_egSuggestIdx >= 0 && items[_egSuggestIdx]) {
-    document.getElementById('egInput').value = items[_egSuggestIdx].textContent.trim();
+    document.getElementById('egInput').value = items[_egSuggestIdx].dataset.name || items[_egSuggestIdx].querySelector('span')?.textContent || '';
   }
 }
 
