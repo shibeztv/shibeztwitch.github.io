@@ -7309,17 +7309,13 @@ function startSpace() {
       enemyTimer--;
       if(enemyTimer<=0){
         spawnEnemy();
-        // Occasionally double-spawn at high scores — reduced thresholds
-        if(score>80&&Math.random()<0.07+score*0.0008) spawnEnemy();
-        if(score>200&&Math.random()<0.05) spawnEnemy();
         // timeFactor decays much more slowly — reaches 0.5 at 10 minutes instead of 0.7 at 3min
         const timeFactor=Math.max(0.45,1-survivalFrames/72000);
         const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
         const secIn=survivalFrames/60;
         // Much higher base intervals, slower ramp — 2-3min range is now 500-600 frames base
         const easeBase= secIn<30 ? 720 : secIn<60 ? 620 : secIn<120 ? 560 : secIn<180 ? 500 : secIn<300 ? 440 : 380;
-        const scoreRamp=Math.max(0.72,1-score*0.002);
-        const baseSpawn=Math.floor(easeBase*scoreRamp);
+        const baseSpawn=easeBase;
         enemyTimer=Math.max(28,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
       difficulty=1+score*0.003; // slower speed scaling (was 0.007)
