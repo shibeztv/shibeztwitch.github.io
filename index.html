@@ -8953,51 +8953,8 @@ function startSpace() {
       if(el) el.remove(); canvas._spaceLbEl=false;
     }
     if(state==='dead'){
-      // Fade in dark overlay
-      const df=Math.min(1,(frame-_deathFrame)/40);
-      ctx.fillStyle=`rgba(0,0,0,${df*0.75})`;ctx.fillRect(0,0,W,H);
-      if(df>0.3){
-        // YOU DIED text — fade in then settle
-        const tf=Math.min(1,(frame-_deathFrame-12)/35);
-        ctx.globalAlpha=tf;
-        ctx.textAlign='center';
-        // Outer glow
-        // YOU DIED — smaller, higher
-        ctx.shadowColor='#8b0000';ctx.shadowBlur=30;
-        ctx.font=`bold ${Math.floor(W*0.08)}px serif`;
-        const tg=ctx.createLinearGradient(0,H/2-W*0.1,0,H/2-W*0.02);
-        tg.addColorStop(0,'#ff2222');tg.addColorStop(0.5,'#cc0000');tg.addColorStop(1,'#660000');
-        ctx.fillStyle=tg;
-        ctx.fillText('YOU DIED',W/2,H/2-W*0.06);
-        ctx.shadowBlur=0;
-        if(tf>0.8){
-          const sf=Math.min(1,(tf-0.8)/0.2);
-          // RETRY button — plain, no flash
-          ctx.globalAlpha=sf*0.9;
-          const retryFontPx=Math.floor(W*0.026);
-          ctx.font=`bold ${retryFontPx}px monospace`;
-          const retryTxt='↺  RETRY';
-          const rtm=ctx.measureText(retryTxt);
-          const rw=rtm.width+24, rh=retryFontPx*1.7;
-          const rx=W/2-rw/2, ry=H/2-W*0.025;
-          ctx.fillStyle='rgba(60,60,80,0.5)';
-          ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,5);ctx.fill();
-          ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1.5;ctx.stroke();
-          ctx.fillStyle='#fff';ctx.fillText(retryTxt,W/2,ry+rh*0.7);
-          canvas._retryRect={x:rx,y:ry,w:rw,h:rh};
-          // Score below retry
-          ctx.globalAlpha=sf*0.85;
-          const scoreFontPx=Math.floor(W*0.022);
-          ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillStyle='#ccc';
-          ctx.fillText('Score: '+score+'  ·  Best: '+Math.max(score,parseInt(localStorage.getItem('spaceBest')||0)),W/2,H/2+W*0.06);
-          ctx.font=`${Math.floor(W*0.018)}px monospace`;ctx.fillStyle='#ffd700';
-          const earnedCoins=Math.floor(score/10);const keptCoins=Math.floor(coins/2)+earnedCoins;const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+keptCoins+' coins next run  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
-          const best2=parseInt(localStorage.getItem('spaceBest')||'0');
-          if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
-          if(!canvas._spaceLbDeathShown){ canvas._spaceLbDeathShown=true; _showSpaceLbDeath(score,survivalFrames,canvas); }
-        }
-        ctx.globalAlpha=1;ctx.textAlign='left';
-      }
+      const el=document.getElementById('spaceLbPanel');
+      if(el) el.remove(); canvas._spaceLbEl=false;
     }
 
 
@@ -9042,6 +8999,48 @@ function startSpace() {
       ctx.restore();
     }
     } // end if(state !== shop)
+
+    if(state==='dead'){
+      const df=Math.min(1,(frame-_deathFrame)/40);
+      ctx.fillStyle=`rgba(0,0,0,${df*0.75})`;ctx.fillRect(0,0,W,H);
+      if(df>0.3){
+        const tf=Math.min(1,(frame-_deathFrame-12)/35);
+        ctx.globalAlpha=tf;
+        ctx.textAlign='center';
+        ctx.shadowColor='#8b0000';ctx.shadowBlur=30;
+        ctx.font=`bold ${Math.floor(W*0.08)}px serif`;
+        const tg=ctx.createLinearGradient(0,H/2-W*0.1,0,H/2-W*0.02);
+        tg.addColorStop(0,'#ff2222');tg.addColorStop(0.5,'#cc0000');tg.addColorStop(1,'#660000');
+        ctx.fillStyle=tg;
+        ctx.fillText('YOU DIED',W/2,H/2-W*0.06);
+        ctx.shadowBlur=0;
+        if(tf>0.8){
+          const sf=Math.min(1,(tf-0.8)/0.2);
+          ctx.globalAlpha=sf*0.9;
+          const retryFontPx=Math.floor(W*0.026);
+          ctx.font=`bold ${retryFontPx}px monospace`;
+          const retryTxt='↺  RETRY';
+          const rtm=ctx.measureText(retryTxt);
+          const rw=rtm.width+24, rh=retryFontPx*1.7;
+          const rx=W/2-rw/2, ry=H/2-W*0.025;
+          ctx.fillStyle='rgba(60,60,80,0.5)';
+          ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,5);ctx.fill();
+          ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1.5;ctx.stroke();
+          ctx.fillStyle='#fff';ctx.fillText(retryTxt,W/2,ry+rh*0.7);
+          canvas._retryRect={x:rx,y:ry,w:rw,h:rh};
+          ctx.globalAlpha=sf*0.85;
+          const scoreFontPx=Math.floor(W*0.022);
+          ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillStyle='#ccc';
+          ctx.fillText('Score: '+score+'  ·  Best: '+Math.max(score,parseInt(localStorage.getItem('spaceBest')||0)),W/2,H/2+W*0.06);
+          ctx.font=`${Math.floor(W*0.018)}px monospace`;ctx.fillStyle='#ffd700';
+          const earnedCoins=Math.floor(score/10);const keptCoins=Math.floor(coins/2)+earnedCoins;const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+keptCoins+' coins next run  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
+          const best2=parseInt(localStorage.getItem('spaceBest')||'0');
+          if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
+          if(!canvas._spaceLbDeathShown){ canvas._spaceLbDeathShown=true; _showSpaceLbDeath(score,survivalFrames,canvas); }
+        }
+        ctx.globalAlpha=1;ctx.textAlign='left';
+      }
+    }
 
   } // end if(state || dead)
 
