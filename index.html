@@ -1363,6 +1363,12 @@
         onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
         📊 HIGHER OR LOWER
       </button>
+      <button onclick="openEmoteGuesser()" id="emoteGuesserBtn"
+        style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.borderColor='#e879f9';this.style.color='#e879f9'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
+        🎭 EMOTE GUESSER
+      </button>
       <button onclick="openFlappyShibez()" id="flappyBtn"
         style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
         onmouseover="this.style.borderColor='#4ade80';this.style.color='#4ade80'"
@@ -1430,6 +1436,54 @@
       </div>
     </div>
 
+    <!-- EMOTE GUESSER MODAL -->
+    <div id="egModal" style="display:none;position:fixed;inset:0;z-index:9005;background:rgba(0,0,0,0.93);align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:560px;max-height:calc(100vh - 40px);overflow-y:auto">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-family:var(--mono);font-size:14px;font-weight:900;color:var(--text);letter-spacing:1px">🎭 EMOTE GUESSER</span>
+            <span style="font-family:var(--mono);font-size:9px;color:#aaa">Guess the emote — more pixels revealed each wrong guess</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="egAttemptsBadge" style="font-family:var(--mono);font-size:11px;color:#aaa"></span>
+            <button onclick="closeEmoteGuesser()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
+          </div>
+        </div>
+        <!-- Game area -->
+        <div style="width:100%;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:14px">
+          <!-- Pixelated emote display -->
+          <div style="position:relative;width:200px;height:200px;border-radius:8px;overflow:hidden;background:#111;border:1px solid var(--border);flex-shrink:0">
+            <canvas id="egCanvas" width="200" height="200" style="display:block;width:200px;height:200px;image-rendering:pixelated"></canvas>
+          </div>
+          <!-- Guess history -->
+          <div id="egGuessHistory" style="width:100%;display:flex;flex-direction:column;gap:4px;min-height:28px"></div>
+          <!-- Input row -->
+          <div id="egInputRow" style="display:flex;gap:8px;width:100%;position:relative">
+            <div style="flex:1;position:relative">
+              <input id="egInput" type="text" placeholder="Type emote name…" autocomplete="off" maxlength="60"
+                style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;box-sizing:border-box"
+                oninput="egOnInput()" onkeydown="if(event.key==='Enter')egSubmitGuess();if(event.key==='ArrowDown'||event.key==='ArrowUp')egNavSuggest(event)">
+              <div id="egSuggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:#1a1a2e;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;z-index:20;max-height:180px;overflow-y:auto"></div>
+            </div>
+            <button onclick="egSubmitGuess()" style="font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(232,121,249,0.15);border:2px solid #e879f9;color:#e879f9;padding:9px 18px;border-radius:4px;cursor:pointer;white-space:nowrap"
+              onmouseover="this.style.background='rgba(232,121,249,0.28)'" onmouseout="this.style.background='rgba(232,121,249,0.15)'">GUESS</button>
+          </div>
+          <!-- Result / give up -->
+          <div id="egResult" style="font-family:var(--mono);font-size:13px;font-weight:700;text-align:center;min-height:18px"></div>
+          <button id="egSkipBtn" onclick="egGiveUp()" style="font-family:var(--mono);font-size:10px;background:none;border:1px solid #333;color:#555;padding:5px 14px;border-radius:4px;cursor:pointer"
+            onmouseover="this.style.color='#aaa';this.style.borderColor='#555'" onmouseout="this.style.color='#555';this.style.borderColor='#333'">Give up / skip</button>
+          <!-- Next emote button (shown after round ends) -->
+          <button id="egNextBtn" onclick="egNextEmote()" style="display:none;font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(232,121,249,0.15);border:2px solid #e879f9;color:#e879f9;padding:10px 28px;border-radius:4px;cursor:pointer"
+            onmouseover="this.style.background='rgba(232,121,249,0.28)'" onmouseout="this.style.background='rgba(232,121,249,0.15)'">▶ NEXT EMOTE</button>
+          <!-- Score row -->
+          <div style="font-family:var(--mono);font-size:10px;color:#555;text-align:center">
+            Score: <span id="egScore" style="color:#e879f9;font-weight:700">0</span> &nbsp;·&nbsp; Best streak: <span id="egBestStreak" style="color:#a78bfa;font-weight:700">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- HIGHER OR LOWER MODAL -->
     <div id="holModal" style="display:none;position:fixed;inset:0;z-index:9004;background:rgba(0,0,0,0.93);align-items:center;justify-content:center;padding:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:700px;max-height:calc(100vh - 40px)">
@@ -1437,7 +1491,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box">
           <div style="display:flex;flex-direction:column;gap:2px">
             <span style="font-family:var(--mono);font-size:14px;font-weight:900;color:var(--text);letter-spacing:1px">📊 HIGHER OR LOWER</span>
-            <span style="font-family:var(--mono);font-size:9px;color:#aaa">Which emote has a higher usage count?</span>
+            <span style="font-family:var(--mono);font-size:9px;color:#aaa">Which emote has been typed more times on Twitch?</span>
           </div>
           <div style="display:flex;align-items:center;gap:14px">
             <span style="font-family:var(--mono);font-size:12px;color:#aaa">Score: <span id="holScore" style="color:#f59e0b;font-weight:900;font-size:15px">0</span></span>
@@ -1447,23 +1501,25 @@
         </div>
         <!-- Game area -->
         <div id="holGame" style="width:100%;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:16px">
-          <!-- Emote comparison row -->
-          <div style="display:flex;align-items:center;justify-content:center;gap:16px;width:100%">
-            <!-- Left emote (reference) -->
-            <div id="holLeftCard" style="flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center">
-              <img id="holLeftImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto" onerror="this.style.opacity=0.3">
-              <div id="holLeftName" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);text-align:center"></div>
-              <div id="holLeftCount" style="font-family:var(--mono);font-size:13px;color:#f59e0b;font-weight:700"></div>
+          <!-- Emote comparison row — grid keeps VS pinned to center regardless of card content -->
+          <div style="display:grid;grid-template-columns:1fr 48px 1fr;align-items:center;gap:12px;width:100%">
+            <!-- Left emote (reference) — clicking it means "left is higher" -->
+            <div id="holLeftCard" onclick="holGuessCard('left')" style="background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center;cursor:pointer;transition:border-color 0.15s,background 0.15s"
+              onmouseover="if(!window._holAnimating)this.style.borderColor='#4ade80'" onmouseout="if(!window._holAnimating)this.style.borderColor='var(--border)'">
+              <img id="holLeftImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto;pointer-events:none" onerror="this.style.opacity=0.3">
+              <div id="holLeftName" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);text-align:center;pointer-events:none"></div>
+              <div id="holLeftCount" style="font-family:var(--mono);font-size:13px;color:#f59e0b;font-weight:700;pointer-events:none"></div>
             </div>
-            <!-- VS divider -->
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0">
+            <!-- VS divider — always exactly centered in its column -->
+            <div style="display:flex;align-items:center;justify-content:center">
               <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:#aaa">VS</div>
             </div>
-            <!-- Right emote (guess target) -->
-            <div id="holRightCard" style="flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center">
-              <img id="holRightImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto" onerror="this.style.opacity=0.3">
-              <div id="holRightName" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);text-align:center"></div>
-              <div id="holRightCount" style="font-family:var(--mono);font-size:13px;color:#aaa;font-weight:700">Usage: ???</div>
+            <!-- Right emote (guess target) — clicking it means "right is higher" -->
+            <div id="holRightCard" onclick="holGuessCard('right')" style="background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center;cursor:pointer;transition:border-color 0.15s,background 0.15s"
+              onmouseover="if(!window._holAnimating)this.style.borderColor='#4ade80'" onmouseout="if(!window._holAnimating)this.style.borderColor='var(--border)'">
+              <img id="holRightImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto;pointer-events:none" onerror="this.style.opacity=0.3">
+              <div id="holRightName" style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);text-align:center;pointer-events:none"></div>
+              <div id="holRightCount" style="font-family:var(--mono);font-size:13px;color:#aaa;font-weight:700;pointer-events:none">??? times typed</div>
             </div>
           </div>
           <!-- Buttons -->
@@ -1475,6 +1531,7 @@
           </div>
           <!-- Result feedback -->
           <div id="holResult" style="font-family:var(--mono);font-size:15px;font-weight:900;min-height:22px;text-align:center"></div>
+          <div style="font-family:var(--mono);font-size:10px;color:#aaa;text-align:center;margin-top:4px">Click on which emote you think has been typed more on Twitch!</div>
         </div>
         <!-- Leaderboard panel -->
         <div id="holLbPanel" style="display:none;position:absolute;inset:0;background:rgba(5,5,20,0.97);z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
@@ -4493,6 +4550,269 @@ document.addEventListener('click', e => {
 });
 
 
+// ─── EMOTE GUESSER ────────────────────────────────────────────────────────
+// Twitch IDs for the target channels
+const EG_CHANNELS = [
+  {name:'forsen',    id:'22484632'},
+  {name:'lirik',     id:'23161357'},
+  {name:'sodapoppin',id:'26301881'},
+  {name:'quin69',    id:'27172641'},
+  {name:'loltyler1', id:'50597026'},
+  {name:'velcuz',    id:'131949094'},
+  {name:'nymn',      id:'62300805'},
+  {name:'zackrawrr', id:'50338810'},
+  {name:'shlbez',    id:'96140858'},
+  {name:'erobb221',  id:'116683030'},
+];
+
+let _egEmotes = [];       // [{id, name, url}]
+let _egLoaded = false;
+let _egCurrentEmote = null;
+let _egAttempts = 0;
+let _egMaxAttempts = 6;
+let _egDone = false;
+let _egScore = 0;
+let _egStreak = 0;
+let _egBestStreak = 0;
+let _egSuggestIdx = -1;
+// Pixel sizes for each reveal level (1=most pixelated, 6=full)
+const EG_PIXEL_SIZES = [32, 16, 8, 4, 2, 1];
+
+async function _egLoadEmotes() {
+  if (_egLoaded && _egEmotes.length > 0) return;
+  const seen = new Set();
+  const results = [];
+  await Promise.all(EG_CHANNELS.map(async ch => {
+    try {
+      const r = await fetch(`https://7tv.io/v3/users/twitch/${ch.id}`);
+      const d = await r.json();
+      const emotes = d.emote_set?.emotes || [];
+      emotes.forEach(e => {
+        if (!e.id || !e.name || seen.has(e.id)) return;
+        seen.add(e.id);
+        results.push({ id: e.id, name: e.name, url: `https://cdn.7tv.app/emote/${e.id}/2x.webp` });
+      });
+    } catch(err) { /* skip failed channels */ }
+  }));
+  // Shuffle
+  _egEmotes = results.sort(() => Math.random() - 0.5);
+  _egLoaded = true;
+}
+
+function _egPickEmote() {
+  if (!_egEmotes.length) return null;
+  return _egEmotes[Math.floor(Math.random() * _egEmotes.length)];
+}
+
+function _egDrawPixelated(img, pixelSize) {
+  const canvas = document.getElementById('egCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 200, H = 200;
+  ctx.clearRect(0, 0, W, H);
+  if (pixelSize <= 1) {
+    ctx.drawImage(img, 0, 0, W, H);
+    return;
+  }
+  // Draw small then scale up = pixelation effect
+  const small = document.createElement('canvas');
+  small.width  = Math.max(1, Math.floor(W / pixelSize));
+  small.height = Math.max(1, Math.floor(H / pixelSize));
+  const sc = small.getContext('2d');
+  sc.drawImage(img, 0, 0, small.width, small.height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(small, 0, 0, W, H);
+}
+
+function _egRender() {
+  const level = Math.min(_egAttempts, _egMaxAttempts - 1);
+  const pixelSize = EG_PIXEL_SIZES[level];
+  if (!_egCurrentEmote) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => _egDrawPixelated(img, pixelSize);
+  img.onerror = () => {
+    const canvas = document.getElementById('egCanvas');
+    if (canvas) { const ctx = canvas.getContext('2d'); ctx.fillStyle = '#222'; ctx.fillRect(0,0,200,200); ctx.fillStyle='#555'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',100,105); }
+  };
+  img.src = _egCurrentEmote.url;
+  // Update attempts badge
+  const badge = document.getElementById('egAttemptsBadge');
+  if (badge) badge.textContent = _egDone ? '' : `${_egAttempts}/${_egMaxAttempts}`;
+}
+
+function _egStartRound() {
+  _egCurrentEmote = _egPickEmote();
+  _egAttempts = 0;
+  _egDone = false;
+  document.getElementById('egGuessHistory').innerHTML = '';
+  document.getElementById('egResult').textContent = '';
+  document.getElementById('egResult').style.color = '';
+  document.getElementById('egInput').value = '';
+  document.getElementById('egInput').disabled = false;
+  document.getElementById('egSuggest').style.display = 'none';
+  document.getElementById('egInputRow').style.display = 'flex';
+  document.getElementById('egSkipBtn').style.display = '';
+  document.getElementById('egNextBtn').style.display = 'none';
+  document.getElementById('egScore').textContent = _egScore;
+  document.getElementById('egBestStreak').textContent = _egBestStreak;
+  document.getElementById('egAttemptsBadge').textContent = `0/${_egMaxAttempts}`;
+  _egRender();
+}
+
+function egOnInput() {
+  const val = document.getElementById('egInput').value.trim().toLowerCase();
+  const suggestEl = document.getElementById('egSuggest');
+  _egSuggestIdx = -1;
+  if (!val || val.length < 1) { suggestEl.style.display = 'none'; return; }
+  const matches = _egEmotes.filter(e => e.name.toLowerCase().includes(val)).slice(0, 8);
+  if (!matches.length) { suggestEl.style.display = 'none'; return; }
+  suggestEl.innerHTML = matches.map((e, i) =>
+    `<div onclick="egSelectSuggest('${e.name.replace(/'/g,"\\'")}')"`+
+    ` style="padding:7px 12px;cursor:pointer;font-family:var(--mono);font-size:12px;color:#ddd;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;gap:8px"`+
+    ` onmouseover="this.style.background='rgba(232,121,249,0.12)'" onmouseout="this.style.background=''">`+
+    `<img src="https://cdn.7tv.app/emote/${e.id}/1x.webp" style="width:20px;height:20px;object-fit:contain"> ${e.name}</div>`
+  ).join('');
+  suggestEl.style.display = 'block';
+}
+
+function egNavSuggest(e) {
+  const el = document.getElementById('egSuggest');
+  const items = el.querySelectorAll('div');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); _egSuggestIdx = Math.min(_egSuggestIdx + 1, items.length - 1); }
+  if (e.key === 'ArrowUp')   { e.preventDefault(); _egSuggestIdx = Math.max(_egSuggestIdx - 1, 0); }
+  items.forEach((d, i) => d.style.background = i === _egSuggestIdx ? 'rgba(232,121,249,0.2)' : '');
+  if (_egSuggestIdx >= 0 && items[_egSuggestIdx]) {
+    document.getElementById('egInput').value = items[_egSuggestIdx].textContent.trim();
+  }
+}
+
+function egSelectSuggest(name) {
+  document.getElementById('egInput').value = name;
+  document.getElementById('egSuggest').style.display = 'none';
+  egSubmitGuess();
+}
+
+function egSubmitGuess() {
+  if (_egDone || !_egCurrentEmote) return;
+  const raw = document.getElementById('egInput').value.trim();
+  if (!raw) return;
+  document.getElementById('egSuggest').style.display = 'none';
+  document.getElementById('egInput').value = '';
+
+  const guess = raw.toLowerCase();
+  const answer = _egCurrentEmote.name.toLowerCase();
+  const isCorrect = guess === answer;
+
+  // Add to history
+  const hist = document.getElementById('egGuessHistory');
+  const row = document.createElement('div');
+  row.style.cssText = `display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:4px;background:${isCorrect?'rgba(74,222,128,0.12)':'rgba(252,92,125,0.08)'};border:1px solid ${isCorrect?'#4ade80':'#333'}`;
+  row.innerHTML = `<span style="font-family:var(--mono);font-size:11px;color:${isCorrect?'#4ade80':'#fc5c7d'}">${isCorrect?'✅':'❌'}</span><span style="font-family:var(--mono);font-size:12px;color:#ddd">${raw}</span>`;
+  hist.appendChild(row);
+
+  _egAttempts++;
+
+  if (isCorrect) {
+    _egDone = true;
+    _egScore++;
+    _egStreak++;
+    if (_egStreak > _egBestStreak) {
+      _egBestStreak = _egStreak;
+      localStorage.setItem('egBestStreak', _egBestStreak);
+    }
+    _egRender(); // show full image
+    _egShowResult(true);
+  } else if (_egAttempts >= _egMaxAttempts) {
+    _egDone = true;
+    _egStreak = 0;
+    _egRender(); // show full image
+    _egShowResult(false);
+  } else {
+    _egRender(); // reveal more pixels
+    document.getElementById('egAttemptsBadge').textContent = `${_egAttempts}/${_egMaxAttempts}`;
+  }
+  document.getElementById('egScore').textContent = _egScore;
+  document.getElementById('egBestStreak').textContent = _egBestStreak;
+}
+
+function egGiveUp() {
+  if (_egDone) return;
+  _egDone = true;
+  _egAttempts = _egMaxAttempts;
+  _egStreak = 0;
+  _egRender();
+  _egShowResult(false);
+}
+
+function _egShowResult(won) {
+  const resultEl = document.getElementById('egResult');
+  if (won) {
+    resultEl.textContent = `✅ Correct! It was ${_egCurrentEmote.name} (${_egAttempts} ${_egAttempts===1?'guess':'guesses'})`;
+    resultEl.style.color = '#4ade80';
+  } else {
+    resultEl.innerHTML = `❌ The answer was: <span style="color:#e879f9;font-weight:900">${_egCurrentEmote.name}</span>`;
+    resultEl.style.color = '#fc5c7d';
+  }
+  document.getElementById('egInputRow').style.display = 'none';
+  document.getElementById('egSkipBtn').style.display = 'none';
+  document.getElementById('egNextBtn').style.display = '';
+  // Draw full clear image at end
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => _egDrawPixelated(img, 1);
+  img.src = _egCurrentEmote.url;
+}
+
+function egNextEmote() {
+  _egStartRound();
+}
+
+async function openEmoteGuesser() {
+  const modal = document.getElementById('egModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  _egBestStreak = parseInt(localStorage.getItem('egBestStreak') || '0');
+  document.getElementById('egResult').textContent = 'Loading emotes…';
+  document.getElementById('egInputRow').style.display = 'none';
+  document.getElementById('egSkipBtn').style.display = 'none';
+  document.getElementById('egNextBtn').style.display = 'none';
+  // Draw loading state
+  const canvas = document.getElementById('egCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, 200, 200);
+    ctx.fillStyle = '#444';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Loading…', 100, 105);
+  }
+  await _egLoadEmotes();
+  document.getElementById('egResult').textContent = '';
+  document.getElementById('egInputRow').style.display = 'flex';
+  document.getElementById('egSkipBtn').style.display = '';
+  _egScore = 0;
+  _egStreak = 0;
+  _egStartRound();
+}
+
+function closeEmoteGuesser() {
+  const modal = document.getElementById('egModal');
+  if (modal) modal.style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  const modal = document.getElementById('egModal');
+  if (modal && e.target === modal) closeEmoteGuesser();
+  // Close suggest dropdown on outside click
+  const suggest = document.getElementById('egSuggest');
+  const input = document.getElementById('egInput');
+  if (suggest && e.target !== input && !suggest.contains(e.target)) suggest.style.display = 'none';
+});
+
+
 // ─── HIGHER OR LOWER ──────────────────────────────────────────────────────
 const HOL_EMOTE_SET = '01F6YHT8TG0003S6SNNTMYB87P';
 const LB_HOL_KEY = 'shibez_lb_hol';
@@ -4506,23 +4826,30 @@ let _holAnimating = false;
 async function _holLoadEmotes() {
   if (_holLoaded && _holEmotes.length > 0) return;
   try {
-    const r = await fetch(`https://7tv.io/v3/emote-sets/${HOL_EMOTE_SET}`);
-    const d = await r.json();
-    _holEmotes = (d.emotes || []).map((e, i) => {
-      // 7TV returns emotes ordered by creation/popularity in the set.
-      // We use the emote's global channel_count if available, otherwise
-      // derive a stable pseudo-popularity from the emote ID (consistent across games).
-      const realCount = e.data?.channel_count || e.channel_count || 0;
-      // Seed a stable number from the emote ID string so the same emote always
-      // has the same "score" — makes the game fair and reproducible.
+    // Fetch the 7TV emote set and StreamElements global stats in parallel
+    const [setRes, seRes] = await Promise.all([
+      fetch(`https://7tv.io/v3/emote-sets/${HOL_EMOTE_SET}`),
+      fetch('https://api.streamelements.com/kappa/v2/chatstats/global/stats')
+    ]);
+    const setData = await setRes.json();
+    const seData = await seRes.json();
+
+    // Build a lookup map of 7TV emote ID → usage count from StreamElements
+    const seMap = {};
+    (seData.sevenTVEmotes || []).forEach(e => { seMap[e.id] = (seMap[e.id] || 0) + e.amount; });
+
+    _holEmotes = (setData.emotes || []).map((e, i) => {
+      const realCount = seMap[e.id] || 0;
+      // Fallback: stable hash-based score if SE doesn't have this emote
       const idHash = e.id ? e.id.split('').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0, 0) : i;
-      const stableScore = realCount > 0 ? realCount : Math.abs(idHash % 8000) + 200;
-      return { id: e.id, name: e.name, channels: stableScore };
+      const channels = realCount > 0 ? realCount : Math.abs(idHash % 8000) + 200;
+      return { id: e.id, name: e.name, channels };
     }).filter(e => e.id && e.name);
+
     _holEmotes = _holEmotes.sort(() => Math.random() - 0.5);
     _holLoaded = true;
   } catch(err) {
-    // Fallback with a mix of well-known emotes and rough relative popularity
+    // Full fallback
     _holEmotes = [
       {id:'01F6YHT8GG000CBM0009XNKBZB',name:'GIGACHAD',channels:7200},
       {id:'01F6YHTHPG0002FDNWQT0CYF8B',name:'Pog',channels:6800},
@@ -4566,7 +4893,7 @@ function _holRender(revealRight = false) {
 
   document.getElementById('holLeftImg').src = _holEmoteUrl(left.id);
   document.getElementById('holLeftName').textContent = left.name;
-  document.getElementById('holLeftCount').textContent = 'Usage: ' + left.channels.toLocaleString();
+  document.getElementById('holLeftCount').textContent = left.channels.toLocaleString() + ' times typed';
 
   document.getElementById('holRightImg').src = _holEmoteUrl(right.id);
   document.getElementById('holRightName').textContent = right.name;
@@ -4574,10 +4901,10 @@ function _holRender(revealRight = false) {
   const rightCountEl = document.getElementById('holRightCount');
   const rightCard = document.getElementById('holRightCard');
   if (revealRight) {
-    rightCountEl.textContent = 'Usage: ' + right.channels.toLocaleString();
+    rightCountEl.textContent = right.channels.toLocaleString() + ' times typed';
     rightCard.style.borderColor = ''; // reset
   } else {
-    rightCountEl.textContent = 'Usage: ???';
+    rightCountEl.textContent = '??? times typed';
     rightCard.style.borderColor = 'var(--border)';
   }
 
@@ -4591,7 +4918,20 @@ function holGetBest() {
   return parseInt(localStorage.getItem('holBest') || '0');
 }
 
+// Clicking a card means "I think THIS card has higher usage"
+function holGuessCard(side) {
+  if (_holAnimating) return;
+  const left = _holEmotes[_holLeftIdx];
+  const right = _holEmotes[_holRightIdx];
+  if (!left || !right) return;
+  const pickedIsHigher = side === 'left'
+    ? left.channels >= right.channels
+    : right.channels >= left.channels;
+  holGuess(pickedIsHigher ? 'higher' : 'lower');
+}
+
 function holGuess(dir) {
+  window._holAnimating = true;
   if (_holAnimating || _holEmotes.length < 2) return;
   const left = _holEmotes[_holLeftIdx];
   const right = _holEmotes[_holRightIdx];
@@ -4602,7 +4942,7 @@ function holGuess(dir) {
   const correct = (dir === 'higher' && isHigher) || (dir === 'lower' && !isHigher);
 
   // Reveal the right card count
-  document.getElementById('holRightCount').textContent = 'Usage: ' + right.channels.toLocaleString();
+  document.getElementById('holRightCount').textContent = right.channels.toLocaleString() + ' times typed';
 
   const resultEl = document.getElementById('holResult');
   const rightCard = document.getElementById('holRightCard');
@@ -4620,6 +4960,7 @@ function holGuess(dir) {
       _holPickTwo();
       _holRender(false);
       _holAnimating = false;
+      window._holAnimating = false;
     }, 1100);
   } else {
     resultEl.textContent = '❌ Wrong!';
@@ -4629,6 +4970,7 @@ function holGuess(dir) {
     setTimeout(() => {
       _holShowGameOver();
       _holAnimating = false;
+      window._holAnimating = false;
     }, 1300);
   }
 }
@@ -4676,9 +5018,8 @@ function holRestart() {
   _holLeftIdx = -1;
   _holRightIdx = -1;
   _holAnimating = false;
+  window._holAnimating = false;
   const panel = document.getElementById('holLbPanel');
-  if (panel) panel.style.display = 'none';
-  const btn = document.getElementById('holLbSubmitBtn');
   if (btn) { btn.textContent = 'SUBMIT'; btn.disabled = false; btn.style.opacity = '1'; }
   _holPickTwo();
   _holRender(false);
