@@ -5473,8 +5473,8 @@ function _showSpaceLbDeath(finalScore, finalFrames, canvas) {
   div.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:280px;background:rgba(4,4,16,0.97);border-left:1px solid #3a2a6a;display:flex;flex-direction:column;padding:16px 14px;box-sizing:border-box;pointer-events:auto;z-index:20;gap:10px';
   div.innerHTML = `
     <div style="font-family:var(--mono,monospace);font-size:13px;font-weight:900;color:#a78bfa;letter-spacing:1px">🏆 LEADERBOARD</div>
-    <div style="font-family:var(--mono,monospace);font-size:10px;color:#888">
-      Your run: <span style="color:#ffd700;font-weight:700">${finalScore} pts</span> · ⏱ ${timeStr}
+    <div style="font-family:var(--mono,monospace);font-size:12px;color:#aaa">
+      Your run: <span style="color:#ffd700;font-weight:700">${finalScore} pts</span> · <span style="color:#aaa">⏱ ${timeStr}</span>
     </div>
     <div style="display:flex;gap:6px">
       <input id="spaceLbName" placeholder="Enter name to submit" maxlength="20"
@@ -9039,7 +9039,7 @@ function startSpace() {
           const earnedCoins=Math.floor(score/10);const keptCoins=Math.floor(coins/2)+earnedCoins;const finalSecs=Math.floor(survivalFrames/60);const finalTime=Math.floor(finalSecs/60)+':'+(finalSecs%60<10?'0':'')+(finalSecs%60);ctx.fillText('🪙 '+keptCoins+' coins next run  ·  ⏱ '+finalTime,W/2,H/2+W*0.09);
           const best2=parseInt(localStorage.getItem('spaceBest')||'0');
           if(score>best2){localStorage.setItem('spaceBest',score);ctx.globalAlpha=sf;ctx.fillStyle='#4ade80';ctx.font=`bold ${scoreFontPx}px monospace`;ctx.fillText('🏆 NEW BEST!',W/2,H/2+W*0.125);}
-          if(!canvas._spaceLbDeathShown){ canvas._spaceLbDeathShown=true; _showSpaceLbDeath(score,survivalFrames,canvas); }
+          if(!canvas._spaceLbDeathShown){ canvas._spaceLbDeathShown=true; setTimeout(()=>_showSpaceLbDeath(score,survivalFrames,canvas), 2000); }
         }
         ctx.globalAlpha=1;ctx.textAlign='left';
       }
