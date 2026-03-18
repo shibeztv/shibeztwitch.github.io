@@ -26,12 +26,17 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html {
+    overflow: hidden;
+    height: 100%;
+  }
+
   body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100%;
+    overflow: hidden;
   }
 
   /* TOPBAR */
@@ -1352,6 +1357,12 @@
         onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
         📅 SHIB.LE
       </button>
+      <button onclick="openHigherLower()" id="higherLowerBtn"
+        style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.borderColor='#f59e0b';this.style.color='#f59e0b'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
+        📊 HIGHER OR LOWER
+      </button>
       <button onclick="openFlappyShibez()" id="flappyBtn"
         style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
         onmouseover="this.style.borderColor='#4ade80';this.style.color='#4ade80'"
@@ -1415,6 +1426,66 @@
           <div id="shopGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;max-width:1200px;overflow-y:auto;overflow-x:hidden;max-height:72vh;box-sizing:border-box;padding:2px 4px"></div>
           <div class="shopMusicLabel" style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#6a5a9a;letter-spacing:0.5px">♪ Shop music: Motoi Sakuraba — Majula</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIGHER OR LOWER MODAL -->
+    <div id="holModal" style="display:none;position:fixed;inset:0;z-index:9004;background:rgba(0,0,0,0.93);align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;width:100%;max-width:700px;max-height:calc(100vh - 40px)">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-family:var(--mono);font-size:14px;font-weight:900;color:var(--text);letter-spacing:1px">📊 HIGHER OR LOWER</span>
+            <span style="font-family:var(--mono);font-size:9px;color:#aaa">Which emote has a higher usage count?</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="font-family:var(--mono);font-size:12px;color:#aaa">Score: <span id="holScore" style="color:#aaa;font-weight:900;font-size:15px">0</span></span>
+            <span style="font-family:var(--mono);font-size:12px;color:#aaa">Highscore: <span id="holBest" style="color:#aaa;font-weight:900">0</span></span>
+            <button onclick="closeHigherLower()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
+          </div>
+        </div>
+        <!-- Game area -->
+        <div id="holGame" style="width:100%;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:16px">
+          <!-- Emote comparison row -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;width:100%">
+            <!-- Left emote (reference) -->
+            <div id="holLeftCard" style="flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center">
+              <img id="holLeftImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto" onerror="this.style.opacity=0.3">
+              <div id="holLeftName" style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);text-align:center"></div>
+              <div id="holLeftCount" style="font-family:var(--mono);font-size:11px;color:#f59e0b;font-weight:700"></div>
+            </div>
+            <!-- VS divider -->
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0">
+              <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:#555">VS</div>
+            </div>
+            <!-- Right emote (guess target) -->
+            <div id="holRightCard" style="flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center">
+              <img id="holRightImg" src="" style="width:120px;height:120px;object-fit:contain;image-rendering:auto" onerror="this.style.opacity=0.3">
+              <div id="holRightName" style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);text-align:center"></div>
+              <div id="holRightCount" style="font-family:var(--mono);font-size:11px;color:#aaa;font-weight:700">Usage: ???</div>
+            </div>
+          </div>
+          <!-- Buttons -->
+          <div id="holButtons" style="display:flex;gap:12px">
+            <button onclick="holGuess('higher')" style="font-family:var(--mono);font-size:13px;font-weight:900;background:rgba(74,222,128,0.15);border:2px solid #4ade80;color:#4ade80;padding:12px 32px;border-radius:6px;cursor:pointer;transition:all 0.15s;letter-spacing:1px"
+              onmouseover="this.style.background='rgba(74,222,128,0.28)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">▲ HIGHER</button>
+            <button onclick="holGuess('lower')" style="font-family:var(--mono);font-size:13px;font-weight:900;background:rgba(252,92,125,0.15);border:2px solid #fc5c7d;color:#fc5c7d;padding:12px 32px;border-radius:6px;cursor:pointer;transition:all 0.15s;letter-spacing:1px"
+              onmouseover="this.style.background='rgba(252,92,125,0.28)'" onmouseout="this.style.background='rgba(252,92,125,0.15)'">▼ LOWER</button>
+          </div>
+          <!-- Result feedback -->
+          <div id="holResult" style="font-family:var(--mono);font-size:15px;font-weight:900;min-height:22px;text-align:center"></div>
+        </div>
+        <!-- Leaderboard panel -->
+        <div id="holLbPanel" style="display:none;position:absolute;inset:0;background:rgba(5,5,20,0.97);z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
+          <div style="font-family:var(--mono);font-size:16px;font-weight:900;color:#f59e0b;margin-bottom:6px">GAME OVER</div>
+          <div id="holLbFinalScore" style="font-family:var(--mono);font-size:28px;font-weight:900;color:#fff;margin-bottom:16px"></div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;width:100%;max-width:340px">
+            <input id="holLbName" placeholder="Your name" maxlength="20" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;padding:8px 12px;color:#fff;font-family:var(--mono);font-size:12px;outline:none">
+            <button id="holLbSubmitBtn" onclick="holSubmitScore()" style="font-family:var(--mono);font-size:11px;font-weight:700;background:#f59e0b;border:none;color:#000;padding:8px 16px;border-radius:4px;cursor:pointer">SUBMIT</button>
+          </div>
+          <div id="holLbRows" style="display:flex;flex-direction:column;gap:3px;width:100%;max-width:340px;max-height:280px;overflow-y:auto;margin-bottom:14px"></div>
+          <button onclick="holRestart()" style="font-family:var(--mono);font-size:11px;font-weight:700;background:rgba(124,92,252,0.2);border:1px solid #7c5cfc;color:#a78bfa;padding:8px 20px;border-radius:4px;cursor:pointer">PLAY AGAIN</button>
         </div>
       </div>
     </div>
@@ -1537,8 +1608,8 @@
 
     <!-- CLIP MODAL -->
     <div id="clipModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:1625px;overflow:hidden;position:relative">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:min(1625px, calc((100vh - 40px) * 16/9 + 80px));overflow:hidden;position:relative;display:flex;flex-direction:column;max-height:calc(100vh - 40px)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
           <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)" id="clipTitle">Loading clip…</div>
           <div style="display:flex;gap:8px;align-items:center">
             <button onclick="openRandomClip()" title="Another random clip"
@@ -1550,8 +1621,8 @@
             <button onclick="closeClipModal()" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">✕</button>
           </div>
         </div>
-        <div style="aspect-ratio:16/9;background:#000" id="clipEmbed"></div>
-        <div style="padding:8px 14px;font-family:var(--mono);font-size:13px;color:#bbb;display:flex;gap:12px" id="clipMeta"></div>
+        <div style="flex:1;min-height:0;background:#000;position:relative" id="clipEmbed"></div>
+        <div style="padding:8px 14px;font-family:var(--mono);font-size:13px;color:#bbb;display:flex;gap:12px;flex-shrink:0" id="clipMeta"></div>
       </div>
     </div>
 
@@ -4416,6 +4487,236 @@ document.addEventListener('click', e => {
 });
 
 
+document.addEventListener('click', e => {
+  const modal = document.getElementById('flappyModal');
+  if (modal && e.target === modal) closeFlappy();
+});
+
+
+// ─── HIGHER OR LOWER ──────────────────────────────────────────────────────
+const HOL_EMOTE_SET = '01F6YHT8TG0003S6SNNTMYB87P';
+const LB_HOL_KEY = 'shibez_lb_hol';
+let _holEmotes = [];
+let _holLoaded = false;
+let _holScore = 0;
+let _holLeftIdx = -1;
+let _holRightIdx = -1;
+let _holAnimating = false;
+
+async function _holLoadEmotes() {
+  if (_holLoaded && _holEmotes.length > 0) return;
+  try {
+    const r = await fetch(`https://7tv.io/v3/emote-sets/${HOL_EMOTE_SET}`);
+    const d = await r.json();
+    _holEmotes = (d.emotes || []).map((e, i) => {
+      // 7TV returns emotes ordered by creation/popularity in the set.
+      // We use the emote's global channel_count if available, otherwise
+      // derive a stable pseudo-popularity from the emote ID (consistent across games).
+      const realCount = e.data?.channel_count || e.channel_count || 0;
+      // Seed a stable number from the emote ID string so the same emote always
+      // has the same "score" — makes the game fair and reproducible.
+      const idHash = e.id ? e.id.split('').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0, 0) : i;
+      const stableScore = realCount > 0 ? realCount : Math.abs(idHash % 8000) + 200;
+      return { id: e.id, name: e.name, channels: stableScore };
+    }).filter(e => e.id && e.name);
+    _holEmotes = _holEmotes.sort(() => Math.random() - 0.5);
+    _holLoaded = true;
+  } catch(err) {
+    // Fallback with a mix of well-known emotes and rough relative popularity
+    _holEmotes = [
+      {id:'01F6YHT8GG000CBM0009XNKBZB',name:'GIGACHAD',channels:7200},
+      {id:'01F6YHTHPG0002FDNWQT0CYF8B',name:'Pog',channels:6800},
+      {id:'01F6YTHSG00003TJ3W00E4YDNT',name:'KEKW',channels:6400},
+      {id:'01F6YHT9P00004BJ4HNPF0QXHM',name:'Sadge',channels:5900},
+      {id:'01F6YHTHXG00048FZYCSGF4XSJ',name:'PauseChamp',channels:5500},
+      {id:'01F6YHT8P00005Q8ZY1P7DQMD3',name:'monkaS',channels:5100},
+      {id:'01F6YHT8YG00006K3HPVZ7BQTP',name:'EZ',channels:4700},
+      {id:'01F6YHTH5G00007TQNKXE5VR9B',name:'FeelsBadMan',channels:4300},
+      {id:'01F6YTHMPG00008JPQN4X6CRTW',name:'OMEGALUL',channels:3900},
+      {id:'01F6YHTQNG00009P3S8YW4DZMV',name:'5Head',channels:3500},
+    ].sort(() => Math.random() - 0.5);
+    _holLoaded = true;
+  }
+}
+
+function _holEmoteUrl(id) {
+  return `https://cdn.7tv.app/emote/${id}/2x.webp`;
+}
+
+function _holPickTwo() {
+  if (_holEmotes.length < 2) return;
+  // Left becomes the old right (after first round), or random
+  let leftIdx, rightIdx;
+  if (_holLeftIdx === -1) {
+    leftIdx = Math.floor(Math.random() * _holEmotes.length);
+  } else {
+    leftIdx = _holRightIdx; // carry over
+  }
+  // Pick a different right
+  do { rightIdx = Math.floor(Math.random() * _holEmotes.length); }
+  while (rightIdx === leftIdx);
+  _holLeftIdx = leftIdx;
+  _holRightIdx = rightIdx;
+}
+
+function _holRender(revealRight = false) {
+  const left = _holEmotes[_holLeftIdx];
+  const right = _holEmotes[_holRightIdx];
+  if (!left || !right) return;
+
+  document.getElementById('holLeftImg').src = _holEmoteUrl(left.id);
+  document.getElementById('holLeftName').textContent = left.name;
+  document.getElementById('holLeftCount').textContent = 'Usage: ' + left.channels.toLocaleString();
+
+  document.getElementById('holRightImg').src = _holEmoteUrl(right.id);
+  document.getElementById('holRightName').textContent = right.name;
+
+  const rightCountEl = document.getElementById('holRightCount');
+  const rightCard = document.getElementById('holRightCard');
+  if (revealRight) {
+    rightCountEl.textContent = 'Usage: ' + right.channels.toLocaleString();
+    rightCard.style.borderColor = ''; // reset
+  } else {
+    rightCountEl.textContent = 'Usage: ???';
+    rightCard.style.borderColor = 'var(--border)';
+  }
+
+  document.getElementById('holScore').textContent = _holScore;
+  document.getElementById('holBest').textContent = holGetBest();
+  document.getElementById('holResult').textContent = '';
+  document.getElementById('holStreak').textContent = `Streak: ${_holScore} correct in a row`;
+}
+
+function holGetBest() {
+  return parseInt(localStorage.getItem('holBest') || '0');
+}
+
+function holGuess(dir) {
+  if (_holAnimating || _holEmotes.length < 2) return;
+  const left = _holEmotes[_holLeftIdx];
+  const right = _holEmotes[_holRightIdx];
+  if (!left || !right) return;
+
+  _holAnimating = true;
+  const isHigher = right.channels >= left.channels;
+  const correct = (dir === 'higher' && isHigher) || (dir === 'lower' && !isHigher);
+
+  // Reveal the right card count
+  document.getElementById('holRightCount').textContent = 'Usage: ' + right.channels.toLocaleString();
+
+  const resultEl = document.getElementById('holResult');
+  const rightCard = document.getElementById('holRightCard');
+  const leftCard = document.getElementById('holLeftCard');
+
+  if (correct) {
+    _holScore++;
+    resultEl.textContent = '✅ Correct!';
+    resultEl.style.color = '#4ade80';
+    rightCard.style.borderColor = '#4ade80';
+    if (_holScore > holGetBest()) localStorage.setItem('holBest', _holScore);
+    document.getElementById('holBest').textContent = holGetBest();
+    document.getElementById('holScore').textContent = _holScore;
+    setTimeout(() => {
+      _holPickTwo();
+      _holRender(false);
+      _holAnimating = false;
+    }, 1100);
+  } else {
+    resultEl.textContent = '❌ Wrong!';
+    resultEl.style.color = '#fc5c7d';
+    rightCard.style.borderColor = '#fc5c7d';
+    // Show game over after brief pause
+    setTimeout(() => {
+      _holShowGameOver();
+      _holAnimating = false;
+    }, 1300);
+  }
+}
+
+function _holShowGameOver() {
+  const panel = document.getElementById('holLbPanel');
+  if (!panel) return;
+  panel.style.display = 'flex';
+  document.getElementById('holLbFinalScore').textContent = `Score: ${_holScore}`;
+  // Load leaderboard
+  document.getElementById('holLbRows').innerHTML = _holRenderLbRows(_holScore);
+  // Focus name input
+  const inp = document.getElementById('holLbName');
+  if (inp) { inp.value = localStorage.getItem('holLastName') || ''; setTimeout(() => inp.focus(), 100); }
+}
+
+function _holRenderLbRows(currentScore) {
+  const entries = JSON.parse(localStorage.getItem(LB_HOL_KEY) || '[]');
+  if (!entries.length) return '<div style="text-align:center;color:#555;font-family:var(--mono);font-size:11px;padding:16px">No scores yet — be the first!</div>';
+  return entries.slice(0, 10).map((e, i) => {
+    const isNew = e.score === currentScore && e.name === (document.getElementById('holLbName')?.value?.trim() || '');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:${i===0?'rgba(245,158,11,0.12)':'rgba(255,255,255,0.04)'};border-radius:4px;font-family:var(--mono);font-size:11px">
+      <span style="color:${i===0?'#f59e0b':i===1?'#aaa':i===2?'#cd7f32':'#555'};font-weight:900;width:18px">${i+1}</span>
+      <span style="flex:1;color:#ddd;font-weight:700">${e.name}</span>
+      <span style="color:#f59e0b;font-weight:900">${e.score}</span>
+    </div>`;
+  }).join('');
+}
+
+function holSubmitScore() {
+  const name = document.getElementById('holLbName')?.value?.trim();
+  if (!name) { const inp = document.getElementById('holLbName'); if(inp){inp.style.borderColor='#fc5c7d';setTimeout(()=>inp.style.borderColor='',700);} return; }
+  localStorage.setItem('holLastName', name);
+  const entries = JSON.parse(localStorage.getItem(LB_HOL_KEY) || '[]');
+  entries.push({ name, score: _holScore, ts: Date.now() });
+  entries.sort((a, b) => b.score - a.score);
+  localStorage.setItem(LB_HOL_KEY, JSON.stringify(entries.slice(0, 50)));
+  document.getElementById('holLbRows').innerHTML = _holRenderLbRows(_holScore);
+  const btn = document.getElementById('holLbSubmitBtn');
+  if (btn) { btn.textContent = '✓ SAVED'; btn.disabled = true; btn.style.opacity = '0.6'; }
+}
+
+function holRestart() {
+  _holScore = 0;
+  _holLeftIdx = -1;
+  _holRightIdx = -1;
+  _holAnimating = false;
+  const panel = document.getElementById('holLbPanel');
+  if (panel) panel.style.display = 'none';
+  const btn = document.getElementById('holLbSubmitBtn');
+  if (btn) { btn.textContent = 'SUBMIT'; btn.disabled = false; btn.style.opacity = '1'; }
+  _holPickTwo();
+  _holRender(false);
+}
+
+async function openHigherLower() {
+  const modal = document.getElementById('holModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  // Reset state
+  _holScore = 0;
+  _holLeftIdx = -1;
+  _holRightIdx = -1;
+  _holAnimating = false;
+  const panel = document.getElementById('holLbPanel');
+  if (panel) panel.style.display = 'none';
+  document.getElementById('holResult').textContent = 'Loading emotes…';
+  document.getElementById('holButtons').style.opacity = '0.3';
+  document.getElementById('holButtons').style.pointerEvents = 'none';
+  await _holLoadEmotes();
+  document.getElementById('holResult').textContent = '';
+  document.getElementById('holButtons').style.opacity = '1';
+  document.getElementById('holButtons').style.pointerEvents = '';
+  _holPickTwo();
+  _holRender(false);
+}
+
+function closeHigherLower() {
+  const modal = document.getElementById('holModal');
+  if (modal) modal.style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  const modal = document.getElementById('holModal');
+  if (modal && e.target === modal) closeHigherLower();
+});
+
+
 // ─── SPACEBEZ ─────────────────────────────────────────────────────────────
 let _spaceRunning = false, _spaceRAF = null;
 const SPACE_EMOTE_SET = '01F6YHT8TG0003S6SNNTMYB87P';
@@ -5412,9 +5713,9 @@ function startSpace() {
       }
       return; // block other clicks when paused
     }
+    if(state==='waiting'){ state='playing'; return; } // start game without shooting
     mouseHeld=true;
     if(state==='playing') fireBulletDir();
-    if(state==='waiting') state='playing';
     if(state==='dead'){
       const rr=canvas._retryRect;
       if(rr&&mx>=rr.x&&mx<=rr.x+rr.w&&my>=rr.y&&my<=rr.y+rr.h){
@@ -7607,6 +7908,48 @@ function startSpace() {
         ctx.shadowBlur=0;ctx.restore();
 
 
+      } else if(b.isMilk){
+        // Milk Gun — white wobbly milk blob with drips
+        const sz=b.size||1;
+        const t=(b.life!==undefined)?(b.life/(b.maxLife||60)):1;
+        ctx.save();
+        ctx.translate(b.x,b.y);
+        const _mWobble=Math.sin(frame*0.35+b.x*0.05)*0.18;
+        // Outer milk glow
+        const _mg=ctx.createRadialGradient(0,0,0,0,0,sz*9);
+        _mg.addColorStop(0,'rgba(255,255,255,0.22)');_mg.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=_mg;ctx.beginPath();ctx.arc(0,0,sz*9,0,Math.PI*2);ctx.fill();
+        // Wobbly blob core
+        ctx.beginPath();
+        const _segs=12;
+        for(let _mi=0;_mi<=_segs;_mi++){
+          const _ma=(_mi/_segs)*Math.PI*2;
+          const _mr=(sz*5.5)*(1+_mWobble*Math.sin(_ma*3+frame*0.2));
+          const _mx=Math.cos(_ma)*_mr, _my=Math.sin(_ma)*_mr;
+          _mi===0?ctx.moveTo(_mx,_my):ctx.lineTo(_mx,_my);
+        }
+        ctx.closePath();
+        const _mFill=ctx.createRadialGradient(-sz*1.5,-sz*1.5,0,0,0,sz*6);
+        _mFill.addColorStop(0,'rgba(255,255,255,0.98)');
+        _mFill.addColorStop(0.6,'rgba(230,240,255,0.92)');
+        _mFill.addColorStop(1,'rgba(200,220,255,0.6)');
+        ctx.fillStyle=_mFill;ctx.fill();
+        // White shine highlight
+        ctx.fillStyle='rgba(255,255,255,0.8)';
+        ctx.beginPath();ctx.ellipse(-sz*1.8,-sz*1.8,sz*1.4,sz*0.8,-0.5,0,Math.PI*2);ctx.fill();
+        // 2-3 little milk drip drops trailing behind
+        const _ang=Math.atan2(b.vy,b.vx);
+        for(let _di=1;_di<=3;_di++){
+          const _df=_di*sz*4.5;
+          const _dx=b.x-Math.cos(_ang)*_df - b.x;
+          const _dy=b.y-Math.sin(_ang)*_df - b.y;
+          const _dSz=sz*(2.2-_di*0.5);
+          ctx.globalAlpha=0.7-_di*0.18;
+          ctx.fillStyle='rgba(240,248,255,0.9)';
+          ctx.beginPath();ctx.arc(_dx,_dy,_dSz,0,Math.PI*2);ctx.fill();
+        }
+        ctx.restore();
+
       } else if(b.circle){
         // Friends weapon circle — meteorite/fireball
         const sz=b.size||5;
@@ -7747,6 +8090,34 @@ function startSpace() {
         }
         ctx.save();ctx.globalAlpha=0.20;ctx.strokeStyle='#88ccff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
         ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.55,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+      // Milk glue visual — white splat overlay on canvas
+      if(e._milkTimer>0){
+        const _mFrac=e._milkTimer/180;
+        ctx.save();
+        // White semi-transparent overlay on the enemy circle
+        ctx.globalAlpha=0.38*_mFrac;
+        const _mGlow=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,e.size*0.6);
+        _mGlow.addColorStop(0,'rgba(255,255,255,0.95)');
+        _mGlow.addColorStop(0.5,'rgba(230,245,255,0.65)');
+        _mGlow.addColorStop(1,'rgba(200,230,255,0)');
+        ctx.fillStyle=_mGlow;ctx.beginPath();ctx.arc(e.x,e.y,e.size*0.6,0,Math.PI*2);ctx.fill();
+        // Milk drip blobs around the enemy
+        if(!e._milkDrips){
+          e._milkDrips=Array.from({length:5},(_,i)=>({
+            a:(i/5)*Math.PI*2+Math.random()*0.6,
+            r:0.45+Math.random()*0.3,
+            sz:0.12+Math.random()*0.15,
+          }));
+        }
+        ctx.globalAlpha=0.55*_mFrac;
+        ctx.fillStyle='rgba(255,255,255,0.9)';
+        e._milkDrips.forEach(d=>{
+          const _dx=e.x+Math.cos(d.a)*e.size*d.r;
+          const _dy=e.y+Math.sin(d.a)*e.size*d.r;
+          ctx.beginPath();ctx.arc(_dx,_dy,e.size*d.sz,0,Math.PI*2);ctx.fill();
+        });
+        ctx.restore();
       }
       const bary=e.y+e.size/2+3, barh=e.isTitan?8:(e.isBoss?10:4);
       ctx.fillStyle='#111';ctx.fillRect(e.x-e.size/2,bary,e.size,barh);
@@ -7942,11 +8313,11 @@ function startSpace() {
         ctx.closePath();ctx.stroke();
         // Floating math symbols inside the aura
         if(!window._narcSymbols){
-          const _syms=['∑','π','∞','√','∫','≠','≈','Δ','α','β','42','IQ','3.14','e²','x²','±'];
-          window._narcSymbols=Array.from({length:10},(_,i)=>({
+          const _syms=['∑','π','∞','√','∫','≠','≈','Δ','α','β','42','IQ','3.14','e²','x²','±','69','777','67','1+1=3','2+2=5','91.5%=100%','140','1337','420','∂','λ','Ω','φ','∇','γ','μ','θ'];
+          window._narcSymbols=Array.from({length:30},(_,i)=>({
             sym:_syms[Math.floor(Math.random()*_syms.length)],
             angle:Math.random()*Math.PI*2,
-            r:(_nRv*0.3)+Math.random()*(_nRv*0.55),
+            r:(_nRv*0.12)+Math.random()*(_nRv*0.82),
             speed:(Math.random()-0.5)*0.012,
             opacity:0.3+Math.random()*0.5,
           }));
