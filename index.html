@@ -6980,6 +6980,9 @@ function startSpace() {
     const shopOpen=document.getElementById('spaceShop').style.display==='flex';
 
     if((state==='playing') && !shopOpen){
+      // Tick down all weapon slot cooldowns every frame
+      for(let _ci=0;_ci<4;_ci++){ if(_slotCooldowns[_ci]>0) _slotCooldowns[_ci]--; }
+      shootCooldown=_slotCooldowns[0];
       survivalFrames++;
       // Real-time timer (not frame-based — works correctly at 120Hz)
       if(!_gameStartTime) _gameStartTime=performance.now();
@@ -7174,7 +7177,6 @@ function startSpace() {
         // Tick down narcissism debuffs
         enemies.forEach(e=>{ if(e._narcDebuff>0) e._narcDebuff--; });
       }
-      shootCooldown=_slotCooldowns[0]; // keep legacy compat
       if(invincible>0) invincible--;
 
       // Ship faces cursor (world-space)
