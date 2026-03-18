@@ -4969,15 +4969,23 @@ function _holHandleGuess(correct) {
   const rightCard = document.getElementById('holRightCard');
   const leftCard = document.getElementById('holLeftCard');
 
+  // Highlight higher = green, lower = red
+  if (left && right) {
+    const leftIsHigher = left.channels >= right.channels;
+    leftCard.style.borderColor = leftIsHigher ? '#4ade80' : '#fc5c7d';
+    rightCard.style.borderColor = leftIsHigher ? '#fc5c7d' : '#4ade80';
+  }
+
   if (correct) {
     _holScore++;
     resultEl.textContent = '✅ Correct!';
     resultEl.style.color = '#4ade80';
-    rightCard.style.borderColor = '#4ade80';
     if (_holScore > holGetBest()) localStorage.setItem('holBest', _holScore);
     document.getElementById('holBest').textContent = holGetBest();
     document.getElementById('holScore').textContent = _holScore;
     setTimeout(() => {
+      leftCard.style.borderColor = 'var(--border)';
+      rightCard.style.borderColor = 'var(--border)';
       _holPickTwo();
       _holRender(false);
       _holAnimating = false;
@@ -4986,8 +4994,6 @@ function _holHandleGuess(correct) {
   } else {
     resultEl.textContent = '❌ Wrong!';
     resultEl.style.color = '#fc5c7d';
-    rightCard.style.borderColor = '#fc5c7d';
-    // Show game over after brief pause
     setTimeout(() => {
       _holShowGameOver();
       _holAnimating = false;
