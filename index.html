@@ -1503,7 +1503,8 @@
           <!-- Pixelated emote display -->
           <div style="position:relative;width:420px;height:420px;border-radius:8px;overflow:hidden;background:#111;border:1px solid var(--border);flex-shrink:0">
             <canvas id="egCanvas" width="420" height="420" style="display:block;width:420px;height:420px;image-rendering:pixelated"></canvas>
-            <img id="egAnimImg" src="" style="display:none;width:420px;height:420px;object-fit:contain;image-rendering:auto">
+            <img id="egAnimImg" src="" style="display:none;width:420px;height:420px;object-fit:contain;image-rendering:auto;position:absolute;inset:0">
+            <div id="egBlurOverlay" style="display:none;position:absolute;inset:0;backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px)"></div>
           </div>
           <!-- Guess history -->
           <div id="egGuessHistory" style="width:100%;display:flex;flex-direction:column;gap:4px;min-height:28px"></div>
@@ -4690,30 +4691,41 @@ function _egRender() {
   if (!_egCurrentEmote) return;
   const canvas = document.getElementById('egCanvas');
   const animImg = document.getElementById('egAnimImg');
+  const blurOverlay = document.getElementById('egBlurOverlay');
 
-  if (pixelSize <= 1 && _egCurrentEmote.animated && animImg) {
-    // Show animated webp natively for animated emotes when fully revealed
+  if (_egCurrentEmote.animated) {
+    // Always show animated img — hide canvas
     if (canvas) canvas.style.display = 'none';
-    animImg.src = _egCurrentEmote.url;
-    animImg.style.display = 'block';
-    const badge = document.getElementById('egAttemptsBadge');
-    if (badge) badge.textContent = _egDone ? '' : `${_egAttempts}/${_egMaxAttempts}`;
-    return;
+    if (animImg) { animImg.src = _egCurrentEmote.url; animImg.style.display = 'block'; }
+    if (blurOverlay) {
+      if (pixelSize <= 1) {
+        // Fully revealed — no blur
+        blurOverlay.style.display = 'none';
+      } else {
+        // Blur scales down with each attempt: 32px → 24 → 16 → 10 → 5 → 0
+        const blurPx = [32, 24, 16, 10, 5, 0][level] || 0;
+        blurOverlay.style.display = 'block';
+        blurOverlay.style.backdropFilter = `blur(${blurPx}px)`;
+        blurOverlay.style.webkitBackdropFilter = `blur(${blurPx}px)`;
+      }
+    }
+  } else {
+    // Static emote — use canvas pixelation as before
+    if (animImg) animImg.style.display = 'none';
+    if (blurOverlay) blurOverlay.style.display = 'none';
+    if (canvas) canvas.style.display = 'block';
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => _egDrawPixelated(img, pixelSize);
+    img.onerror = () => {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#222'; ctx.fillRect(0,0,420,420);
+      ctx.fillStyle='#555'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',210,215);
+    };
+    img.src = _egCurrentEmote.url;
   }
-  // Hide animated img, use canvas
-  if (animImg) animImg.style.display = 'none';
-  if (canvas) canvas.style.display = 'block';
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => _egDrawPixelated(img, pixelSize);
-  img.onerror = () => {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#222'; ctx.fillRect(0,0,420,420);
-    ctx.fillStyle='#555'; ctx.font='14px monospace'; ctx.textAlign='center'; ctx.fillText('?',210,215);
-  };
-  img.src = _egCurrentEmote.url;
   const badge = document.getElementById('egAttemptsBadge');
   if (badge) badge.textContent = _egDone ? '' : `${_egAttempts}/${_egMaxAttempts}`;
 }
@@ -4724,6 +4736,8 @@ function _egStartRound() {
   _egDone = false;
   const _egAnimImg = document.getElementById('egAnimImg');
   if (_egAnimImg) { _egAnimImg.style.display = 'none'; _egAnimImg.src = ''; }
+  const _egBlur = document.getElementById('egBlurOverlay');
+  if (_egBlur) _egBlur.style.display = 'none';
   const _egCv = document.getElementById('egCanvas');
   if (_egCv) _egCv.style.display = 'block';
   document.getElementById('egGuessHistory').innerHTML = '';
@@ -6551,9 +6565,10 @@ function startSpace() {
       };
       // Fire 3 bullets in sequence with short delay between each
       _fireOneMilk();
-      const _delay = Math.floor(60 / milkSpd); // gap between bullets ~1 bullet-width apart
-      setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, _delay*16);
-      setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, _delay*32);
+      // Delay = time for bullet to travel ~1 bullet-diameter so they're nearly touching
+      const _delay = Math.round((milkSz / milkSpd) * 16 * 0.6);
+      setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, _delay);
+      setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, _delay*2);
       const milkCd=isT2milk?Math.floor(184*0.93):184;
       setCd(Math.floor(milkCd*rapidMod*atkMod));
 
@@ -8824,74 +8839,25 @@ function startSpace() {
         ctx.lineWidth=2.5; ctx.lineJoin='round';
         _drawDecagon(_nRv, 0); ctx.stroke();
 
-        // ── Loading-bar arc: lighter segment spinning clockwise along the outline ──
-        // Compute decagon perimeter points
-        const _pts=[];
-        for(let _pi=0;_pi<_nSides;_pi++){
-          const _pa=(_pi/_nSides)*Math.PI*2;
-          _pts.push({x:ship.x+Math.cos(_pa)*_nRv, y:ship.y+Math.sin(_pa)*_nRv});
-        }
-        // Total perimeter length
-        let _perim=0;
-        const _segLens=[];
-        for(let _si=0;_si<_nSides;_si++){
-          const _nx=_pts[(_si+1)%_nSides], _cx=_pts[_si];
-          const _sl=Math.sqrt((_nx.x-_cx.x)**2+(_nx.y-_cx.y)**2);
-          _segLens.push(_sl); _perim+=_sl;
-        }
-        // Bar length = 30% of perimeter, spins with frame
-        const _barLen=_perim*0.30;
-        const _spinPos=(frame*0.001*_perim)%_perim; // clockwise travel (12x slower)
-        // Draw the arc segment
+        // ── Clock hand: single line from center rotating clockwise, +40% speed ──
+        const _clockAngle = (frame * 0.001 * 1.4 * Math.PI * 2) % (Math.PI * 2); // 40% faster
+        // Find where the hand intersects the decagon outline
+        const _handLen = _nRv; // reaches outline
+        const _handX = ship.x + Math.cos(_clockAngle) * _handLen;
+        const _handY = ship.y + Math.sin(_clockAngle) * _handLen;
         ctx.save();
-        ctx.lineWidth=4+_nBurst*3; ctx.lineJoin='round'; ctx.lineCap='round';
-        ctx.globalAlpha=0.75+_nPulse*0.20+_nBurst*0.25;
-        // Create gradient along segment for leading-edge glow
-        let _traveled=0, _drawn=0;
+        ctx.globalAlpha = 0.85 + _nPulse * 0.15 + _nBurst * 0.15;
+        ctx.strokeStyle = _nT2v ? 'rgba(240,180,255,0.95)' : 'rgba(255,255,255,0.95)';
+        ctx.lineWidth = 2.5 + _nBurst * 2;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        let _started=false;
-        for(let _pass=0;_pass<2;_pass++){ // two passes to handle wrap-around
-          for(let _si=0;_si<_nSides;_si++){
-            const _segStart=_traveled;
-            const _segEnd=_traveled+_segLens[_si];
-            const _activeStart=_spinPos, _activeEnd=_spinPos+_barLen;
-            // Check overlap
-            const _oStart=Math.max(_segStart,_activeStart), _oEnd=Math.min(_segEnd,_activeEnd);
-            if(_oEnd>_oStart){
-              const _p0=(_oStart-_segStart)/_segLens[_si];
-              const _p1=(_oEnd-_segStart)/_segLens[_si];
-              const _ptA=_pts[_si], _ptB=_pts[(_si+1)%_nSides];
-              const _ax=_ptA.x+(_ptB.x-_ptA.x)*_p0, _ay=_ptA.y+(_ptB.y-_ptA.y)*_p0;
-              const _bx=_ptA.x+(_ptB.x-_ptA.x)*_p1, _by=_ptA.y+(_ptB.y-_ptA.y)*_p1;
-              if(!_started){ ctx.moveTo(_ax,_ay); _started=true; } else ctx.lineTo(_ax,_ay);
-              ctx.lineTo(_bx,_by);
-              _drawn+=(_oEnd-_oStart);
-            }
-            _traveled+=_segLens[_si];
-            if(_drawn>=_barLen) break;
-          }
-          if(_drawn>=_barLen) break;
-          _traveled=0; // second pass for wrap-around
-        }
-        ctx.strokeStyle=_nT2v?'rgba(230,150,255,0.95)':'rgba(240,240,240,0.95)';
+        ctx.moveTo(ship.x, ship.y);
+        ctx.lineTo(_handX, _handY);
         ctx.stroke();
-        // Leading glow dot
-        const _leadFrac=(_spinPos+_barLen)%_perim;
-        let _lAccum=0;
-        for(let _si=0;_si<_nSides;_si++){
-          if(_lAccum+_segLens[_si]>=_leadFrac){
-            const _lp=(_leadFrac-_lAccum)/_segLens[_si];
-            const _lx=_pts[_si].x+(_pts[(_si+1)%_nSides].x-_pts[_si].x)*_lp;
-            const _ly=_pts[_si].y+(_pts[(_si+1)%_nSides].y-_pts[_si].y)*_lp;
-            ctx.globalAlpha=0.9+_nBurst*0.1;
-            ctx.shadowColor=_nColorSolid; ctx.shadowBlur=12;
-            ctx.fillStyle=_nT2v?'#f0c0ff':'#ffffff';
-            ctx.beginPath(); ctx.arc(_lx,_ly,4+_nBurst*3,0,Math.PI*2); ctx.fill();
-            ctx.shadowBlur=0;
-            break;
-          }
-          _lAccum+=_segLens[_si];
-        }
+        // Tip glow dot
+        ctx.globalAlpha = 0.95 + _nBurst * 0.05;
+        ctx.fillStyle = _nT2v ? '#f0c0ff' : '#ffffff';
+        ctx.beginPath(); ctx.arc(_handX, _handY, 3 + _nBurst * 3, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
         // Burst flash on attack
