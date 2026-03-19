@@ -4463,7 +4463,7 @@ function startFlappy() {
   let _flappyLastTime = 0;
   function loop(timestamp) {
     if (!_flappyRunning) return;
-    const dt = _flappyLastTime ? Math.min(2, (timestamp - _flappyLastTime) / 16.667) : 1;
+    const dt = _flappyLastTime ? Math.min(1, (timestamp - _flappyLastTime) / 6.061) : 1;
     _flappyLastTime = timestamp;
 
     // Background — sunny green field
@@ -7086,7 +7086,7 @@ function startSpace() {
   let _spaceLastTime = 0;
   function loop(timestamp) {
     if(!_spaceRunning) return;
-    const dt = _spaceLastTime ? Math.min(2, (timestamp - _spaceLastTime) / 16.667) : 1;
+    const dt = _spaceLastTime ? Math.min(1, (timestamp - _spaceLastTime) / 6.061) : 1;
     _spaceLastTime = timestamp;
     frame++;
     window._spaceGameActive = (state==='playing' && !_spaceInShop);
