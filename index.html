@@ -4176,7 +4176,7 @@ function startFlappy() {
 
     if (state === 'playing') {
       // Scroll all ground emotes left
-      _gEmotes.forEach(g => { g.x -= getPipeSpeed() * dt; });
+      _gEmotes.forEach(g => { g.x -= getPipeSpeed() * _flappyDt; });
       // Remove ones that scrolled off screen
       _gEmotes = _gEmotes.filter(g => g.x > -g.size - 10);
 
@@ -4462,11 +4462,13 @@ function startFlappy() {
 
   let _flappyLastTime = 0;
   let _flappyAccum = 0;
+  let _flappyDt = 1;
   const _TICK = 1000/165; // fixed tick = 165Hz
   function loop(timestamp) {
     if (!_flappyRunning) return;
-    const _elapsed = _flappyLastTime ? Math.min(33, timestamp - _flappyLastTime) : 6.061;
-    const dt = _elapsed / 6.061;
+    const _elapsed = _flappyLastTime ? Math.min(33, timestamp - _flappyLastTime) : 7.576;
+    const dt = _elapsed / 7.576;
+    _flappyDt = dt;
     _flappyLastTime = timestamp;
 
     // Background — sunny green field
@@ -4742,7 +4744,7 @@ function egOnInput() {
   // Starts-with matches first, then contains
   const startsWith = _egEmotes.filter(e => e.name.toLowerCase().startsWith(val));
   const contains = _egEmotes.filter(e => !e.name.toLowerCase().startsWith(val) && e.name.toLowerCase().includes(val));
-  const matches = [...startsWith, ...contains].slice(0, 5);
+  const matches = [...startsWith, ...contains];
   if (!matches.length) { suggestEl.style.display = 'none'; return; }
   suggestEl.innerHTML = matches.map((e) =>
     `<div onclick="egSelectSuggest('${e.name.replace(/'/g,"\\'")}')"`+
@@ -7089,8 +7091,8 @@ function startSpace() {
   let _spaceLastTime = 0;
   function loop(timestamp) {
     if(!_spaceRunning) return;
-    const _elapsed = _spaceLastTime ? Math.min(33, timestamp - _spaceLastTime) : 6.061;
-    const dt = _elapsed / 6.061;
+    const _elapsed = _spaceLastTime ? Math.min(33, timestamp - _spaceLastTime) : 7.576;
+    const dt = _elapsed / 7.576;
     _spaceLastTime = timestamp;
     frame++;
     window._spaceGameActive = (state==='playing' && !_spaceInShop);
