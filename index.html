@@ -1957,6 +1957,7 @@ async function loadEmotes() {
           const animated = e.data?.animated || false;
           const ext = animated ? 'gif' : 'webp';
           emoteMap[name] = {
+            id,
             url: `https://cdn.7tv.app/emote/${id}/2x.${ext}`,
             animated,
             source: '7tv'
@@ -1977,6 +1978,7 @@ async function loadEmotes() {
           const animated = e.data?.animated || false;
           const ext = animated ? 'gif' : 'webp';
           emoteMap[e.name] = {
+            id: e.id,
             url: `https://cdn.7tv.app/emote/${e.id}/2x.${ext}`,
             animated,
             source: '7tv-global'
@@ -4472,8 +4474,8 @@ function startFlappy() {
   const _TICK = 1000/165; // fixed tick = 165Hz
   function loop(timestamp) {
     if (!_flappyRunning) return;
-    const _elapsed = _flappyLastTime ? Math.min(33, timestamp - _flappyLastTime) : 9;
-    const dt = _elapsed / 9;
+    const _elapsed = _flappyLastTime ? Math.min(33, timestamp - _flappyLastTime) : 8.333;
+    const dt = _elapsed / 8.333;
     _flappyDt = dt;
     _flappyLastTime = timestamp;
 
@@ -4636,33 +4638,24 @@ let _egStreak = 0;
 let _egBestStreak = 0;
 let _egSuggestIdx = -1;
 // Pixel sizes for each reveal level (1=most pixelated, 6=full)
-const EG_PIXEL_SIZES = [32, 16, 8, 4, 2, 1];
+const EG_PIXEL_SIZES = [64, 32, 16, 8, 3, 1];
 
 async function _egLoadEmotes() {
   if (_egLoaded && _egEmotes.length > 0) return;
-  const seen = new Set();
+  // Wait briefly for emoteMap to populate if needed
+  await new Promise(r => setTimeout(r, 200));
   const results = [];
-  await Promise.all(EG_CHANNELS.map(async ch => {
-    try {
-      const r = await fetch(`https://7tv.io/v3/users/twitch/${ch.id}`);
-      const d = await r.json();
-      const emotes = d.emote_set?.emotes || [];
-      emotes.forEach(e => {
-        if (!e.id || !e.name || seen.has(e.id)) return;
-        seen.add(e.id);
-        const animated = e.data?.animated || false;
-        results.push({ id: e.id, name: e.name, animated, url: `https://cdn.7tv.app/emote/${e.id}/2x.webp` });
-      });
-    } catch(err) { /* skip failed channels */ }
-  }));
-  // Fallback: global emote set
+  Object.entries(emoteMap).forEach(([name, data]) => {
+    if (!data.id || !name) return;
+    results.push({ id: data.id, name, animated: data.animated || false, url: data.url });
+  });
+  // Fallback: fetch global set directly
   if (results.length === 0) {
     try {
       const r = await fetch('https://7tv.io/v3/emote-sets/global');
       const d = await r.json();
       (d.emotes || []).forEach(e => {
-        if (!e.id || !e.name || seen.has(e.id)) return;
-        seen.add(e.id);
+        if (!e.id || !e.name) return;
         results.push({ id: e.id, name: e.name, animated: e.data?.animated||false, url: `https://cdn.7tv.app/emote/${e.id}/2x.webp` });
       });
     } catch(err) {}
@@ -4716,18 +4709,23 @@ function _egRender() {
         animImg.style.width = '420px';
         animImg.style.height = '420px';
         animImg.style.imageRendering = 'auto';
+        animImg.style.filter = '';
         animImg.style.transform = 'none';
         animImg.style.transformOrigin = 'top left';
         animImg.style.position = 'absolute';
         animImg.style.left = '0';
         animImg.style.top = '0';
       } else {
-        // Pixelate by rendering tiny then scaling up with CSS pixelated rendering
-        const _scale = Math.max(1, Math.floor(420 / pixelSize));
-        const _tiny = Math.max(1, Math.floor(420 / _scale));
+        // Pixelate: render at very small size then scale up with pixelated rendering
+        // Divide by extra factor to get bigger blocks
+        const _tiny = Math.max(1, Math.floor(420 / pixelSize / 2));
+        const _scale = 420 / _tiny;
         animImg.style.width = _tiny + 'px';
         animImg.style.height = _tiny + 'px';
         animImg.style.imageRendering = 'pixelated';
+        // Extra blur on top for early levels to really hide it
+        const _blurPx = pixelSize >= 32 ? 4 : pixelSize >= 16 ? 2 : 0;
+        animImg.style.filter = _blurPx > 0 ? `blur(${_blurPx}px)` : '';
         animImg.style.transform = `scale(${_scale})`;
         animImg.style.transformOrigin = 'top left';
         animImg.style.position = 'absolute';
@@ -6477,7 +6475,7 @@ function startSpace() {
       const _rotOff=hasTier2?(frame*0.012):baseAngle; // T2 slow auto-rotate
       for(let i=0;i<shotCount;i++){
         const a=_rotOff+(i/shotCount)*Math.PI*2;
-        const spd=5.2*0.85;
+        const spd=5.2*0.85*(hasTier2?0.88:0.88); // 12% slower for both T1 and T2
         const bulletSz=sz*1.1;
         const _shotHue=(_towerGunBurstCount*73)%360;
         const col=`hsl(${(_shotHue+i*(360/shotCount))%360},100%,65%)`;
@@ -6487,19 +6485,19 @@ function startSpace() {
         spawnParticles(ship.x,ship.y,'#e879f9',10);
         _burstRings.push({x:ship.x,y:ship.y,r:0,maxR:2200,life:180,maxLife:180,spd:8.4,hue:(_towerGunBurstCount*73)%360,dmg:1.5*getBulletDmg(),hitEnemies:new Set()});
       }
-      setCd(Math.floor(138*rapidMod*atkMod)); // 138 frames (was 138*1.20, removing extra 20%)
+      setCd(Math.floor((hasTier2?145:160)*rapidMod*atkMod));
 
     } else if(wKey==='flamethrower'){
       const isT2=!!upgrades.tier2_flamethrower;
       const spread=isT2?0.45*1.25:0.45; // T2 25% wider cone
       const rangeBonus=isT2?1.65:1.0;   // T2 +65% range
       const _flameSpd=4.5+Math.random()*2.0; // constant speed regardless of range
-      const _flameLife=(35+Math.random()*20)*rangeBonus*rm; // range bonus only affects life/distance
+      const _flameLife=(35+Math.random()*20)*rangeBonus*rm*(isT2?1.40:1.0);
       const _baseDmg=0.00415*0.15*getBulletDmg();
-      const _flameDmg=_baseDmg*1.70; // +70% dmg
+      const _flameDmg=_baseDmg*1.70;
       const a=baseAngle+(Math.random()-0.5)*spread;
       bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_flameSpd,vy:Math.sin(a)*_flameSpd,
-        dmg:_flameDmg, size:sz*3.5,
+        dmg:_flameDmg, size:sz*(isT2?3.5*1.60:3.5),
         color:'#ff4400',flame:true,life:_flameLife,maxLife:_flameLife,
         pierce:upgrades.pierce||0, burns:true,
         _burnDur:240,           // 4s burn
@@ -6514,9 +6512,10 @@ function startSpace() {
       const count=(isT2m2?9:5)+Math.floor(upgrades.multishot*0.8);
       const spread=isT2m2?Math.PI*0.61:0.55; // T2 ~110° arc
       for(let i=0;i<count;i++){
-        const a=baseAngle+(i-(count-1)/2)*(spread/(count-1||1));
-        const _mSpd=5.5; // normalized to pistol speed
-        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd,vy:Math.sin(a)*_mSpd,dmg:Math.max(1,Math.floor(dmg*0.80)),size:sz,color:'#fbbf24',weaponType:'multi',pierce:upgrades.pierce||0});
+        const a=baseAngle+Math.PI+(i-(count-1)/2)*(spread/(count-1||1)); // +PI to flip 180°
+        const _mSpd=5.5*0.78; // -22% speed
+        const _mSz=sz*1.30*1.15; // 30% bigger + 15% wider
+        bullets.push({x:ship.x,y:ship.y,vx:Math.cos(a)*_mSpd,vy:Math.sin(a)*_mSpd,dmg:Math.max(1,Math.floor(dmg*0.80)),size:_mSz,color:'#fbbf24',weaponType:'multi',pierce:upgrades.pierce||0});
       }
       setCd(Math.floor(160*rapidMod*atkMod)); // 160 frames
 
@@ -6566,8 +6565,8 @@ function startSpace() {
       const perpX=Math.cos(baseAngle+Math.PI/2), perpY=Math.sin(baseAngle+Math.PI/2);
       const _lcol=isT2L?'#ff4444':'#7df9ff';
       const _lSpread=isT2L?14:22;
-      const _lBaseSpd=6.5; // clean base speed
-      const _lT2Extra=isT2L?1.12:1.0;    // T2 +12%
+      const _lBaseSpd=isT2L?6.3:5.7;
+      const _lT2Extra=1.0; // speed already set per tier above
       for(let bi=0;bi<boltCount;bi++){
         const offset=(bi-(boltCount-1)/2)*_lSpread;
         bullets.push({
@@ -6581,7 +6580,7 @@ function startSpace() {
           snakePhase:bi*2.1, snakeAng:baseAngle,
         });
       }
-      setCd(Math.floor(160*rapidMod*atkMod)); // 160 frames
+      setCd(Math.floor((isT2L?145:170)*rapidMod*atkMod));
       const _lac=getACtx();if(_lac){
         const _lv=getSfxVol()*0.08;
         [600,900,1200].forEach((f,i)=>setTimeout(()=>{
@@ -6608,7 +6607,7 @@ function startSpace() {
       _fireOneMilk();
       setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, 50);
       setTimeout(()=>{ if(_spaceRunning) _fireOneMilk(); }, 100);
-      const milkCd=isT2milk?Math.floor(184*0.93*1.75):Math.floor(184*1.75);
+      const milkCd=isT2milk?210:250;
       setCd(Math.floor(milkCd*rapidMod*atkMod));
 
     } else if(wKey==='narcissism'){
@@ -7156,8 +7155,8 @@ function startSpace() {
   let _spaceLastTime = 0;
   function loop(timestamp) {
     if(!_spaceRunning) return;
-    const _elapsed = _spaceLastTime ? Math.min(33, timestamp - _spaceLastTime) : 9;
-    const dt = _elapsed / 9;
+    const _elapsed = _spaceLastTime ? Math.min(33, timestamp - _spaceLastTime) : 8.333;
+    const dt = _elapsed / 8.333;
     _spaceLastTime = timestamp;
     frame++;
     window._spaceGameActive = (state==='playing' && !_spaceInShop);
@@ -7284,8 +7283,8 @@ function startSpace() {
       if((activeWeapons.includes('garlic')||activeWeapon==='garlic') && unlockedWeapons.has('garlic')){
         const _gT2=!!upgrades.tier2_garlic;
         const _gRadius = 3 * 36 * 1.5 * (_gT2 ? 1.40*0.85*1.07 : 1.0) * getRangeMult() * getBulletSize(); // T2 +7% range
-        const _gDmgBase = 0.3*1.12*0.80*1.15; // +15% base dmg
-        const _gDmg = (_gT2 ? _gDmgBase*1.25 : _gDmgBase) * getBulletDmg() / 60; // T2 +25% dmg
+        const _gDmgBase = 0.3*1.12*0.80*1.15*1.25; // +25% extra base dmg
+        const _gDmg = (_gT2 ? _gDmgBase*1.25*1.20 : _gDmgBase) * getBulletDmg() / 60; // T2 +25%+20% dmg
         // Garlic damages abandoned ships in range
         for(let _gasi=0;_gasi<abandonedShips.length;_gasi++){
           const _gas=abandonedShips[_gasi];if(_gas.dead)continue;
@@ -7334,7 +7333,7 @@ function startSpace() {
       if((activeWeapons.includes('narcissism')||activeWeapon==='narcissism') && unlockedWeapons.has('narcissism')){
         const _nT2=!!upgrades.tier2_narcissism;
         const _nRadius = 3*36*1.5*0.8*getRangeMult()*getBulletSize()*(_nT2?1.20:1.0);
-        const _nDmg = 0.3*1.12*0.80*getBulletDmg()*(_nT2?1.30:1.0); // back to original dmg (×2.30 was too high)
+        const _nDmg = 0.3*1.12*0.80*1.5*getBulletDmg()*(_nT2?1.30:1.0);
         if(Math.floor(frame)%240===0){ // every 4 seconds (slower)
           enemies=enemies.map(e=>{
             const dx=e.x-ship.x, dy=e.y-ship.y;
@@ -7453,13 +7452,12 @@ function startSpace() {
       if(enemyTimer<=0){
         spawnEnemy();
         // timeFactor decays much more slowly — reaches 0.5 at 10 minutes instead of 0.7 at 3min
-        const timeFactor=Math.max(0.45,1-survivalFrames/72000);
+        const timeFactor=Math.max(0.38,1-survivalFrames/72000);
         const swarmMod=upgrades.enemySwarm?1/(1+upgrades.enemySwarm*0.15):1;
         const secIn=survivalFrames/60;
-        // Much higher base intervals, slower ramp — 2-3min range is now 500-600 frames base
-        const easeBase= secIn<30 ? 720 : secIn<60 ? 620 : secIn<120 ? 560 : secIn<180 ? 500 : secIn<300 ? 440 : 380;
+        const easeBase= secIn<30 ? 600 : secIn<60 ? 510 : secIn<120 ? 460 : secIn<180 ? 410 : secIn<300 ? 360 : 310;
         const baseSpawn=easeBase;
-        enemyTimer=Math.max(28,Math.floor(baseSpawn*timeFactor*swarmMod));
+        enemyTimer=Math.max(22,Math.floor(baseSpawn*timeFactor*swarmMod));
       }
       difficulty=1+score*0.003; // slower speed scaling (was 0.007)
 
@@ -7627,8 +7625,8 @@ function startSpace() {
           // T2 bounce: reflect beam angle off world walls once
           if(b.bounceOnce && !b._bounced){
             const bx=b.beamX, by=b.beamY;
-            const fullLen=Math.sqrt(WW*WW+WH*WH)*1.2;
-            const endX=bx+cosA*fullLen, endY=by+sinA*fullLen;
+            const checkLen=Math.sqrt(W*W+H*H)*2; // only check within 2 screen lengths
+            const endX=bx+cosA*checkLen, endY=by+sinA*checkLen;
             if(endX<0||endX>WW){ b.beamAngle=Math.PI-b.beamAngle; b._bounced=true; }
             else if(endY<0||endY>WH){ b.beamAngle=-b.beamAngle; b._bounced=true; }
           }
@@ -8472,7 +8470,7 @@ function startSpace() {
         // Multi-Gun — yellow crescent facing outward (like 🌙), arch opens away from player
         const sz=b.size||1;
         const angle=Math.atan2(b.vy,b.vx);
-        ctx.translate(b.x,b.y);ctx.rotate(angle+Math.PI); // +PI flips so open side faces forward
+        ctx.translate(b.x,b.y);ctx.rotate(angle); // open side faces forward (already flipped in fire)
         ctx.save();
         ctx.shadowBlur=0;
         // Outer arc (the back of the crescent)
