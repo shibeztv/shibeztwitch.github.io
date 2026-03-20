@@ -1339,19 +1339,13 @@
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
     </a>
     <div style="position:relative" id="vqAvatarWrap">
-      <button onclick="(()=>{const m=document.getElementById('vqAvatarMenu');m.style.display=m.style.display==='flex'?'none':'flex';})()" class="topbar-avatar" title="Video Queue / Mod" style="cursor:pointer;background:none;border:none;padding:0">
-        <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/629b51ce-483d-4cf8-a1c4-c9a56074e6a7-profile_image-70x70.png" alt="shlbez">
+      <button onclick="shibezProfileOpen()" id="profileAvatarBtn" title="Your Profile" style="cursor:pointer;background:none;border:none;padding:0;display:flex;align-items:center" class="topbar-avatar">
+        <img id="profileAvatarImg" src="https://static-cdn.jtvnw.net/jtv_user_pictures/629b51ce-483d-4cf8-a1c4-c9a56074e6a7-profile_image-70x70.png" alt="profile">
       </button>
-      <div id="vqAvatarMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#111;border:1px solid #333;border-radius:8px;padding:8px;flex-direction:column;gap:4px;min-width:180px;z-index:9999">
-        <a href="https://twitch.tv/shlbez" target="_blank" style="display:block;font-family:var(--mono);font-size:11px;color:#eee;text-decoration:none;padding:8px 12px;border-radius:4px;background:#1a1a1a;border:1px solid #2a2a2a" onmouseover="this.style.background='#252525'" onmouseout="this.style.background='#1a1a1a'">🟣 Twitch Channel</a>
-        <a href="?submit" target="_blank" style="display:block;font-family:var(--mono);font-size:11px;color:#eee;text-decoration:none;padding:8px 12px;border-radius:4px;background:#1a1a1a;border:1px solid #2a2a2a" onmouseover="this.style.background='#252525'" onmouseout="this.style.background='#1a1a1a'">🎬 Submit a Video</a>
-        <a href="?queue" target="_blank" style="display:block;font-family:var(--mono);font-size:11px;color:#eee;text-decoration:none;padding:8px 12px;border-radius:4px;background:#1a1a1a;border:1px solid #2a2a2a" onmouseover="this.style.background='#252525'" onmouseout="this.style.background='#1a1a1a'">🛡 Mod Queue</a>
-        <a href="?obs" target="_blank" style="display:block;font-family:var(--mono);font-size:11px;color:#eee;text-decoration:none;padding:8px 12px;border-radius:4px;background:#1a1a1a;border:1px solid #2a2a2a" onmouseover="this.style.background='#252525'" onmouseout="this.style.background='#1a1a1a'">📺 OBS Source</a>
-      </div>
     </div>
   </div>
 </nav>
-<script>document.addEventListener('click',e=>{const w=document.getElementById('vqAvatarWrap');const m=document.getElementById('vqAvatarMenu');if(m&&w&&!w.contains(e.target))m.style.display='none';});</script>
+
 
 <!-- LAYOUT -->
 <div class="layout" id="mainLayout">
@@ -1404,6 +1398,92 @@
         onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
         🚀 SPACEBEZ
       </button>
+      <button onclick="openFollowerChecker()" id="followerCheckerBtn"
+        style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--surface2);border:1px solid var(--border);color:#bbb;padding:8px 18px;border-radius:4px;cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.borderColor='#9146ff';this.style.color='#9146ff'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='#bbb'">
+        🔍 TWITCH LOOKUP
+      </button>
+    </div>
+
+    <!-- FOLLOWER CHECKER MODAL -->
+    <div id="followerCheckerModal" style="display:none;position:fixed;inset:0;z-index:9010;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeFollowerChecker()">
+      <div style="background:#0d0d1a;border:1px solid #2a2a4a;border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;position:relative">
+
+        <!-- Header -->
+        <div style="padding:18px 24px 14px;border-bottom:1px solid #1a1a2a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <div style="font-family:var(--mono);font-size:15px;font-weight:900;color:#fff">🔍 Twitch Follows Lookup</div>
+          <button onclick="closeFollowerChecker()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer;line-height:1">✕</button>
+        </div>
+
+        <!-- Search bar -->
+        <div style="padding:14px 24px 0;flex-shrink:0">
+          <div style="display:flex;gap:8px">
+            <input id="fcInput" type="text" placeholder="Enter Twitch username…"
+              style="flex:1;background:#111;border:1px solid #333;color:#fff;font-family:var(--mono);font-size:13px;padding:10px 14px;border-radius:6px;outline:none"
+              onkeydown="if(event.key==='Enter')fcLookup()">
+            <button onclick="fcLookup()" style="background:#9146ff;border:none;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;padding:10px 20px;border-radius:6px;cursor:pointer">SEARCH</button>
+          </div>
+          <div id="fcError" style="font-family:var(--mono);font-size:11px;color:#fc5c7d;margin-top:6px;min-height:14px"></div>
+        </div>
+
+        <!-- User profile card -->
+        <div id="fcProfile" style="display:none;padding:12px 24px 0;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:14px;background:#111;border:1px solid #222;border-radius:8px;padding:14px 16px">
+            <img id="fcAvatar" src="" style="width:52px;height:52px;border-radius:50%;border:2px solid #9146ff;flex-shrink:0">
+            <div style="flex:1;min-width:0">
+              <div id="fcDisplayName" style="font-family:var(--mono);font-size:15px;font-weight:900;color:#fff"></div>
+              <div style="display:flex;gap:10px;margin-top:3px;flex-wrap:wrap">
+                <span id="fcLogin" style="font-family:var(--mono);font-size:10px;color:#9146ff"></span>
+                <span id="fcMeta" style="font-family:var(--mono);font-size:10px;color:#555"></span>
+              </div>
+            </div>
+            <div style="display:flex;gap:20px;text-align:center;flex-shrink:0">
+              <div>
+                <div id="fcFollowerCount" style="font-family:var(--mono);font-size:18px;font-weight:900;color:#fff"></div>
+                <div style="font-family:var(--mono);font-size:9px;color:#555;letter-spacing:0.5px">FOLLOWERS</div>
+              </div>
+              <div>
+                <div id="fcFollowingCount" style="font-family:var(--mono);font-size:18px;font-weight:900;color:#fff"></div>
+                <div style="font-family:var(--mono);font-size:9px;color:#555;letter-spacing:0.5px">FOLLOWING</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs + filter row -->
+        <div id="fcTabsRow" style="display:none;flex-shrink:0;padding:0 24px;border-bottom:1px solid #1a1a2a;display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+          <div style="display:flex">
+            <button id="fcTabFollowers" onclick="fcShowTab('followers')" style="font-family:var(--mono);font-size:11px;font-weight:700;background:none;border:none;border-bottom:2px solid #9146ff;color:#fff;padding:10px 18px 8px;cursor:pointer">
+              FOLLOWERS <span id="fcFollowersCountBadge" style="font-size:9px;color:#9146ff;margin-left:4px"></span>
+            </button>
+            <button id="fcTabFollowing" onclick="fcShowTab('following')" style="font-family:var(--mono);font-size:11px;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:#555;padding:10px 18px 8px;cursor:pointer">
+              FOLLOWING <span id="fcFollowingCountBadge" style="font-size:9px;color:#555;margin-left:4px"></span>
+            </button>
+          </div>
+          <input id="fcFilter" type="text" placeholder="Filter…"
+            style="background:#111;border:1px solid #222;color:#ccc;font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:4px;outline:none;width:140px"
+            oninput="fcApplyFilter()">
+        </div>
+
+        <!-- List -->
+        <div id="fcList" style="overflow-y:auto;flex:1;min-height:240px">
+          <div style="text-align:center;padding:60px 0;font-family:var(--mono);font-size:12px;color:#333">Enter a username to look them up</div>
+        </div>
+
+        <!-- Footer note -->
+        <div id="fcFooter" style="display:none;padding:8px 24px;border-top:1px solid #1a1a2a;font-family:var(--mono);font-size:9px;color:#333;flex-shrink:0">
+          Showing first 100 results · <span style="color:#9146ff">purple = mutual follow</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" style="display:none;position:fixed;inset:0;z-index:9010;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)shibezProfileClose()">
+      <div style="background:#0d0d1a;border:1px solid #2a2a4a;border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;position:relative">
+        <button onclick="shibezProfileClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#555;font-size:20px;cursor:pointer;line-height:1">✕</button>
+        <div id="profileModalContent" style="padding:24px"></div>
+      </div>
     </div>
 
     <!-- SPACEBEZ MODAL -->
@@ -1933,6 +2013,376 @@ function lbRenderRows(key,highlightScore,limit){
     </div>`;
   }).join('');
 }
+// ─── USER PROFILE SYSTEM ────────────────────────────────────────────────────
+const _PROF_KEY = 'shibez_user_profile';
+const _PROF_TWITCH_CLIENT = '61x4q55vai9w0lwsc1enqw9vktqzee';
+let _profUser = null; // {id, login, displayName, avatar, followedAt, subMonths, subTier}
+
+function _profLoad() {
+  try { return JSON.parse(localStorage.getItem(_PROF_KEY)||'null'); } catch(e){ return null; }
+}
+function _profSave(p) {
+  localStorage.setItem(_PROF_KEY, JSON.stringify(p));
+}
+function _profGet(field, def) {
+  const p = _profLoad(); return p ? (p[field] ?? def) : def;
+}
+function _profSet(field, val) {
+  const p = _profLoad() || {};
+  p[field] = val;
+  _profSave(p);
+}
+
+// Time tracking — save every 30s
+let _profTimeStart = Date.now();
+setInterval(() => {
+  const p = _profLoad(); if(!p) return;
+  p.timeMs = (p.timeMs||0) + Math.min(30000, Date.now() - _profTimeStart);
+  _profTimeStart = Date.now();
+  _profSave(p);
+}, 30000);
+
+// Track stream opens
+function profTrackStream(stream) {
+  const p = _profLoad(); if(!p) return;
+  const entry = { title: stream.title, date: stream.date||stream.rawDate||'', ts: Date.now() };
+  const last = p.lastStreams || [];
+  p.lastStreams = [entry, ...last.filter(s=>s.title!==entry.title)].slice(0,5);
+  p.streamsOpened = (p.streamsOpened||0) + 1;
+  _profSave(p);
+}
+
+// Track game scores
+function profTrackScore(game, score) {
+  const p = _profLoad(); if(!p) return;
+  if(!p.scores) p.scores = {};
+  const prev = p.scores[game] || { best: 0, last: 0, plays: 0 };
+  p.scores[game] = { best: Math.max(prev.best, score), last: score, plays: (prev.plays||0)+1 };
+  _profSave(p);
+}
+
+// Twitch OAuth
+function profTwitchLogin() {
+  const redirect = location.origin + location.pathname;
+  const url = `https://id.twitch.tv/oauth2/authorize?client_id=${_PROF_TWITCH_CLIENT}&redirect_uri=${encodeURIComponent(redirect)}&response_type=token&scope=user%3Aread%3Aemail+user%3Aread%3Afollows`;
+  sessionStorage.setItem('shibez_prof_login_pending','1');
+  location.href = url;
+}
+function profLogout() {
+  localStorage.removeItem(_PROF_KEY);
+  _profUser = null;
+  const img = document.getElementById('profileAvatarImg');
+  if(img) img.src = 'https://static-cdn.jtvnw.net/jtv_user_pictures/629b51ce-483d-4cf8-a1c4-c9a56074e6a7-profile_image-70x70.png';
+  shibezProfileClose();
+}
+
+async function _profHandleOAuthCallback(token) {
+  history.replaceState(null,'',location.pathname);
+  sessionStorage.removeItem('shibez_prof_login_pending');
+  try {
+    // Get user info
+    const ur = await fetch('https://api.twitch.tv/helix/users', {
+      headers:{'Authorization':`Bearer ${token}`,'Client-Id':_PROF_TWITCH_CLIENT}
+    });
+    const ud = await ur.json();
+    const user = ud.data?.[0]; if(!user) return;
+
+    // Get follow info
+    let followedAt = null;
+    try {
+      const fr = await fetch(`https://api.twitch.tv/helix/channels/followed?user_id=${user.id}&broadcaster_id=96140858`, {
+        headers:{'Authorization':`Bearer ${token}`,'Client-Id':_PROF_TWITCH_CLIENT}
+      });
+      const fd = await fr.json();
+      followedAt = fd.data?.[0]?.followed_at || null;
+    } catch(e){}
+
+    // Get sub info
+    let subMonths = 0, subTier = null;
+    try {
+      const sr = await fetch(`https://api.twitch.tv/helix/subscriptions/user?broadcaster_id=96140858&user_id=${user.id}`, {
+        headers:{'Authorization':`Bearer ${token}`,'Client-Id':_PROF_TWITCH_CLIENT}
+      });
+      const sd = await sr.json();
+      if(sd.data?.[0]) { subTier = sd.data[0].tier; subMonths = sd.data[0].gifter_name ? 0 : 1; }
+    } catch(e){}
+
+    const existing = _profLoad() || {};
+    const updated = {
+      ...existing,
+      id: user.id,
+      login: user.login,
+      displayName: user.display_name,
+      avatar: user.profile_image_url,
+      followedAt,
+      subTier,
+      subMonths,
+      token,
+      joinedSite: existing.joinedSite || Date.now(),
+    };
+    _profSave(updated);
+    _profUser = updated;
+
+    const img = document.getElementById('profileAvatarImg');
+    if(img) img.src = user.profile_image_url;
+
+    shibezProfileOpen();
+  } catch(e){ console.error('Profile OAuth error',e); }
+}
+
+// Check for OAuth callback on page load
+(function(){
+  const hash = new URLSearchParams(location.hash.replace('#',''));
+  const token = hash.get('access_token');
+  const state = hash.get('state');
+  if(token && sessionStorage.getItem('shibez_prof_login_pending')) {
+    _profHandleOAuthCallback(token);
+    return;
+  }
+  // Restore saved session and track visit
+  const p = _profLoad();
+  if(p?.avatar) {
+    _profUser = p;
+    const img = document.getElementById('profileAvatarImg');
+    if(img) img.src = p.avatar;
+    // Increment visit count (once per session)
+    if(!sessionStorage.getItem('shibez_visit_counted')) {
+      sessionStorage.setItem('shibez_visit_counted','1');
+      p.visitCount = (p.visitCount||0) + 1;
+      p.lastVisit = Date.now();
+      // Night shift: 2am–5am
+      const _hr = new Date().getHours();
+      if(_hr >= 2 && _hr < 5) p.nightShift = true;
+      // Christmas Day
+      const _now2 = new Date();
+      if(_now2.getMonth()===11 && _now2.getDate()===25) p.visitedXmas = true;
+      // shlbez birthday: Oct 16
+      if(_now2.getMonth()===9 && _now2.getDate()===16) p.visitedBirthday = true;
+      _profSave(p);
+    }
+  }
+})();
+
+function _fmtTime(ms) {
+  if(!ms) return '0m';
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function _fmtDate(iso) {
+  if(!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function _monthsAgo(iso) {
+  if(!iso) return null;
+  const months = Math.floor((Date.now()-new Date(iso))/(1000*60*60*24*30.5));
+  return months;
+}
+
+function shibezProfileOpen() {
+  const modal = document.getElementById('profileModal');
+  const content = document.getElementById('profileModalContent');
+  if(!modal||!content) return;
+  modal.style.display='flex';
+
+  const p = _profLoad();
+
+  if(!p?.login) {
+    // Not logged in
+    content.innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;margin-bottom:12px">👤</div>
+        <div style="font-family:var(--mono,monospace);font-size:16px;font-weight:900;color:#fff;margin-bottom:6px">Your Profile</div>
+        <div style="font-family:var(--mono,monospace);font-size:11px;color:#555;margin-bottom:24px">Log in with Twitch to track your stats</div>
+        <button onclick="profTwitchLogin()" style="display:inline-flex;align-items:center;gap:8px;background:#9146ff;border:none;color:#fff;font-family:var(--mono,monospace);font-size:13px;font-weight:700;padding:12px 24px;border-radius:6px;cursor:pointer">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+          Connect Twitch
+        </button>
+        <div style="margin-top:16px">
+          <a href="?submit" style="font-family:var(--mono,monospace);font-size:11px;color:#555;text-decoration:none" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#555'">🎬 Submit a Video</a>
+          &nbsp;·&nbsp;
+          <a href="?queue" style="font-family:var(--mono,monospace);font-size:11px;color:#555;text-decoration:none" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#555'">🛡 Mod Queue</a>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Logged in
+  const followMonths = _monthsAgo(p.followedAt);
+  const subLabel = p.subTier === '1000' ? 'Tier 1' : p.subTier === '2000' ? 'Tier 2' : p.subTier === '3000' ? 'Tier 3' : null;
+  const scores = p.scores || {};
+  const streams = p.lastStreams || [];
+
+  const _statBox = (icon, label, val) => `
+    <div style="background:#111;border:1px solid #222;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">${icon}</span>
+      <div>
+        <div style="font-family:var(--mono,monospace);font-size:10px;color:#555">${label}</div>
+        <div style="font-family:var(--mono,monospace);font-size:13px;font-weight:700;color:#ddd">${val}</div>
+      </div>
+    </div>`;
+
+  const _gameRow = (icon, name, key) => {
+    const s = scores[key];
+    if(!s) return '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a">
+      <span style="font-size:16px;width:20px">${icon}</span>
+      <span style="font-family:var(--mono,monospace);font-size:11px;color:#aaa;flex:1">${name}</span>
+      <span style="font-family:var(--mono,monospace);font-size:11px;color:#ffd700">🏆 ${s.best}</span>
+      <span style="font-family:var(--mono,monospace);font-size:10px;color:#555">${s.plays} plays</span>
+    </div>`;
+  };
+
+  // Achievements — pure localStorage checks, zero API calls
+  const _ACHIEVEMENTS = [
+    // Visits
+    { id:'first_visit',   icon:'🌟', name:'First Timer',        desc:'Visit the site for the first time',        check: p => true },
+    { id:'visits_5',      icon:'🔁', name:'Regular',            desc:'Visit the site 5 times',                   check: p => (p.visitCount||0)>=5 },
+    { id:'visits_25',     icon:'📅', name:'Dedicated',          desc:'Visit the site 25 times',                  check: p => (p.visitCount||0)>=25 },
+    { id:'visits_100',    icon:'💯', name:'Century',            desc:'Visit the site 100 times',                 check: p => (p.visitCount||0)>=100 },
+    { id:'visits_1000',   icon:'🔥', name:'Addicted',           desc:'Visit the site 1,000 times',               check: p => (p.visitCount||0)>=1000 },
+    { id:'visits_2500',   icon:'👑', name:'Royalty',            desc:'Visit the site 2,500 times',               check: p => (p.visitCount||0)>=2500 },
+    { id:'visits_5000',   icon:'🏯', name:'Veteran',            desc:'Visit the site 5,000 times',               check: p => (p.visitCount||0)>=5000 },
+    { id:'visits_10000',  icon:'🌌', name:'Legendary',          desc:'Visit the site 10,000 times',              check: p => (p.visitCount||0)>=10000 },
+    // Time
+    { id:'time_30',       icon:'⏱',  name:'Half Hour Club',     desc:'Spend 30 minutes on the site',             check: p => (p.timeMs||0)>=1800000 },
+    { id:'time_5h',       icon:'🕰️', name:'Lore Master',        desc:'Spend 5 hours on the site',                check: p => (p.timeMs||0)>=18000000 },
+    { id:'time_12h',      icon:'🌙', name:'Night Owl',          desc:'Spend 12 hours on the site',               check: p => (p.timeMs||0)>=43200000 },
+    { id:'time_24h',      icon:'🗓️', name:'Full Day',           desc:'Spend 24 hours on the site',               check: p => (p.timeMs||0)>=86400000 },
+    { id:'time_50h',      icon:'🧟', name:'No Life',            desc:'Spend 50 hours on the site',               check: p => (p.timeMs||0)>=180000000 },
+    { id:'time_100h',     icon:'💀', name:'Send Help',          desc:'Spend 100 hours on the site',              check: p => (p.timeMs||0)>=360000000 },
+    // Streams
+    { id:'streams_1',     icon:'📺', name:'First Stream',       desc:'Open your first stream',                   check: p => (p.streamsOpened||0)>=1 },
+    { id:'streams_5',     icon:'📼', name:'Binge Watcher',      desc:'Open 5 streams',                           check: p => (p.streamsOpened||0)>=5 },
+    { id:'streams_25',    icon:'📡', name:'VOD Hoarder',        desc:'Open 25 streams',                          check: p => (p.streamsOpened||0)>=25 },
+    { id:'streams_50',    icon:'🎞️', name:'Archivist',          desc:'Open 50 streams',                          check: p => (p.streamsOpened||0)>=50 },
+    { id:'streams_100',   icon:'🏛️', name:'Historian',          desc:'Open 100 streams',                         check: p => (p.streamsOpened||0)>=100 },
+    { id:'streams_250',   icon:'🗃️', name:'The Librarian',      desc:'Open 250 streams',                         check: p => (p.streamsOpened||0)>=250 },
+    // Twitch
+    { id:'follower',      icon:'💜', name:'Follower',           desc:'Follow shlbez on Twitch',                  check: p => !!p.followedAt },
+    { id:'sub',           icon:'⭐', name:'Subscriber',         desc:'Subscribe to shlbez',                      check: p => !!p.subTier },
+    { id:'sub_12mo',      icon:'🎖️', name:'Loyal Sub',          desc:'Be subscribed for at least 12 months',     check: p => !!p.followedAt && _monthsAgo(p.followedAt)>=12 && !!p.subTier },
+    // SpaceBez
+    { id:'space_play',    icon:'🚀', name:'To The Stars',       desc:'Play SpaceBez for the first time',         check: p => !!(p.scores?.space) },
+    { id:'space_100',     icon:'💫', name:'Space Cadet',        desc:'Get a score of 100 in SpaceBez',           check: p => (p.scores?.space?.best||0)>=100 },
+    { id:'space_250',     icon:'🌠', name:'Shooting Star',      desc:'Get a score of 250 in SpaceBez',           check: p => (p.scores?.space?.best||0)>=250 },
+    { id:'space_500',     icon:'☄️', name:'Comet',              desc:'Get a score of 500 in SpaceBez',           check: p => (p.scores?.space?.best||0)>=500 },
+    { id:'space_1000',    icon:'🌍', name:'Orbit',              desc:'Get a score of 1,000 in SpaceBez',         check: p => (p.scores?.space?.best||0)>=1000 },
+    { id:'space_3000',    icon:'🪐', name:'Deep Space',         desc:'Get a score of 3,000 in SpaceBez',         check: p => (p.scores?.space?.best||0)>=3000 },
+    { id:'space_5000',    icon:'🌌', name:'Galaxy Brain',       desc:'Get a score of 5,000 in SpaceBez',         check: p => (p.scores?.space?.best||0)>=5000 },
+    { id:'space_10000',   icon:'🔭', name:'Astronomer',         desc:'Get a score of 10,000 in SpaceBez',        check: p => (p.scores?.space?.best||0)>=10000 },
+    { id:'space_25000',   icon:'👾', name:'Alien',              desc:'Get a score of 25,000 in SpaceBez',        check: p => (p.scores?.space?.best||0)>=25000 },
+    { id:'space_cheat',   icon:'🕹️', name:'Cheater',            desc:'Find the cheat code in SpaceBez',          check: p => !!(p.usedCheat) },
+    // Flappy Shibez
+    { id:'flappy_play',   icon:'🐦', name:'Flap Flap',          desc:'Play Flappy Shibez for the first time',    check: p => !!(p.scores?.flappy) },
+    { id:'flappy_10',     icon:'🏅', name:'Getting There',      desc:'Get a score of 10 in Flappy Shibez',       check: p => (p.scores?.flappy?.best||0)>=10 },
+    { id:'flappy_25',     icon:'🪶', name:'Flapper',            desc:'Get a score of 25 in Flappy Shibez',       check: p => (p.scores?.flappy?.best||0)>=25 },
+    { id:'flappy_50',     icon:'🦅', name:'Eagle',              desc:'Get a score of 50 in Flappy Shibez',       check: p => (p.scores?.flappy?.best||0)>=50 },
+    { id:'flappy_100',    icon:'✈️', name:'Pilot',              desc:'Get a score of 100 in Flappy Shibez',      check: p => (p.scores?.flappy?.best||0)>=100 },
+    { id:'flappy_250',    icon:'🛸', name:'UFO',                desc:'Get a score of 250 in Flappy Shibez',      check: p => (p.scores?.flappy?.best||0)>=250 },
+    // Higher or Lower
+    { id:'hol_play',      icon:'📊', name:'Numbers Guy',        desc:'Play Higher or Lower for the first time',  check: p => !!(p.scores?.hol) },
+    { id:'hol_10',        icon:'🎯', name:'Sharp Eye',          desc:'Get a score of 10 in Higher or Lower',     check: p => (p.scores?.hol?.best||0)>=10 },
+    { id:'hol_25',        icon:'🔍', name:'Analyst',            desc:'Get a score of 25 in Higher or Lower',     check: p => (p.scores?.hol?.best||0)>=25 },
+    { id:'hol_50',        icon:'📈', name:'Trend Spotter',      desc:'Get a score of 50 in Higher or Lower',     check: p => (p.scores?.hol?.best||0)>=50 },
+    { id:'hol_100',       icon:'🧮', name:'Statistician',       desc:'Get a score of 100 in Higher or Lower',    check: p => (p.scores?.hol?.best||0)>=100 },
+    { id:'hol_250',       icon:'🏆', name:'Oracle',             desc:'Get a score of 250 in Higher or Lower',    check: p => (p.scores?.hol?.best||0)>=250 },
+    // Emote Guesser
+    { id:'eg_play',       icon:'🎭', name:'Emote Enjoyer',      desc:'Play Emote Guesser for the first time',    check: p => !!(p.scores?.eg) },
+    { id:'eg_5',          icon:'🧠', name:'7TV Brain',          desc:'Get a score of 5 in Emote Guesser',        check: p => (p.scores?.eg?.best||0)>=5 },
+    { id:'eg_15',         icon:'👁️', name:'Emote Scholar',      desc:'Get a score of 15 in Emote Guesser',       check: p => (p.scores?.eg?.best||0)>=15 },
+    { id:'eg_30',         icon:'🎪', name:'Emote Expert',       desc:'Get a score of 30 in Emote Guesser',       check: p => (p.scores?.eg?.best||0)>=30 },
+    { id:'eg_50',         icon:'🌈', name:'Emote God',          desc:'Get a score of 50 in Emote Guesser',       check: p => (p.scores?.eg?.best||0)>=50 },
+    { id:'eg_100',        icon:'🔮', name:'Pixel Whisperer',    desc:'Get a score of 100 in Emote Guesser',      check: p => (p.scores?.eg?.best||0)>=100 },
+    // All games
+    { id:'all_games',     icon:'🎮', name:'Gamer',              desc:'Play all 4 games at least once',               check: p => !!(p.scores?.space && p.scores?.flappy && p.scores?.hol && p.scores?.eg) },
+    // Site interactions
+    { id:'random_roller', icon:'🎲', name:'Random Roller',      desc:'Use the Random Clip button',                   check: p => !!(p.usedRandomClip) },
+    { id:'night_shift',   icon:'🌃', name:'Night Shift',        desc:'Visit the site between 2am and 5am',           check: p => !!(p.nightShift) },
+    { id:'holiday',       icon:'🎄', name:'Holiday Spirit',     desc:'Visit the site on Christmas Day (Dec 25)',      check: p => !!(p.visitedXmas) },
+    { id:'birthday',      icon:'🎂', name:'Birthday Boy',       desc:"Visit the site on shlbez's birthday (Oct 16)", check: p => !!(p.visitedBirthday) },
+    // SpaceBez special
+    { id:'space_rich',    icon:'💰', name:'Rich',               desc:'Collect 1,000 coins in a single SpaceBez run', check: p => !!(p.spaceBigCoins) },
+    { id:'space_shop20',  icon:'🛒', name:'Shopaholic',         desc:'Buy 20 upgrades in a single SpaceBez run',     check: p => !!(p.spaceShopaholic) },
+  ];
+
+  const _earned = _ACHIEVEMENTS.filter(a => { try { return a.check(p); } catch(e){ return false; }});
+  const _locked = _ACHIEVEMENTS.filter(a => !_earned.find(e=>e.id===a.id));
+
+  const _achBadge = (a, dim) => `<div title="${a.desc}" style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:${dim?'0.22':'1'}">
+    <div style="font-size:22px;filter:${dim?'grayscale(1)':'none'}">${a.icon}</div>
+    <div style="font-family:var(--mono,monospace);font-size:8px;color:${dim?'#444':'#aaa'};text-align:center;max-width:56px;line-height:1.2">${a.name}</div>
+  </div>`;
+
+  content.innerHTML = `
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #1a1a2a">
+      <img src="${p.avatar}" style="width:56px;height:56px;border-radius:50%;border:2px solid #9146ff">
+      <div>
+        <div style="font-family:var(--mono,monospace);font-size:16px;font-weight:900;color:#fff">${p.displayName}</div>
+        <div style="font-family:var(--mono,monospace);font-size:10px;color:#9146ff;margin-top:2px">@${p.login}</div>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          ${p.followedAt ? `<span style="font-family:var(--mono,monospace);font-size:9px;background:rgba(145,70,255,0.15);border:1px solid rgba(145,70,255,0.3);color:#a78bfa;padding:2px 8px;border-radius:10px">💜 Following${followMonths!==null?' · '+followMonths+'mo':''}</span>` : '<span style="font-family:var(--mono,monospace);font-size:9px;color:#444">Not following</span>'}
+          ${subLabel ? `<span style="font-family:var(--mono,monospace);font-size:9px;background:rgba(145,70,255,0.25);border:1px solid #9146ff;color:#e9d5ff;padding:2px 8px;border-radius:10px">⭐ Sub ${subLabel}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+      ${_statBox('⏱','Time on site', _fmtTime(p.timeMs))}
+      ${_statBox('👋','Visits', (p.visitCount||1).toString())}
+      ${_statBox('📅','Member since', _fmtDate(p.joinedSite ? new Date(p.joinedSite).toISOString() : null))}
+      ${p.followedAt ? _statBox('📺','Following since', _fmtDate(p.followedAt)) : ''}
+    </div>
+
+    <!-- Achievements -->
+    <div style="margin-bottom:20px">
+      <div style="font-family:var(--mono,monospace);font-size:10px;font-weight:900;color:#555;letter-spacing:1px;margin-bottom:10px">ACHIEVEMENTS <span style="color:#7c5cfc">${_earned.length}/${_ACHIEVEMENTS.length}</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${_earned.map(a=>_achBadge(a,false)).join('')}
+        ${_locked.map(a=>_achBadge(a,true)).join('')}
+      </div>
+    </div>
+
+    <!-- Game scores -->
+    ${Object.keys(scores).length ? `
+    <div style="margin-bottom:20px">
+      <div style="font-family:var(--mono,monospace);font-size:10px;font-weight:900;color:#555;letter-spacing:1px;margin-bottom:8px">GAME SCORES</div>
+      ${_gameRow('🚀','SpaceBez','space')}
+      ${_gameRow('🐦','Flappy Shibez','flappy')}
+      ${_gameRow('📊','Higher or Lower','hol')}
+      ${_gameRow('🎭','Emote Guesser','eg')}
+    </div>` : ''}
+
+    <!-- Last streams -->
+    ${streams.length ? `
+    <div style="margin-bottom:20px">
+      <div style="font-family:var(--mono,monospace);font-size:10px;font-weight:900;color:#555;letter-spacing:1px;margin-bottom:8px">LAST WATCHED</div>
+      ${streams.map(s=>`
+        <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;align-items:center">
+          <span style="font-size:14px">📺</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--mono,monospace);font-size:11px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title||'Stream'}</div>
+            <div style="font-family:var(--mono,monospace);font-size:9px;color:#444">${s.date||''}</div>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <!-- Footer -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #1a1a2a">
+      <div style="display:flex;gap:12px">
+        <a href="?submit" style="font-family:var(--mono,monospace);font-size:11px;color:#555;text-decoration:none" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#555'">🎬 Submit Video</a>
+        <a href="?queue" style="font-family:var(--mono,monospace);font-size:11px;color:#555;text-decoration:none" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#555'">🛡 Mod Queue</a>
+      </div>
+      <button onclick="profLogout()" style="background:none;border:1px solid #333;color:#555;font-family:var(--mono,monospace);font-size:10px;padding:5px 12px;border-radius:4px;cursor:pointer" onmouseover="this.style.color='#fc5c7d';this.style.borderColor='#fc5c7d'" onmouseout="this.style.color='#555';this.style.borderColor='#333'">Log out</button>
+    </div>`;
+}
+
+function shibezProfileClose() {
+  const modal = document.getElementById('profileModal');
+  if(modal) modal.style.display='none';
+}
+
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const DEFAULTS = {
   ytChannel: 'ShibezVods',
@@ -2489,6 +2939,8 @@ function selectStream(idx, pushHistory=true) {
   currentStream = allStreams[idx];
   currentPartIdx = 0;
   if (pushHistory) try { history.pushState({ streamIdx: idx }, '', '#stream-' + idx); } catch(e) {}
+  // Track for user profile
+  try { profTrackStream(allStreams[idx]); } catch(e){}
   document.getElementById('gridView').style.display = 'none';
   document.getElementById('playerView').classList.add('active');
   const s = allStreams[idx];
@@ -3729,6 +4181,7 @@ let _cachedClips = [];
 let _clipMuted = true; // start muted first time, track user's preference after
 
 async function openRandomClip() {
+  try { _profSet('usedRandomClip', true); } catch(e){}
   const modal = document.getElementById('clipModal');
   const embedEl = document.getElementById('clipEmbed');
   const titleEl = document.getElementById('clipTitle');
@@ -3833,6 +4286,155 @@ function shibleZoomClose() {
 }
 function shibleZoomToggle() {
   if (_shibleZoomed) shibleZoomClose(); else shibleZoomOpen();
+}
+
+// ── FOLLOWER CHECKER ────────────────────────────────────────────────────────
+const _FC_CLIENT = '61x4q55vai9w0lwsc1enqw9vktqzee';
+let _fcCurrentUserId = null;
+let _fcCurrentTab = 'followers';
+let _fcFollowersData = [];
+let _fcFollowingData = [];
+let _fcFollowersLoaded = false;
+let _fcFollowingLoaded = false;
+
+function openFollowerChecker() {
+  document.getElementById('followerCheckerModal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('fcInput')?.focus(), 80);
+}
+function closeFollowerChecker() {
+  document.getElementById('followerCheckerModal').style.display = 'none';
+}
+function _fcGetToken() {
+  const p = _profLoad();
+  return p?.token || null;
+}
+
+async function fcLookup() {
+  const errEl = document.getElementById('fcError');
+  const username = document.getElementById('fcInput')?.value?.trim().toLowerCase();
+  if(!username){ errEl.textContent='Enter a username'; return; }
+  errEl.textContent = '';
+  _fcFollowersData = []; _fcFollowingData = [];
+  _fcFollowersLoaded = false; _fcFollowingLoaded = false;
+  document.getElementById('fcList').innerHTML = '<div style="text-align:center;padding:50px 0;font-family:var(--mono);font-size:12px;color:#555">Loading…</div>';
+  document.getElementById('fcProfile').style.display = 'none';
+  document.getElementById('fcTabsRow').style.display = 'none';
+  document.getElementById('fcFooter').style.display = 'none';
+
+  const token = _fcGetToken();
+  if(!token){ errEl.textContent = 'Log in with Twitch (via your profile) to use this tool'; return; }
+
+  try {
+    const [ur, fr, fwr] = await Promise.all([
+      fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}}),
+      fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=x&first=1`, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}}), // placeholder
+      fetch(`https://api.twitch.tv/helix/channels/followed?user_id=x&first=1`, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}}), // placeholder
+    ]);
+    const ud = await ur.json();
+    const user = ud.data?.[0];
+    if(!user){ errEl.textContent = `User "${username}" not found on Twitch`; document.getElementById('fcList').innerHTML=''; return; }
+    _fcCurrentUserId = user.id;
+
+    // Parallel: get follower + following counts
+    const [fcntR, fwcntR] = await Promise.all([
+      fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${user.id}&first=1`, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}}),
+      fetch(`https://api.twitch.tv/helix/channels/followed?user_id=${user.id}&first=1`, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}}),
+    ]);
+    const fcntD = await fcntR.json();
+    const fwcntD = await fwcntR.json();
+    const followerCount = fcntD.total ?? 0;
+    const followingCount = fwcntD.total ?? 0;
+
+    document.getElementById('fcAvatar').src = user.profile_image_url || '';
+    document.getElementById('fcDisplayName').textContent = user.display_name;
+    document.getElementById('fcLogin').textContent = '@'+user.login;
+    const created = user.created_at ? 'Joined '+new Date(user.created_at).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
+    const btype = user.broadcaster_type ? ' · '+user.broadcaster_type : '';
+    document.getElementById('fcMeta').textContent = created+btype;
+    document.getElementById('fcFollowerCount').textContent = Number(followerCount).toLocaleString();
+    document.getElementById('fcFollowingCount').textContent = Number(followingCount).toLocaleString();
+    document.getElementById('fcProfile').style.display = 'block';
+    document.getElementById('fcTabsRow').style.display = 'flex';
+    document.getElementById('fcFooter').style.display = 'block';
+    document.getElementById('fcFilter').value = '';
+
+    // Load followers list first
+    await _fcLoadList('followers', user.id, token);
+    _fcFollowersLoaded = true;
+    document.getElementById('fcFollowersCountBadge').textContent = `(${_fcFollowersData.length}${_fcFollowersData.length>=100?'+':''})`;
+    fcShowTab('followers');
+
+  } catch(e){ errEl.textContent = 'Error fetching data. Try again.'; console.error(e); }
+}
+
+async function _fcLoadList(type, userId, token) {
+  const endpoint = type === 'followers'
+    ? `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}&first=100`
+    : `https://api.twitch.tv/helix/channels/followed?user_id=${userId}&first=100`;
+  try {
+    const r = await fetch(endpoint, {headers:{'Authorization':`Bearer ${token}`,'Client-Id':_FC_CLIENT}});
+    const d = await r.json();
+    if(type==='followers') _fcFollowersData = d.data||[];
+    else _fcFollowingData = d.data||[];
+  } catch(e){ if(type==='followers') _fcFollowersData=[]; else _fcFollowingData=[]; }
+}
+
+async function fcShowTab(tab) {
+  _fcCurrentTab = tab;
+  ['followers','following'].forEach(t => {
+    const btn = document.getElementById('fcTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(!btn) return;
+    btn.style.borderBottomColor = t===tab ? '#9146ff' : 'transparent';
+    btn.style.color = t===tab ? '#fff' : '#555';
+    const badge = btn.querySelector('span');
+    if(badge) badge.style.color = t===tab ? '#9146ff' : '#555';
+  });
+
+  const token = _fcGetToken(); if(!token) return;
+  if(tab==='following' && !_fcFollowingLoaded) {
+    document.getElementById('fcList').innerHTML = '<div style="text-align:center;padding:50px 0;font-family:var(--mono);font-size:12px;color:#555">Loading…</div>';
+    await _fcLoadList('following', _fcCurrentUserId, token);
+    _fcFollowingLoaded = true;
+    document.getElementById('fcFollowingCountBadge').textContent = `(${_fcFollowingData.length}${_fcFollowingData.length>=100?'+':''})`;
+  }
+  fcApplyFilter();
+}
+
+function fcApplyFilter() {
+  const filter = (document.getElementById('fcFilter')?.value||'').toLowerCase();
+  const data = _fcCurrentTab === 'followers' ? _fcFollowersData : _fcFollowingData;
+  const otherSet = new Set((_fcCurrentTab==='followers' ? _fcFollowingData : _fcFollowersData).map(u=>(u.user_login||u.broadcaster_login||'').toLowerCase()));
+
+  const filtered = filter ? data.filter(u => {
+    const n = (u.user_name||u.broadcaster_name||'').toLowerCase();
+    const l = (u.user_login||u.broadcaster_login||'').toLowerCase();
+    return n.includes(filter) || l.includes(filter);
+  }) : data;
+
+  if(!filtered.length){
+    document.getElementById('fcList').innerHTML = `<div style="text-align:center;padding:50px 0;font-family:var(--mono);font-size:12px;color:#555">${filter ? 'No results for "'+filter+'"' : 'No '+_fcCurrentTab+' found'}</div>`;
+    return;
+  }
+
+  document.getElementById('fcList').innerHTML = filtered.map(u => {
+    const name = u.user_name || u.broadcaster_name || '';
+    const login = u.user_login || u.broadcaster_login || '';
+    const date = u.followed_at ? new Date(u.followed_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    const isMutual = otherSet.has(login.toLowerCase());
+    const safeLogin = login.replace(/'/g,"\\'");
+    return `<div style="display:flex;align-items:center;gap:12px;padding:8px 24px;cursor:pointer;border-bottom:1px solid #0d0d1a;transition:background 0.1s"
+      onclick="document.getElementById('fcInput').value='${safeLogin}';fcLookup()"
+      onmouseover="this.style.background='rgba(145,70,255,0.07)'"
+      onmouseout="this.style.background='none'">
+      <div style="width:32px;height:32px;border-radius:50%;background:#1a1a2a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;color:${isMutual?'#9146ff':'#444'};border:1px solid ${isMutual?'rgba(145,70,255,0.4)':'#222'}">${(name[0]||'?').toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${isMutual?'#c084fc':'#ddd'}">${name}</span>
+        ${isMutual?'<span style="font-family:var(--mono);font-size:9px;color:#7c3aed;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);padding:1px 6px;border-radius:8px;margin-left:6px">mutual</span>':''}
+        <div style="font-family:var(--mono);font-size:9px;color:#555;margin-top:1px">@${login}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:#444;white-space:nowrap;flex-shrink:0">${date}</div>
+    </div>`;
+  }).join('');
 }
 
 function openShible(randomMode) {
@@ -4417,7 +5019,7 @@ function startFlappy() {
               return;
             }
             localStorage.setItem('shibez_lb_name',n);
-            lbSubmit(LB_FLAPPY_KEY,n,${finalScore},'');
+            lbSubmit(LB_FLAPPY_KEY,n,${finalScore},''); try{profTrackScore('flappy',);}catch(e){}
             document.getElementById('flappyLbRows').innerHTML=lbRenderRows(LB_FLAPPY_KEY,${finalScore});
             const btn=document.getElementById('flappyLbSubmitBtn');
             if(btn){btn.textContent='✓ Done';btn.disabled=true;btn.style.background='#1a3a1a';}
@@ -4931,6 +5533,7 @@ async function openEmoteGuesser() {
 function closeEmoteGuesser() {
   const modal = document.getElementById('egModal');
   if (modal) modal.style.display = 'none';
+  try { if(_egScore>0) profTrackScore('eg', _egScore); } catch(e){}
 }
 
 document.addEventListener('click', e => {
@@ -5191,6 +5794,7 @@ function holSubmitScore() {
   entries.push({ name, score: _holScore, ts: Date.now() });
   entries.sort((a, b) => b.score - a.score);
   localStorage.setItem(LB_HOL_KEY, JSON.stringify(entries.slice(0, 50)));
+  try { profTrackScore('hol', _holScore); } catch(e){}
   document.getElementById('holLbRows').innerHTML = _holRenderLbRows(_holScore);
   const btn = document.getElementById('holLbSubmitBtn');
   if (btn) { btn.textContent = '✓ SAVED'; btn.disabled = true; btn.style.opacity = '0.6'; }
@@ -5593,7 +6197,7 @@ function _showSpaceLbDeath(finalScore, finalFrames, canvas) {
         if(!n){ document.getElementById('spaceLbName').style.border='1px solid #fc5c7d'; document.getElementById('spaceLbName').placeholder='Name required!'; return; }
         if(${finalScore}<5){ document.getElementById('spaceLbSubmitBtn').textContent='Need score ≥ 5'; setTimeout(()=>{const b=document.getElementById('spaceLbSubmitBtn');if(b)b.textContent='Submit';},1500); return; }
         localStorage.setItem('shibez_lb_name',n);
-        lbSubmit(LB_SPACE_KEY,n,${finalScore},'⏱${timeStr}');
+        lbSubmit(LB_SPACE_KEY,n,${finalScore},'⏱${timeStr}'); try{profTrackScore('space',);}catch(e){}
         document.getElementById('spaceLbDeathRows').innerHTML=lbRenderRows(LB_SPACE_KEY,${finalScore});
         const btn=document.getElementById('spaceLbSubmitBtn');
         if(btn){btn.textContent='✓ Done';btn.disabled=true;btn.style.background='#1a3a1a';}
@@ -5883,7 +6487,22 @@ function startSpace() {
   ];
 
   let coins = window._spaceCoins||0;
-  function saveCoins(n){coins=n;window._spaceCoins=n;document.getElementById('spaceCoins').textContent=coins;document.getElementById('shopCoinsDisp').textContent=coins;}
+  function saveCoins(n){
+    const _delta = n - coins;
+    coins=n;window._spaceCoins=n;
+    document.getElementById('spaceCoins').textContent=coins;
+    document.getElementById('shopCoinsDisp').textContent=coins;
+    // Track coins collected for Rich achievement
+    if(_delta > 0 && _delta < 1000) {
+      try {
+        const _rp = _profLoad(); if(_rp){
+          _rp._spaceRunCoins = (_rp._spaceRunCoins||0) + _delta;
+          if(_rp._spaceRunCoins >= 1000) _rp.spaceBigCoins = true;
+          _profSave(_rp);
+        }
+      } catch(e){}
+    }
+  }
 
   const WEAPON_DEFS = [
     {key:'default',      label:'🔫 Pistol',         desc:'Fires toward cursor. Your basic starter weapon.',                color:'#60ddff', cost:0,   tier2:{key:'tier2_default',    label:'🔫+ Auto Pistol',       desc:'Fires 3 parallel shots with enemy tracking!',              cost:40}},
@@ -6064,6 +6683,14 @@ function startSpace() {
     saveCoins(coins-cost); upgrades[key]=lvl+1; renderShopGrid();
     if(key==='maxHp'){lives=Math.min(5+upgrades.maxHp,lives+1);updateHeartsDisplay(lives,silverLives,getMaxHp());}
     if(key==='weaponSlots'){ sfxPowerup(); }
+    // Track upgrades bought for Shopaholic achievement
+    try {
+      const _sp = _profLoad(); if(_sp){
+        _sp._spaceRunUpgrades = (_sp._spaceRunUpgrades||0) + 1;
+        if(_sp._spaceRunUpgrades >= 20) _sp.spaceShopaholic = true;
+        _profSave(_sp);
+      }
+    } catch(e){}
   };
 
   // Hold-to-buy: after 400ms hold, auto-buy every 150ms
@@ -6237,6 +6864,7 @@ function startSpace() {
             saveCoins(coins+10000);
             invincible=9999999;
             const _dp=document.getElementById('spaceDevPanel'); if(_dp) _dp.style.display='block';
+            try { _profSet('usedCheat', true); } catch(e){}
             spawnParticles(ship.x,ship.y,'#ffd700',30);
             try{const _cs=new Audio('https://badoge.github.io/soundboard/forsen/10lines/slice%20em%20up%20doc.mp3');_cs.volume=0.5;_cs.play().catch(()=>{});}catch(e){}
           }
@@ -6931,6 +7559,8 @@ function startSpace() {
     score=0;lives=getMaxHp();frame=0;survivalFrames=0;
     try{_spaceDeathSfxPlayer?.pauseVideo();_spaceDeathSfxPlayer?.seekTo(0,true);}catch(e){}
     state='playing';enemyTimer=90;difficulty=1;invincible=0;shootCooldown=0;_deathFrame=0;silverLives=0;
+    // Reset per-run achievement counters
+    try { const _rp=_profLoad(); if(_rp){ _rp._spaceRunCoins=0; _rp._spaceRunUpgrades=0; _profSave(_rp); } } catch(e){}
     for(let _ri=0;_ri<4;_ri++)_slotCooldowns[_ri]=0;
     _nukeFlash=0;_freezeFlash=0;_minigunShooting=false;_towerGunBurstCount=0;_autoShoot=false;_lastShownSec=-1;
     _gameStartTime=null;_gamePausedMs=0;_pauseStartTime=null;
@@ -9503,7 +10133,7 @@ function _vqRenderMod(app) {
         <button onclick="vqModTab('pending')" id="vqTabPending" style="background:#7c5cfc;border:none;color:#fff;font-family:var(--mono,monospace);font-size:11px;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer">PENDING</button>
         <button onclick="vqModTab('approved')" id="vqTabApproved" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">APPROVED</button>
         <button onclick="vqModTab('all')" id="vqTabAll" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">ALL</button>
-        <button onclick="vqModTab('history')" id="vqTabHistory" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">📼 HISTORY</button>
+        <button onclick="vqModTab('history')" id="vqTabHistory" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">HISTORY</button>
         <button onclick="vqModTab('setup')" id="vqTabSetup" style="background:#222;border:1px solid #333;color:#aaa;font-family:var(--mono,monospace);font-size:11px;padding:7px 18px;border-radius:4px;cursor:pointer">⚙ SETUP</button>
       </div>
       <div id="vqList" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -9613,10 +10243,10 @@ function vqRenderHistoryTab() {
     return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:6px;background:#111;border:1px solid #222">
       ${_thumb}
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(v.title||v.url)}</div>
-        <div style="font-size:10px;color:#555;margin-top:2px">${_esc(v.submitter||'')}</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono,monospace)">${_esc(v.title||v.url)}</div>
+        <div style="font-size:11px;font-weight:600;color:#aaa;margin-top:2px;font-family:var(--mono,monospace)">${_esc(v.submitter||'')}</div>
       </div>
-      <div style="font-size:10px;color:#444;white-space:nowrap">${_date}</div>
+      <div style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;font-family:var(--mono,monospace)">${_date}</div>
     </div>`;
   }).join('');
 }
