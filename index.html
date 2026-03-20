@@ -4912,7 +4912,7 @@ function startFlappy() {
   const FLAP    = _fMobile ? -5.2 : -4.2;
   const PIPE_SPEED_BASE = _fMobile ? 2.9 : 2.1; // faster
   const PIPE_W = 52;
-  const PIPE_GAP = 245;
+  const PIPE_GAP = 190; // ~1 emote smaller
   const EMOTE_SIZE = 52;
   const BIRD_SIZE = 48;
   // Speed ramps after score 10, caps at 2.4× base
@@ -5235,14 +5235,49 @@ function startFlappy() {
 
   let _flappyLastTime = 0;
   let _flappyAccum = 0;
-  let _flappyDt = 1;
-  const _TICK = 1000/165; // fixed tick = 165Hz
+  const _FIXED_STEP = 1000 / 60; // 60Hz fixed physics step
+  const _FIXED_DT = 1;           // physics always advances by 1 unit per tick
+
+  function _physicsStep() {
+    if (state !== 'playing') return;
+    frameCount++;
+    groundX = (groundX + getPipeSpeed()) % W;
+
+    _pipeSpawnTimer += _FIXED_DT;
+    const _pipeInterval = Math.round(185 * (PIPE_SPEED_BASE / getPipeSpeed()));
+    if (_pipeSpawnTimer >= _pipeInterval || frameCount === 1) {
+      spawnPipe();
+      _pipeSpawnTimer = 0;
+    }
+
+    bird.vy += GRAVITY;
+    bird.y  += bird.vy;
+    bird.rot = bird.vy * 0.06;
+
+    for (const p of pipes) {
+      p.x -= getPipeSpeed();
+      if (!p.scored && p.x + PIPE_W < bird.x) {
+        p.scored = true; score++;
+        if (score > best) { best = score; localStorage.setItem('flappyBest', best); }
+        document.getElementById('flappyScore').textContent = score;
+      }
+    }
+    pipes = pipes.filter(p => p.x > -PIPE_W - 10);
+    if (checkCollision()) { state = 'dead'; playFlappyDeathSfx(); }
+  }
+
   function loop(timestamp) {
     if (!_flappyRunning) return;
-    const _elapsed = _flappyLastTime ? Math.min(33, timestamp - _flappyLastTime) : 8.333;
-    const dt = _elapsed / 8.333;
-    _flappyDt = dt;
+    const elapsed = _flappyLastTime ? Math.min(100, timestamp - _flappyLastTime) : _FIXED_STEP;
     _flappyLastTime = timestamp;
+    _flappyAccum += elapsed;
+    // Run fixed physics steps — catch up without overshooting
+    let steps = 0;
+    while (_flappyAccum >= _FIXED_STEP && steps < 3) {
+      _physicsStep();
+      _flappyAccum -= _FIXED_STEP;
+      steps++;
+    }
 
     // Background — sunny green field
     const sky = ctx.createLinearGradient(0, 0, 0, H * 0.65);
@@ -5259,7 +5294,7 @@ function startFlappy() {
       }));
     }
     startFlappy._clouds.forEach(cl => {
-      if (state === 'playing') cl.x -= cl.speed * dt;
+      if (state === 'playing') cl.x -= cl.speed * (steps||1);
       if (cl.x + cl.w < 0) cl.x = W + cl.w;
       ctx.fillStyle = 'rgba(255,255,255,0.82)';
       ctx.beginPath();
@@ -5278,37 +5313,7 @@ function startFlappy() {
     ctx.bezierCurveTo(W*0.7, H-60, W*0.85, H-150, W, H-90);
     ctx.lineTo(W, H-60); ctx.closePath(); ctx.fill();
 
-    if (state === 'playing') {
-      frameCount++;
-      groundX = (groundX + getPipeSpeed()*dt) % W;
-
-      // Spawn pipes
-      _pipeSpawnTimer += dt;
-      const _pipeInterval = Math.round(185 * (PIPE_SPEED_BASE / getPipeSpeed())); // closer pipes
-      if (_pipeSpawnTimer >= _pipeInterval || frameCount === 1) {
-        spawnPipe();
-        _pipeSpawnTimer = 0;
-      }
-
-      // Update bird
-      bird.vy += GRAVITY * dt;
-      bird.y += bird.vy * dt;
-      bird.rot = bird.vy * 0.06;
-
-      // Update pipes
-      for (const p of pipes) {
-        p.x -= getPipeSpeed() * dt;
-        if (!p.scored && p.x + PIPE_W < bird.x) {
-          p.scored = true;
-          score++;
-          if (score > best) { best = score; localStorage.setItem('flappyBest', best); }
-          document.getElementById('flappyScore').textContent = score;
-        }
-      }
-      pipes = pipes.filter(p => p.x > -PIPE_W - 10);
-
-      if (checkCollision()) { state = 'dead'; playFlappyDeathSfx(); }
-    }
+    // Physics handled by _physicsStep() via fixed accumulator above
 
     // Draw
     pipes.forEach(drawPipe);
