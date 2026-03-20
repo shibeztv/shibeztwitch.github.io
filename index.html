@@ -5117,6 +5117,7 @@ function startFlappy() {
     if (state === 'waiting') { state = 'playing'; }
     if (state === 'playing') {
       bird.vy = FLAP;
+      _flappyAccum = 0; // prevent queued steps causing instant drop
       try { if(!_flappyMuted){_flapSfx.currentTime = 0; _flapSfx.play().catch(()=>{});} } catch(e) {}
     }
     if (state === 'dead') {
@@ -5268,16 +5269,18 @@ function startFlappy() {
 
   function loop(timestamp) {
     if (!_flappyRunning) return;
-    const elapsed = _flappyLastTime ? Math.min(100, timestamp - _flappyLastTime) : _FIXED_STEP;
+    // Simple fixed step — always exactly 1 physics tick per rendered frame
+    // Cap elapsed to avoid spiral-of-death after tab switches
+    const elapsed = _flappyLastTime ? Math.min(_FIXED_STEP * 1.5, timestamp - _flappyLastTime) : _FIXED_STEP;
     _flappyLastTime = timestamp;
     _flappyAccum += elapsed;
-    // Run fixed physics steps — catch up without overshooting
     let steps = 0;
-    while (_flappyAccum >= _FIXED_STEP && steps < 3) {
+    while (_flappyAccum >= _FIXED_STEP && steps < 1) { // max 1 step per frame
       _physicsStep();
       _flappyAccum -= _FIXED_STEP;
       steps++;
     }
+    if (_flappyAccum > _FIXED_STEP) _flappyAccum = 0; // drain any leftover after tab switch
 
     // Background — sunny green field
     const sky = ctx.createLinearGradient(0, 0, 0, H * 0.65);
