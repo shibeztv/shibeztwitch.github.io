@@ -1304,6 +1304,17 @@
     transform: scale(1.12);
   }
   #spacePauseBtn { transition: all 0.12s; }
+
+  @keyframes aionShimmer {
+    0%{background-position:200% 0}100%{background-position:-200% 0}
+  }
+  #aionCard.loading {
+    background: linear-gradient(90deg,#111 25%,#1e1e2e 50%,#111 75%);
+    background-size: 200% 100%;
+    animation: aionShimmer 1.2s infinite linear;
+  }
+  #aionCard.loading img { opacity:0; }
+  #aionCard.ready img { opacity:1; transition: opacity 0.2s ease; }
 </style>
 <script src="https://www.youtube.com/iframe_api"></script>
   <link rel="icon" type="image/png" href="https://static-cdn.jtvnw.net/jtv_user_pictures/629b51ce-483d-4cf8-a1c4-c9a56074e6a7-profile_image-70x70.png">
@@ -2364,8 +2375,18 @@ function shibezProfileOpen() {
     { id:'eg_30',         icon:'🎪', name:'Emote Expert',       desc:'Get a score of 30 in Emote Guesser',       check: p => (p.scores?.eg?.best||0)>=30 },
     { id:'eg_50',         icon:'🌈', name:'Emote God',          desc:'Get a score of 50 in Emote Guesser',       check: p => (p.scores?.eg?.best||0)>=50 },
     { id:'eg_100',        icon:'🔮', name:'Pixel Whisperer',    desc:'Get a score of 100 in Emote Guesser',      check: p => (p.scores?.eg?.best||0)>=100 },
+    // AI or Not
+    { id:'aion_play',     icon:'🤖', name:'Bot Detector',       desc:'Play AI or Not for the first time',        check: p => !!(p.scores?.aion) },
+    { id:'aion_5',        icon:'👀', name:'Suspicious',         desc:'Get a score of 5 in AI or Not',            check: p => (p.scores?.aion?.best||0)>=5 },
+    { id:'aion_10',       icon:'🔎', name:'Investigator',       desc:'Get a score of 10 in AI or Not',           check: p => (p.scores?.aion?.best||0)>=10 },
+    { id:'aion_20',       icon:'🧐', name:'AI Skeptic',         desc:'Get a score of 20 in AI or Not',           check: p => (p.scores?.aion?.best||0)>=20 },
+    { id:'aion_35',       icon:'🕵️', name:'Turing Cop',         desc:'Get a score of 35 in AI or Not',           check: p => (p.scores?.aion?.best||0)>=35 },
+    { id:'aion_50',       icon:'🤯', name:'AI Whisperer',       desc:'Get a score of 50 in AI or Not',           check: p => (p.scores?.aion?.best||0)>=50 },
+    { id:'aion_75',       icon:'🦾', name:'Machine Mind',       desc:'Get a score of 75 in AI or Not',           check: p => (p.scores?.aion?.best||0)>=75 },
+    { id:'aion_100',      icon:'🏆', name:'Turing Test',        desc:'Get a score of 100 in AI or Not',          check: p => (p.scores?.aion?.best||0)>=100 },
+    { id:'aion_forsen',   icon:'🐴', name:'bajs',               desc:'Correctly identify a Forsen image',        check: p => !!(p.aionForsenFound) },
     // All games
-    { id:'all_games',     icon:'🎮', name:'Gamer',              desc:'Play all 4 games at least once',               check: p => !!(p.scores?.space && p.scores?.flappy && p.scores?.hol && p.scores?.eg) },
+    { id:'all_games',     icon:'🎮', name:'Gamer',              desc:'Play all 4 games at least once',               check: p => !!(p.scores?.space && p.scores?.flappy && p.scores?.hol && p.scores?.eg && p.scores?.aion) },
     // Site interactions
     { id:'random_roller', icon:'🎲', name:'Random Roller',      desc:'Use the Random Clip button',                   check: p => !!(p.usedRandomClip) },
     { id:'night_shift',   icon:'🌃', name:'Night Shift',        desc:'Visit the site between 2am and 5am',           check: p => !!(p.nightShift) },
@@ -10842,7 +10863,6 @@ async function _aionFetchLexica(){ /* removed — Lexica NSFW not 100% reliable 
 function openAiOrNot(){
   document.getElementById('aionModal').style.display='flex';
   document.getElementById('aionBest').textContent=_aionBest;
-  _aionFetchLexica(); // pre-fetch some Lexica images in background
   aionRestart();
   document.addEventListener('keydown',_aionKey);
 }
@@ -10874,34 +10894,61 @@ function aionRestart(){
   }
   _aionIdx=0;
   _aionGuessing=true;
+  _aionPreload(0, 5);
   _aionLoadCard();
   _aionSetupSwipe();
 }
+// Preload cache — images preloaded into Image objects so browser has them ready
+const _aionPreloadCache = new Map();
+function _aionPreload(idx, count=3){
+  for(let i=idx; i<Math.min(idx+count, _aionPool.length); i++){
+    const url = _aionPool[i]?.url;
+    if(!url || _aionPreloadCache.has(url)) continue;
+    const pre = new Image();
+    pre.src = url;
+    _aionPreloadCache.set(url, pre);
+  }
+}
+
 function _aionLoadCard(){
   if(_aionIdx>=_aionPool.length){
-    // Refill with fresh 50/50 shuffle
     const _r2=AION_IMAGES.filter(x=>x.label==='real').sort(()=>Math.random()-0.5);
-    _aionFetchLexica(); // fetch more AI images on loop
-    const _a2=[...AION_IMAGES.filter(x=>x.label==='ai'),..._aionLexicaCache].sort(()=>Math.random()-0.5);
+    const _a2=[...AION_IMAGES.filter(x=>x.label==='ai')].sort(()=>Math.random()-0.5);
     _aionPool=[];
     for(let _i2=0;_i2<Math.max(_r2.length,_a2.length);_i2++){if(_i2<_r2.length)_aionPool.push(_r2[_i2]);if(_i2<_a2.length)_aionPool.push(_a2[_i2]);}
     _aionIdx=0;
+    _aionPreloadCache.clear();
   }
   const img=document.getElementById('aionImg');
   const card=document.getElementById('aionCard');
-  card.style.transform='';
+  card.style.transform=''; card.style.boxShadow='';
   document.getElementById('aionOverlayAI').style.opacity=0;
   document.getElementById('aionOverlayReal').style.opacity=0;
   document.getElementById('aionResult').style.display='none';
-  img.style.filter='';
-  img.src='';
-  // Spinner while loading
-  img.style.filter='brightness(0.3)';
+
   const entry=_aionPool[_aionIdx];
-  img.onload=()=>{ img.style.filter=''; };
-  img.onerror=()=>{ _aionIdx++; _aionLoadCard(); }; // skip broken
-  img.src=entry.url;
-  _aionGuessing=true;
+  const cached = _aionPreloadCache.get(entry.url);
+
+  // If already preloaded and complete — show instantly
+  if(cached && cached.complete && cached.naturalWidth>0){
+    card.classList.remove('loading'); card.classList.add('ready');
+    img.src = entry.url;
+    _aionGuessing=true;
+  } else {
+    // Show shimmer skeleton while loading
+    card.classList.add('loading'); card.classList.remove('ready');
+    img.src='';
+    const loader = new Image();
+    loader.onload = ()=>{
+      img.src = entry.url;
+      card.classList.remove('loading'); card.classList.add('ready');
+      _aionGuessing=true;
+    };
+    loader.onerror = ()=>{ _aionIdx++; _aionLoadCard(); };
+    loader.src = entry.url;
+  }
+  // Preload next 4 images in background
+  _aionPreload(_aionIdx+1, 4);
 }
 function aionGuess(choice){
   if(!_aionGuessing) return;
@@ -10922,6 +10969,10 @@ function aionGuess(choice){
     sub.innerHTML=_srcLink;
     _aionScore++;
     document.getElementById('aionScore').textContent=_aionScore;
+    // Forsen easter egg achievement
+    if(entry.hint && entry.hint.toLowerCase().includes('forsen')){
+      try{ const _fp=JSON.parse(localStorage.getItem('shibez_profile')||'{}'); _fp.aionForsenFound=true; localStorage.setItem('shibez_profile',JSON.stringify(_fp)); }catch(e){}
+    }
     _aionIdx++;
     setTimeout(()=>{ _aionLoadCard(); }, 1200);
   } else {
