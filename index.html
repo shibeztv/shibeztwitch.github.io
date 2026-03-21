@@ -1731,7 +1731,11 @@
           <!-- Image card -->
           <div id="aionCardWrap" style="width:100%;flex:1;min-height:0;display:flex;flex-direction:column;border-radius:12px;padding:6px;box-sizing:border-box;background:#0a0a14;transition:background 0.05s">
           <div id="aionCard" style="position:relative;width:100%;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:#111;border:2px solid #2a2a4a;cursor:grab;user-select:none;touch-action:none">
-            <img id="aionImg" src="" alt="guess" draggable="false"
+            <div id="aionFallback" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:linear-gradient(135deg,#1a0a2e,#0d1a2e);border-radius:10px">
+                <div style="font-size:48px">🤖</div>
+                <div style="font-family:var(--mono);font-size:13px;color:#aaa;text-align:center">Image could not load<br><span style="color:#f472b6;font-size:11px">Make your best guess!</span></div>
+              </div>
+              <img id="aionImg" src="" alt="guess" draggable="false"
               style="width:100%;height:100%;object-fit:contain;display:block;transition:filter 0.15s;background:#000">
             <!-- Swipe overlays -->
             <div id="aionOverlayAI" style="position:absolute;inset:0;background:rgba(239,68,68,0);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.1s;pointer-events:none"><span style="font-family:var(--mono);font-size:52px;font-weight:900;color:#ef4444;background:rgba(0,0,0,0.6);padding:10px 22px;border-radius:12px;border:3px solid #ef4444;text-shadow:0 0 20px #ef4444">🤖 AI</span></div>
@@ -10927,12 +10931,16 @@ function _aionLoadCard(){
   document.getElementById('aionResult').style.display='none';
 
   const entry=_aionPool[_aionIdx];
+  img.style.display='block';
+  const _fbr=document.getElementById('aionFallback');
+  if(_fbr) _fbr.style.display='none';
   const cached = _aionPreloadCache.get(entry.url);
 
   // If already preloaded and complete — show instantly
   if(cached && cached.complete && cached.naturalWidth>0){
     card.classList.remove('loading'); card.classList.add('ready');
     img.src = entry.url;
+    img.style.display='block';
     _aionGuessing=true;
   } else {
     // Show shimmer skeleton while loading
@@ -10941,10 +10949,21 @@ function _aionLoadCard(){
     const loader = new Image();
     loader.onload = ()=>{
       img.src = entry.url;
+      img.style.display='block';
+      const _fb2=document.getElementById('aionFallback');
+      if(_fb2) _fb2.style.display='none';
       card.classList.remove('loading'); card.classList.add('ready');
       _aionGuessing=true;
     };
-    loader.onerror = ()=>{ _aionIdx++; _aionLoadCard(); };
+    loader.onerror = ()=>{
+      // Image failed (CORS/rate-limit) — still show card, just with a fallback
+      img.src='';
+      img.style.display='none';
+      const _fb=document.getElementById('aionFallback');
+      if(_fb) _fb.style.display='flex';
+      card.classList.remove('loading'); card.classList.add('ready');
+      _aionGuessing=true;
+    };
     loader.src = entry.url;
   }
   // Preload next 4 images in background
