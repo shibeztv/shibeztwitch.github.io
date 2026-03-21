@@ -10884,16 +10884,13 @@ function aionRestart(){
   document.getElementById('aionGame').style.display='flex';
   document.getElementById('aionGameOver').style.display='none';
   // Shuffle a fresh pool
-  // 50/50 balance: separate real and AI (static + Lexica cache), shuffle, interleave
+  // Strict 50/50: take equal counts, combine, then fully shuffle
   const _realImgs = AION_IMAGES.filter(x=>x.label==='real').sort(()=>Math.random()-0.5);
   const _allAi = [...AION_IMAGES.filter(x=>x.label==='ai'), ..._aionLexicaCache];
   const _aiImgs = _allAi.sort(()=>Math.random()-0.5);
-  _aionPool = [];
-  const _maxLen = Math.max(_realImgs.length, _aiImgs.length);
-  for(let _ii=0; _ii<_maxLen; _ii++){
-    if(_ii<_realImgs.length) _aionPool.push(_realImgs[_ii]);
-    if(_ii<_aiImgs.length)   _aionPool.push(_aiImgs[_ii]);
-  }
+  const _n50 = Math.min(_realImgs.length, _aiImgs.length);
+  _aionPool = [..._realImgs.slice(0,_n50), ..._aiImgs.slice(0,_n50)];
+  for(let _si=_aionPool.length-1;_si>0;_si--){const _sj=Math.floor(Math.random()*(_si+1));[_aionPool[_si],_aionPool[_sj]]=[_aionPool[_sj],_aionPool[_si]];}
   _aionIdx=0;
   _aionGuessing=true;
   _aionPreload(0, 15);
@@ -10916,8 +10913,9 @@ function _aionLoadCard(){
   if(_aionIdx>=_aionPool.length){
     const _r2=AION_IMAGES.filter(x=>x.label==='real').sort(()=>Math.random()-0.5);
     const _a2=[...AION_IMAGES.filter(x=>x.label==='ai')].sort(()=>Math.random()-0.5);
-    _aionPool=[];
-    for(let _i2=0;_i2<Math.max(_r2.length,_a2.length);_i2++){if(_i2<_r2.length)_aionPool.push(_r2[_i2]);if(_i2<_a2.length)_aionPool.push(_a2[_i2]);}
+    const _n2=Math.min(_r2.length,_a2.length);
+    _aionPool=[..._r2.slice(0,_n2),..._a2.slice(0,_n2)];
+    for(let _si2=_aionPool.length-1;_si2>0;_si2--){const _sj2=Math.floor(Math.random()*(_si2+1));[_aionPool[_si2],_aionPool[_sj2]]=[_aionPool[_sj2],_aionPool[_si2]];}
     _aionIdx=0;
     _aionPreloadCache.clear();
   }
