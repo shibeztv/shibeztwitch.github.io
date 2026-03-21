@@ -1729,7 +1729,8 @@
         <!-- Game area -->
         <div id="aionGame" style="width:100%;flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 16px;box-sizing:border-box;gap:10px;min-height:0">
           <!-- Image card -->
-          <div id="aionCard" style="position:relative;width:100%;flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#111;border:2px solid #2a2a4a;cursor:grab;user-select:none;touch-action:none">
+          <div id="aionCardWrap" style="width:100%;flex:1;min-height:0;display:flex;flex-direction:column;border-radius:12px;padding:6px;box-sizing:border-box;background:#0a0a14;transition:background 0.05s">
+          <div id="aionCard" style="position:relative;width:100%;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:#111;border:2px solid #2a2a4a;cursor:grab;user-select:none;touch-action:none">
             <img id="aionImg" src="" alt="guess" draggable="false"
               style="width:100%;height:100%;object-fit:contain;display:block;transition:filter 0.15s;background:#000">
             <!-- Swipe overlays -->
@@ -1742,6 +1743,7 @@
               <div id="aionResultSub" style="font-family:var(--mono);font-size:13px;color:#aaa"></div>
             </div>
           </div>
+          </div><!-- /aionCardWrap -->
           <!-- Swipe hint -->
           <div style="font-family:var(--mono);font-size:12px;color:#aaa;text-align:center;font-weight:600">← AI &nbsp;&nbsp;|&nbsp;&nbsp; REAL → &nbsp;·&nbsp; or use buttons below</div>
           <!-- Buttons -->
@@ -10921,7 +10923,7 @@ function _aionLoadCard(){
   }
   const img=document.getElementById('aionImg');
   const card=document.getElementById('aionCard');
-  card.style.transform=''; card.style.boxShadow='';
+  card.style.transform=''; card.style.boxShadow=''; const _wrap=document.getElementById('aionCardWrap'); if(_wrap) _wrap.style.background='#0a0a14';
   document.getElementById('aionOverlayAI').style.opacity=0;
   document.getElementById('aionOverlayReal').style.opacity=0;
   document.getElementById('aionResult').style.display='none';
@@ -11020,16 +11022,17 @@ function _aionSetupSwipe(){
     const t=Math.min(1,Math.abs(dx)/120);
     document.getElementById('aionOverlayAI').style.opacity=dx<0?t:0;
     document.getElementById('aionOverlayReal').style.opacity=dx>0?t:0;
-    // Glow border on card
-    if(dx<0) card.style.boxShadow=`0 0 ${30*t}px rgba(239,68,68,${0.7*t}), inset 0 0 ${20*t}px rgba(239,68,68,${0.2*t})`;
-    else if(dx>0) card.style.boxShadow=`0 0 ${30*t}px rgba(74,222,128,${0.7*t}), inset 0 0 ${20*t}px rgba(74,222,128,${0.2*t})`;
-    else card.style.boxShadow='';
+    const wrap=document.getElementById('aionCardWrap');
+    if(dx<0){ wrap.style.background=`rgba(239,68,68,${0.55*t})`; card.style.boxShadow=''; }
+    else if(dx>0){ wrap.style.background=`rgba(74,222,128,${0.55*t})`; card.style.boxShadow=''; }
+    else{ wrap.style.background='#0a0a14'; card.style.boxShadow=''; }
     if(e.cancelable) e.preventDefault();
   };
   const end=e=>{
     if(!dragging) return; dragging=false;
     const dx=(e.changedTouches?e.changedTouches[0].clientX:e.clientX)-sx;
     card.style.transform='';card.style.boxShadow='';
+    document.getElementById('aionCardWrap').style.background='#0a0a14';
     document.getElementById('aionOverlayAI').style.opacity=0;
     document.getElementById('aionOverlayReal').style.opacity=0;
     if(moved && Math.abs(dx)>60) aionGuess(dx<0?'ai':'real');
