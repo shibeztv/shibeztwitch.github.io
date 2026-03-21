@@ -1707,7 +1707,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #1a1a3a;width:100%;box-sizing:border-box">
           <div style="display:flex;flex-direction:column;gap:1px">
             <span style="font-family:var(--mono);font-size:14px;font-weight:900;color:#f472b6;letter-spacing:2px">🤖 AI OR NOT</span>
-            <span style="font-family:var(--mono);font-size:9px;color:#888">Is this image AI-generated or real?</span>
+            <span style="font-family:var(--mono);font-size:12px;color:#aaa;font-weight:600">Is this image AI-generated or real?</span>
           </div>
           <div style="display:flex;align-items:center;gap:12px">
             <span style="font-family:var(--mono);font-size:11px;color:#aaa">Score: <span id="aionScore" style="color:#fff;font-weight:900;font-size:14px">0</span></span>
@@ -1722,8 +1722,8 @@
             <img id="aionImg" src="" alt="guess" draggable="false"
               style="width:100%;height:100%;object-fit:contain;display:block;transition:filter 0.15s;background:#000">
             <!-- Swipe overlays -->
-            <div id="aionOverlayAI" style="position:absolute;inset:0;background:rgba(239,68,68,0);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:48px;font-weight:900;color:#ef4444;opacity:0;transition:opacity 0.1s;pointer-events:none">🤖 AI</div>
-            <div id="aionOverlayReal" style="position:absolute;inset:0;background:rgba(74,222,128,0);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:48px;font-weight:900;color:#4ade80;opacity:0;transition:opacity 0.1s;pointer-events:none">📸 REAL</div>
+            <div id="aionOverlayAI" style="position:absolute;inset:0;background:rgba(239,68,68,0);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.1s;pointer-events:none"><span style="font-family:var(--mono);font-size:52px;font-weight:900;color:#ef4444;background:rgba(0,0,0,0.6);padding:10px 22px;border-radius:12px;border:3px solid #ef4444;text-shadow:0 0 20px #ef4444">🤖 AI</span></div>
+            <div id="aionOverlayReal" style="position:absolute;inset:0;background:rgba(74,222,128,0);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.1s;pointer-events:none"><span style="font-family:var(--mono);font-size:52px;font-weight:900;color:#4ade80;background:rgba(0,0,0,0.6);padding:10px 22px;border-radius:12px;border:3px solid #4ade80;text-shadow:0 0 20px #4ade80">📸 REAL</span></div>
             <!-- Result flash -->
             <div id="aionResult" style="position:absolute;inset:0;background:rgba(0,0,0,0.75);display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px">
               <div id="aionResultIcon" style="font-size:64px"></div>
@@ -1732,14 +1732,14 @@
             </div>
           </div>
           <!-- Swipe hint -->
-          <div style="font-family:var(--mono);font-size:9px;color:#555;text-align:center">Swipe or click → AI &nbsp;|&nbsp; Real ← &nbsp;·&nbsp; or use buttons below</div>
+          <div style="font-family:var(--mono);font-size:12px;color:#aaa;text-align:center;font-weight:600">← AI &nbsp;&nbsp;|&nbsp;&nbsp; REAL → &nbsp;·&nbsp; or use buttons below</div>
           <!-- Buttons -->
           <div style="display:flex;gap:16px;width:100%;max-width:420px">
-            <button onclick="aionGuess('real')" style="flex:1;font-family:var(--mono);font-size:13px;font-weight:900;background:rgba(74,222,128,0.15);border:2px solid #4ade80;color:#4ade80;padding:12px;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:all 0.1s" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
-              ← 📸 REAL
+            <button onclick="aionGuess('ai')" style="flex:1;font-family:var(--mono);font-size:14px;font-weight:900;background:rgba(239,68,68,0.15);border:2px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:all 0.1s" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+              <span style="font-size:18px;font-weight:900">←</span> 🤖 AI
             </button>
-            <button onclick="aionGuess('ai')" style="flex:1;font-family:var(--mono);font-size:13px;font-weight:900;background:rgba(239,68,68,0.15);border:2px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:all 0.1s" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-              🤖 AI →
+            <button onclick="aionGuess('real')" style="flex:1;font-family:var(--mono);font-size:14px;font-weight:900;background:rgba(74,222,128,0.15);border:2px solid #4ade80;color:#4ade80;padding:12px;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:all 0.1s" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
+              REAL 📸 <span style="font-size:18px;font-weight:900">→</span>
             </button>
           </div>
         </div>
@@ -2450,7 +2450,7 @@ function shibezProfileOpen() {
     </div>`;
 }
 
-function shibezProfileClose() {
+function shibezProfileClose() { _clearHash();
   const modal = document.getElementById('profileModal');
   if(modal) modal.style.display='none';
 }
@@ -2977,12 +2977,13 @@ function renderStreamList(streams) {
   }
   renderPage();
   // Restore stream from URL hash on page load/refresh
-  const hash = location.hash; // e.g. "#stream-3"
+  const hash = location.hash;
   if (hash && hash.startsWith('#stream-')) {
-    const idx = parseInt(hash.replace('#stream-',''));
-    if (!isNaN(idx) && idx >= 0 && idx < allStreams.length) {
-      selectStream(idx, false);
-    }
+    const slug = hash.replace('#stream-','');
+    // Try date match first (e.g. #stream-2025-07-29), then fallback to index
+    let idx = allStreams.findIndex(s => s.day === slug);
+    if (idx < 0) { const n = parseInt(slug); if (!isNaN(n) && n>=0 && n<allStreams.length) idx=n; }
+    if (idx >= 0) selectStream(idx, false);
   }
 }
 
@@ -3010,7 +3011,7 @@ function goHome() {
 function selectStream(idx, pushHistory=true) {
   currentStream = allStreams[idx];
   currentPartIdx = 0;
-  if (pushHistory) try { history.pushState({ streamIdx: idx }, '', '#stream-' + idx); } catch(e) {}
+  const _sd = allStreams[idx]?.day||idx; if (pushHistory) try { history.pushState({ streamIdx: idx }, '', '#stream-' + _sd); } catch(e) {}
   // Track for user profile
   try { profTrackStream(allStreams[idx]); } catch(e){}
   document.getElementById('gridView').style.display = 'none';
@@ -10966,17 +10967,21 @@ function _aionSetupSwipe(){
     moved=Math.abs(dx)>5;
     card.style.transform=`translateX(${dx*0.4}px) rotate(${dx*0.03}deg)`;
     const t=Math.min(1,Math.abs(dx)/120);
-    document.getElementById('aionOverlayAI').style.opacity=dx>0?t:0;
-    document.getElementById('aionOverlayReal').style.opacity=dx<0?t:0;
+    document.getElementById('aionOverlayAI').style.opacity=dx<0?t:0;
+    document.getElementById('aionOverlayReal').style.opacity=dx>0?t:0;
+    // Glow border on card
+    if(dx<0) card.style.boxShadow=`0 0 ${30*t}px rgba(239,68,68,${0.7*t}), inset 0 0 ${20*t}px rgba(239,68,68,${0.2*t})`;
+    else if(dx>0) card.style.boxShadow=`0 0 ${30*t}px rgba(74,222,128,${0.7*t}), inset 0 0 ${20*t}px rgba(74,222,128,${0.2*t})`;
+    else card.style.boxShadow='';
     if(e.cancelable) e.preventDefault();
   };
   const end=e=>{
     if(!dragging) return; dragging=false;
     const dx=(e.changedTouches?e.changedTouches[0].clientX:e.clientX)-sx;
-    card.style.transform='';
+    card.style.transform='';card.style.boxShadow='';
     document.getElementById('aionOverlayAI').style.opacity=0;
     document.getElementById('aionOverlayReal').style.opacity=0;
-    if(moved && Math.abs(dx)>60) aionGuess(dx>0?'ai':'real');
+    if(moved && Math.abs(dx)>60) aionGuess(dx<0?'ai':'real');
   };
   card.removeEventListener('mousedown',card._aionMD);card.removeEventListener('touchstart',card._aionTS,{passive:false});
   card._aionMD=start; card._aionTS=start;
@@ -10998,10 +11003,12 @@ function _routeFromHash() {
   const map = {
     'spacebez':openSpacebez, 'space':openSpacebez,
     'flappy':openFlappyShibez, 'flappyshibez':openFlappyShibez,
-    'aion':openAiOrNot, 'aiornot':openAiOrNot,
+    'aion':openAiOrNot, 'aiornot':openAiOrNot, 'aior':openAiOrNot,
     'emote':openEmoteGuesser, 'emoteguesser':openEmoteGuesser,
     'hol':()=>{const el=document.getElementById('holModal');if(el)el.style.display='flex';},
     'shible':()=>openShible(false),
+    'profile':shibezProfileOpen,
+    'twitch':shibezProfileOpen,
   };
   const fn = map[hash];
   if(fn) setTimeout(fn, 700);
@@ -11013,8 +11020,9 @@ document.addEventListener('click', e=>{
   if(!btn) return;
   if(btn.id==='spaceBtn') setTimeout(()=>_setHash('spacebez'),100);
   if(btn.id==='flappyBtn') setTimeout(()=>_setHash('flappy'),100);
-  if(btn.id==='aionBtn') setTimeout(()=>_setHash('aion'),100);
+  if(btn.id==='aionBtn') setTimeout(()=>_setHash('aiornot'),100);
   if(btn.id==='emoteGuesserBtn') setTimeout(()=>_setHash('emote'),100);
+  if(btn.id==='profileAvatarBtn') setTimeout(()=>_setHash('profile'),100);
 });
 
 window.addEventListener('DOMContentLoaded', _routeFromHash);
